@@ -1,0 +1,12 @@
+<Project>
+  <!-- Shared settings for every C# project under src/ -->
+  <PropertyGroup>
+    <LangVersion>latest</LangVersion>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <AnalysisLevel>latest</AnalysisLevel>
+    <Product>PS5 Backport Studio</Product>
+    <Version>0.1.0</Version>
+  </PropertyGroup>
+</Project>

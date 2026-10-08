@@ -1,0 +1,8 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/Ps5Backport.App/Ps5Backport.App.csproj" />
+    <Project Path="src/Ps5Backport.Cli/Ps5Backport.Cli.csproj" />
+    <Project Path="src/Ps5Backport.Core/Ps5Backport.Core.csproj" />
+    <Project Path="src/Ps5Backport.Tests/Ps5Backport.Tests.csproj" />
+  </Folder>
+</Solution>

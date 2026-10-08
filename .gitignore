@@ -1,0 +1,22 @@
+# Game dumps, backports and cloned reference repos (large, third-party, some copyrighted)
+.original/
+
+# Per-firmware fakelib store holds Sony system libraries: never commit them
+fakelibs/*
+!fakelibs/README.md
+
+# Unwrapped ELFs and scratch output
+work/
+
+# Ghidra project: its database embeds the analysed game/system binaries
+Ghidra/
+
+# Python
+__pycache__/
+*.pyc
+
+# .NET build output and IDE state
+bin/
+obj/
+.vs/
+*.user
