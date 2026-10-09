@@ -1,0 +1,3 @@
+sce_sys/param.json not found
+no fakelib/libScePlayGo.sprx in the game or the fakelib set: a dump needs them under ShadowMountPlus, so the game would depend on the console's own (global fakelib or auto_update_ampr)
+fakelib/libSceAmpr.sprx (libSceAmpr built Sep  6 2026) is a known-broken build: broken on old firmware: CONTROL Resonant README (reads dump data wrong, the game asks for ~9 GB) and EA SPORTS FC 27 (its build with this ampr_emu works on FW 12.xx and later only; the FW 4.xx backport swaps in the Aug 24 build). AC Black Flag shipped it and ran on a PS5 Pro at FW 10.01. Use the Aug 24 build (year inferred from the Aug 24 binary)

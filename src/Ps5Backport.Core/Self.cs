@@ -4,8 +4,8 @@ using System.Security.Cryptography;
 namespace Ps5Backport.Core;
 
 /// <summary>
-/// SELF (fake-signed ELF) detection, unwrap and fake-sign (port of ps5bp/fself.py with the
-/// vendored make_fself.py signer and make_fself_batch.py unpacker).
+/// SELF (fake-signed ELF) detection, unwrap and fake-sign (a port of make_fself.py's signer and
+/// make_fself_batch.py's unpacker).
 ///
 /// Unwrapping keeps the original ELF header from inside the SELF. With it kept, unwrap -> sign
 /// reproduces GT7's shipped files byte for byte, except the ex-info digest (a SHA-256 of the
@@ -111,8 +111,8 @@ public static class Self
             throw new InvalidDataException("SELF entry table extends past end of file");
         if (U16(s, 0x0C) > actual)
             throw new InvalidDataException("SELF header size extends past end of file");
-        if (declaredSize > (ulong)actual)
-            throw new InvalidDataException("SELF declared file size extends past end of file");
+        // a declared size beyond the file is tolerated: every entry is still checked to lie inside it
+        // (re-signing tools cut a few bytes off: Kena's dump)
 
         var entries = new (ulong Props, long Offset, long Filesz)[numEntries];
         for (int i = 0; i < numEntries; i++)
@@ -168,12 +168,22 @@ public static class Self
         if (versions.Count == 1)
         {
             var p = phdrs[versions[0]];
-            long start = actual - p.Filesz;
-            if (start < (long)declaredSize - 0xF || start > (long)declaredSize)
-                throw new InvalidDataException("truncated trailing PT_SCE_VERSION data");
-            var version = s.Slice((int)start, (int)p.Filesz);
-            if (!IsCompleteSceVersion(version))
-                throw new InvalidDataException("malformed trailing PT_SCE_VERSION data");
+            long dataEnd = entries.Length == 0 ? entriesEnd : entries.Max(e => e.Offset + e.Filesz);
+            long tail = actual - p.Filesz;
+            // 1) name:-records at the end of the file, or around the declared size when a signer appended data after
+            //    the block (Borderlands 4's backport: 0x1E8 bytes; the packer's alignment puts it up to 0xF before)
+            long start = tail >= 0 && IsCompleteSceVersion(s.Slice((int)tail, (int)p.Filesz)) ? tail : -1;
+            for (long at = Math.Max(0, (long)declaredSize - 0xF); start < 0 && at <= Math.Min((long)declaredSize + 0xF, tail); at++)
+                if (IsCompleteSceVersion(s.Slice((int)at, (int)p.Filesz)))
+                    start = at;
+            ReadOnlySpan<byte> version =
+                start >= 0 ? s.Slice((int)start, (int)p.Filesz)
+                // 2) otherwise the bytes after the last segment, as they are: not every block holds records (Sony system
+                //    modules: a build-path string; Unity's PS5Util.prx: opaque bytes; re-signing tools: zeros)
+                : tail >= dataEnd ? s.Slice((int)tail, (int)p.Filesz)
+                // 3) nothing after the last segment (a re-signing tool cut the block off: Kena's dump): zeros;
+                //    the loader does not check this segment
+                : new byte[p.Filesz];
             output = Place(output, p.Offset, version);
         }
 
@@ -191,7 +201,7 @@ public static class Self
         return output;
     }
 
-    /// <summary>Trailing PT_SCE_VERSION records: 00 00, u16 size, 0x08, "name:", 8-byte version twice.</summary>
+    /// <summary>Trailing PT_SCE_VERSION records: 00 00, u16 size, 0x08, "name:", two 8-byte versions.</summary>
     static bool IsCompleteSceVersion(ReadOnlySpan<byte> records)
     {
         int offset = 0, count = 0;
@@ -205,14 +215,13 @@ public static class Self
                 return false;
             int nameSize = payload - 17;
             var name = records.Slice(offset + 5, nameSize);
-            int versionAt = offset + 5 + nameSize;
             if (name.Length == 0 || name[^1] != (byte)':')
                 return false;
             foreach (byte b in name)
                 if (b < 0x20 || b > 0x7E)
                     return false;
-            if (!records.Slice(versionAt, 8).SequenceEqual(records.Slice(versionAt + 8, 8)))
-                return false;
+            // the two 8-byte versions after the name are not compared: they differ in real eboots
+            // (Ghost of Yotei: libScePsmlMfsr2), which upstream make_fself rejected as malformed
             offset += size;
             count++;
         }

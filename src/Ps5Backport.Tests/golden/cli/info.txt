@@ -1,0 +1,6 @@
+exit 0
+<repo>\work\NOT_BACKPORT_elf\sce_module\libc.elf: ELF
+   type=0xfe18 module=libc PS5 SDK=0x10000040 PS4 SDK=0x12090001
+   build: W:/Build/J03848509/sys/internal/usermode/src/libc/Prospero_Release/libc.prx
+   123 imports, 3085 exports
+<repo>\.original\backports\PPSA01317\4xx+\USA\logiWheel.prx: PS4-style fake SELF (make_fself.py)

@@ -31,7 +31,7 @@ public enum RelocKind { JmpRel, Rela }
 public readonly record struct Reloc(ulong Offset, int SymIndex, uint Type, long Addend);
 
 /// <summary>
-/// PS5 (SCE) ELF model: segments, dynamic tables, imports and exports (port of ps5bp/elf.py).
+/// PS5 (SCE) ELF model: segments, dynamic tables, imports and exports.
 /// PS5 ELFs use standard DT_* tags whose values are virtual addresses inside a non-executable
 /// PT_LOAD. Symbol names are "&lt;NID&gt;#&lt;library-id&gt;#&lt;module-id&gt;".
 /// </summary>
@@ -164,6 +164,8 @@ public sealed class SceElf
 
     public List<Symbol> Symbols()
     {
+        if (!Dyn.ContainsKey(DtSymtab) || !Dyn.ContainsKey(DtStrtab))   // e.g. a module without a dynamic symbol table
+            return [];
         long baseOff = Off(Dyn[DtSymtab]), strings = Off(Dyn[DtStrtab]);
         int count = (int)(Dyn.GetValueOrDefault(DtSceSymtabSz) / 24);
         var symbols = new List<Symbol>(count);

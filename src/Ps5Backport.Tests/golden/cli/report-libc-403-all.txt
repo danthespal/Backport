@@ -1,0 +1,21 @@
+exit 0
+reference: firmware_db 4.03 (exact for FW 4.03)
+
+== libc.elf  module=libc
+   build: W:/Build/J03848509/sys/internal/usermode/src/libc/Prospero_Release/libc.prx
+   reference=110, provided=0, stubbed=0, patched=0, data=2, missing=10, unknown=0
+   libSceLibcInternalExt:
+      missing  OQ-dzhlnM28  OQ-dzhlnM28  (GOT 0x18e288)
+      missing  qBS714-Jr3g  qBS714-Jr3g  (GOT 0x18e330)
+      missing  tB59hFLH3SA  tB59hFLH3SA  (GOT 0x18e268)
+   libkernel:
+      data     djxxOmW6-aw  __progname  (GOT 0x18e130)
+      data     f7uOxY9mM1U  __stack_chk_guard  (GOT 0x18e0e8)
+      missing  XgVs4jRehcY  XgVs4jRehcY  (GOT 0x18e4f0)
+      missing  dFym5b41JLU  dFym5b41JLU  (GOT 0x18e4e8)
+      missing  4h6F1LLbTiw  sceKernelMapNamedFlexibleMemoryInternal  (GOT 0x18e1f8)
+      missing  Hc4CaR6JBL0  sceKernelSyncOnAddressWait  (GOT 0x18e510)
+      missing  B2n8aDorSH4  sceKernelSyncOnAddressWait32  (GOT 0x18e4f8)
+      missing  PZQhiiLXRFs  sceKernelSyncOnAddressWait64  (GOT 0x18e500)
+      missing  q2y-wDIVWZA  sceKernelSyncOnAddressWake  (GOT 0x18e508)
+

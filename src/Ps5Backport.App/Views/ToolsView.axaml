@@ -1,0 +1,76 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Ps5Backport.App.ViewModels"
+             xmlns:app="using:Ps5Backport.App"
+             x:Class="Ps5Backport.App.Views.ToolsView"
+             x:DataType="vm:ToolsViewModel">
+
+  <Grid RowDefinitions="Auto,*,Auto" Margin="16,14,16,8" RowSpacing="12">
+    <TextBlock Classes="title" Text="Tools" />
+
+    <!-- SELF tools (7.4): drop files anywhere on this card -->
+    <Border Name="DropArea" Grid.Row="1" Classes="card" DragDrop.AllowDrop="True">
+      <DockPanel>
+        <Grid DockPanel.Dock="Top" ColumnDefinitions="*,Auto,Auto" ColumnSpacing="6">
+          <StackPanel>
+            <TextBlock Classes="section" Text="SELF and ELF files" />
+            <TextBlock Classes="caption" TextWrapping="Wrap"
+                       Text="Drop files here or add them. Unwrap writes &lt;name&gt;.elf; Fake-sign turns an ELF into a SELF. Existing files are never overwritten." />
+          </StackPanel>
+          <Button Grid.Column="1" Content="Add files" Command="{Binding AddFilesCommand}" VerticalAlignment="Top" />
+          <Button Grid.Column="2" Content="Clear" Command="{Binding ClearFilesCommand}" VerticalAlignment="Top" />
+        </Grid>
+        <Grid DockPanel.Dock="Bottom" ColumnDefinitions="Auto,Auto,*,Auto,Auto" ColumnSpacing="6" Margin="0,8,0,0">
+          <Button Content="Unwrap to ELF" Command="{Binding UnwrapCommand}" IsEnabled="{Binding !Busy}" />
+          <Button Grid.Column="1" Content="Fake-sign" Command="{Binding SignCommand}" IsEnabled="{Binding !Busy}" />
+          <TextBlock Grid.Column="2" Classes="caption" Text="{Binding OutputText}" VerticalAlignment="Center" TextTrimming="PathSegmentEllipsis" Margin="8,0" />
+          <Button Grid.Column="3" Content="Choose folder" Command="{Binding ChooseOutputCommand}" />
+          <Button Grid.Column="4" Content="Next to files" Command="{Binding OutputNextToFilesCommand}" />
+        </Grid>
+        <Panel Margin="0,8,0,0">
+          <TextBlock Classes="muted" Text="No files yet" HorizontalAlignment="Center" VerticalAlignment="Center" IsVisible="{Binding !HasFiles}" />
+          <TableView ItemsSource="{Binding Files}" IsVisible="{Binding HasFiles}">
+            <TableView.Columns>
+              <TableViewColumn Header="File" Width="*" x:DataType="vm:SelfFileRow">
+                <TableViewColumn.CellTemplate>
+                  <DataTemplate x:DataType="vm:SelfFileRow">
+                    <TextBlock Text="{Binding Name}" ToolTip.Tip="{Binding Path}" />
+                  </DataTemplate>
+                </TableViewColumn.CellTemplate>
+              </TableViewColumn>
+              <TableViewColumn Header="Kind" Width="140" x:DataType="vm:SelfFileRow">
+                <TableViewColumn.CellTemplate>
+                  <DataTemplate x:DataType="vm:SelfFileRow">
+                    <TextBlock Text="{Binding Kind}" Foreground="{Binding Tone, Converter={x:Static app:ToneBrushConverter.Instance}}" />
+                  </DataTemplate>
+                </TableViewColumn.CellTemplate>
+              </TableViewColumn>
+              <TableViewColumn Header="Module" Binding="{Binding Module}" Width="180" x:DataType="vm:SelfFileRow" />
+              <TableViewColumn Header="SDK" Binding="{Binding Sdk}" Width="70" x:DataType="vm:SelfFileRow" />
+              <TableViewColumn Header="Imports / exports" Binding="{Binding Counts}" Width="230" x:DataType="vm:SelfFileRow" />
+            </TableView.Columns>
+          </TableView>
+        </Panel>
+      </DockPanel>
+    </Border>
+
+    <!-- NID lookup (7.5) -->
+    <Border Grid.Row="2" Classes="card">
+      <StackPanel Spacing="6">
+        <TextBlock Classes="section" Text="NID lookup" />
+        <TextBox Text="{Binding NidQuery}" PlaceholderText="Function names, NIDs or NID#lib#mod symbols (several at once)" />
+        <ItemsControl ItemsSource="{Binding NidResults}">
+          <ItemsControl.ItemTemplate>
+            <DataTemplate x:DataType="vm:NidRow">
+              <Grid ColumnDefinitions="2*,120,3*" ColumnSpacing="12" Margin="0,3">
+                <SelectableTextBlock Text="{Binding Name}" TextWrapping="Wrap" />
+                <SelectableTextBlock Grid.Column="1" Classes="mono" FontFamily="{StaticResource MonoFont}" FontSize="12" Text="{Binding Nid}" />
+                <TextBlock Grid.Column="2" Classes="caption" Text="{Binding Known}" TextWrapping="Wrap" />
+              </Grid>
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
+      </StackPanel>
+    </Border>
+  </Grid>
+</UserControl>

@@ -1,0 +1,16 @@
+== 4 patch=False: PPSA01317 01.710.000
+warning: param.json requiredSystemSoftwareVersion=0x1360000000000000, sdkVersion=0x1300000000000000 is above the target FW 4; left unchanged (--patch-param lowers it; tested backports have done both)
+== 4 patch=True: PPSA01317 01.710.000
+warning: param.json requiredSystemSoftwareVersion, sdkVersion lowered to 0x0400000000000000 (written to sce_sys/param.json)
+patched sha256 c9bcd49337fa5f4d95e7809581097f3462b5e89f3a7721ef8302bac46689bf2c
+== 4.03 patch=False: PPSA01317 01.710.000
+warning: param.json requiredSystemSoftwareVersion=0x1360000000000000, sdkVersion=0x1300000000000000 is above the target FW 4.03; left unchanged (--patch-param lowers it; tested backports have done both)
+== 4.03 patch=True: PPSA01317 01.710.000
+warning: param.json requiredSystemSoftwareVersion, sdkVersion lowered to 0x0403000000000000 (written to sce_sys/param.json)
+patched sha256 82b56fbfbe8e6662cc515b9093e51ffbbb97b81941e80adcdc97705f6997ef2f
+== 10 patch=False: PPSA01317 01.710.000
+warning: param.json requiredSystemSoftwareVersion=0x1360000000000000, sdkVersion=0x1300000000000000 is above the target FW 10; left unchanged (--patch-param lowers it; tested backports have done both)
+== 10 patch=True: PPSA01317 01.710.000
+warning: param.json requiredSystemSoftwareVersion, sdkVersion lowered to 0x1000000000000000 (written to sce_sys/param.json)
+patched sha256 4ad1a628b36eb4252646c54e5feddb5229a578b55792886a5161c704084fb7f6
+ampr: ampr_emu.index present in the game folder: delete it from app0 on the console before playing (ampr_emu rebuilds it; a stale index from another ampr_emu build can break the game). The output overlay cannot remove it.

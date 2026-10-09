@@ -1,0 +1,146 @@
+exit 0
+== <repo>\.original\reference\BackPork\patches\6xx\libSceAgc.bps: 0x597f8 -> 0x597f8 bytes, source CRC32 f98b1366, 47 actions
+   0x000d100  write          2  48c7
+   0x000d102  source-copy    5  from 0x4e349
+   0x000d107  write          1  c3
+   0x001aa96  write          4  31c0c390
+   0x001aa9a  target-copy   12  from 0x1aa99
+   0x002cb88  write          1  82
+   0x002cb89  source-copy    7  from 0x597ac
+   0x002cb90  target-copy   16  from 0x2cb88
+   0x002cc40  target-copy    8  from 0x2cb90
+   0x002cc98  target-copy    8  from 0x2cc40
+   0x002cd00  target-copy   24  from 0x2cb88
+   0x002cd7a  write          1  09
+   0x002cd7f  source-copy   12  from 0x4da5c
+   0x004d22e  write          1  01
+   0x004d22f  source-copy    9  from 0x4b927
+   0x004d40e  write          2  0100
+   0x004d410  target-copy    8  from 0x2cd00
+   0x004d426  target-copy   18  from 0x4d40e
+   0x004d43e  target-copy   18  from 0x4d426
+   0x004d636  target-copy   18  from 0x4d43e
+   0x004d73e  target-copy   19  from 0x4d43e
+   0x004d876  target-copy   18  from 0x4d73e
+   0x004d88e  target-copy   19  from 0x4d40e
+   0x004d8a6  target-copy   19  from 0x4d426
+   0x004db1c  source-copy   12  from 0x58e90
+   0x0059518  source-copy   16  from 0x2c478
+   0x0059528  target-copy   32  from 0x59518
+== <repo>\.original\reference\BackPork\patches\6xx\libSceAgcDriver.bps: 0x2a810 -> 0x2a810 bytes, source CRC32 f719b950, 43 actions
+   0x0018000  source-copy    8  from 0x28a48
+   0x0018010  source-copy    8  from 0x28a48
+   0x0018020  source-copy    8  from 0x28a48
+   0x0018030  source-copy    8  from 0x28a48
+   0x0018040  source-copy    8  from 0x28a48
+   0x0018050  source-copy    8  from 0x28a48
+   0x0018060  source-copy    8  from 0x28a48
+   0x0018070  target-copy    9  from 0x18020
+   0x0018090  source-copy    8  from 0x28a48
+   0x0018098  target-copy    9  from 0x18000
+   0x00180a1  source-copy   24  from 0x1c029
+   0x00180b9  source-copy    7  from 0x2a668
+   0x00180c0  target-copy   16  from 0x18090
+   0x00180d0  target-copy   24  from 0x18090
+   0x00180e8  target-copy   48  from 0x18098
+   0x0018260  source-copy    8  from 0x29e8f
+   0x00182c0  target-copy   16  from 0x180e8
+   0x00182f2  write          1  09
+   0x00182f7  write          1  06
+   0x0024000  target-copy   32  from 0x180e8
+   0x002809e  write          1  01
+   0x002809f  source-copy    9  from 0x28a47
+   0x00290a6  target-copy   18  from 0x2809e
+   0x0029466  write          1  01
+   0x0029467  source-copy   17  from 0x29e8e
+== <repo>\.original\reference\BackPork\patches\6xx\libSceFiber.bps: 0x11064 -> 0x11064 bytes, source CRC32 8105a1ba, 41 actions
+   0x000c048  source-copy    4  from 0x8060
+   0x000c080  target-copy    8  from 0xc048
+   0x000c0a8  target-copy    8  from 0xc080
+   0x000c0b0  target-copy    8  from 0xc0a8
+   0x000c0c8  target-copy    9  from 0xc048
+   0x000c0d8  target-copy   16  from 0xc0a8
+   0x000c12b  write          5  1038000006
+   0x001044e  write          2  0100
+   0x0010450  target-copy    8  from 0xc0d8
+   0x0010496  target-copy   18  from 0x1044e
+   0x001056e  target-copy   18  from 0x10496
+   0x001062e  target-copy   18  from 0x1056e
+   0x0010646  target-copy   18  from 0x1062e
+   0x00106a6  target-copy   18  from 0x10646
+   0x00106d6  target-copy   18  from 0x106a6
+   0x00106ee  target-copy   19  from 0x1056e
+   0x0010a54  source-copy    4  from 0x10fa1
+   0x0010a6c  source-copy    5  from 0x10fa1
+   0x0010c48  source-copy   12  from 0x1097c
+   0x0010c54  source-copy    4  from 0x11060
+   0x0010c58  target-copy   32  from 0x10c48
+   0x0010c88  target-copy   56  from 0x10c48
+== <repo>\.original\reference\BackPork\patches\6xx\libSceNpAuth.bps: 0x1171c -> 0x1171c bytes, source CRC32 748d2523, 3 actions
+   0x000c1db  write          5  1038000006
+== <repo>\.original\reference\BackPork\patches\6xx\libSceNpAuthAuthorizedAppDialog.bps: 0x1126c -> 0x1126c bytes, source CRC32 7c0798a3, 3 actions
+   0x000c1c3  write          5  1038000006
+== <repo>\.original\reference\BackPork\patches\6xx\libScePsml.bps: 0x238320 -> 0x238320 bytes, source CRC32 092e2872, 4 actions
+   0x01a6a7b  write          2  1038
+   0x01a6a7d  source-copy   14  from 0x22cf32
+== <repo>\.original\reference\BackPork\patches\6xx\libSceSaveData.native.bps: 0x50f64 -> 0x50f64 bytes, source CRC32 6194c841, 9 actions
+   0x0048d10  source-copy    7  from 0x4ec79
+   0x0049053  write          2  1038
+   0x0049055  source-copy    4  from 0x48ede
+   0x004d096  write          1  01
+   0x004d097  source-copy    5  from 0x4cfcf
+== <repo>\.original\reference\BackPork\patches\7xx\libSceAgc.bps: 0x597f8 -> 0x597f8 bytes, source CRC32 124705ec, 41 actions
+   0x001aa96  write          4  31c0c390
+   0x001aa9a  target-copy   12  from 0x1aa99
+   0x002cb90  write          1  82
+   0x002cb91  source-copy    7  from 0x597ac
+   0x002cb98  target-copy    8  from 0x2cb90
+   0x002cc40  target-copy    8  from 0x2cb98
+   0x002cc98  target-copy    9  from 0x2cb98
+   0x002cd00  target-copy   16  from 0x2cb90
+   0x002cd10  target-copy    8  from 0x2cd00
+   0x002cd7a  write          3  591038
+   0x002cd7d  source-copy   14  from 0x4da72
+   0x004d22e  write          1  01
+   0x004d22f  source-copy    9  from 0x4b927
+   0x004d426  write          2  0100
+   0x004d428  target-copy    8  from 0x2cd10
+   0x004d43e  target-copy   18  from 0x4d426
+   0x004d636  target-copy   18  from 0x4d43e
+   0x004d73e  target-copy   19  from 0x4d43e
+   0x004d876  target-copy   18  from 0x4d73e
+   0x004d88e  target-copy   18  from 0x4d876
+   0x004d8a6  target-copy   19  from 0x4d426
+   0x004db1c  source-copy   12  from 0x58e90
+   0x0059518  source-copy   16  from 0x2c478
+   0x0059528  target-copy   32  from 0x59518
+== <repo>\.original\reference\BackPork\patches\7xx\libSceAgcDriver.bps: 0x2a810 -> 0x2a810 bytes, source CRC32 c565c3d1, 37 actions
+   0x0018000  source-copy    8  from 0x28a48
+   0x0018010  source-copy    8  from 0x28a48
+   0x0018020  source-copy    8  from 0x28a48
+   0x0018030  source-copy    8  from 0x28a48
+   0x0018040  source-copy    8  from 0x28a48
+   0x0018050  source-copy    8  from 0x28a48
+   0x0018060  source-copy    8  from 0x28a48
+   0x0018070  target-copy    9  from 0x18020
+   0x0018090  source-copy    8  from 0x28a48
+   0x0018098  target-copy    9  from 0x18000
+   0x00180a1  source-copy   24  from 0x1c029
+   0x00180b9  source-copy    7  from 0x2a668
+   0x00180c0  target-copy   16  from 0x18090
+   0x00180d0  target-copy   24  from 0x18090
+   0x00180e8  target-copy   48  from 0x18098
+   0x00182c0  target-copy   16  from 0x180e8
+   0x00182f2  write          5  5910380000
+   0x00182f7  source-copy    7  from 0x29a59
+   0x0024000  target-copy   32  from 0x180e8
+   0x002809e  write          1  01
+   0x002809f  source-copy    9  from 0x28a47
+   0x00290a6  target-copy   18  from 0x2809e
+== <repo>\.original\reference\BackPork\patches\7xx\libSceNpAuth.bps: 0x1171c -> 0x1171c bytes, source CRC32 748d2523, 3 actions
+   0x000c1da  write          6  591038000007
+== <repo>\.original\reference\BackPork\patches\7xx\libSceNpAuthAuthorizedAppDialog.bps: 0x1126c -> 0x1126c bytes, source CRC32 7c0798a3, 3 actions
+   0x000c1c2  write          6  591038000007
+== <repo>\.original\reference\BackPork\patches\7xx\libSceSaveData.native.bps: 0x50f64 -> 0x50f64 bytes, source CRC32 6194c841, 4 actions
+   0x0049052  write          3  591038
+   0x0049055  source-copy   10  from 0x4d476

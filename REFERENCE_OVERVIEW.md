@@ -24,6 +24,8 @@ Survey of `.original/reference/` (5 projects, about 4,200 files and 115 MB). The
 
 ---
 
+> **2026-10-10: one engine.** The Python engine `ps5bp` (and its `tests/` and `tools/`) was retired; PS5 Backport Studio's C# engine (`Ps5Backport.Core`, command line `ps5backport`) is the only one. `python -m ps5bp X` is now `ps5backport X` (same commands); `tools/import_firmware_dumps.py`, `gen_sony_builds.py` and `gen_candidates.py` are `ps5backport fwdb import-firmwares`, `data sony-builds` and `data candidates`. Its parity results live on as golden files in `src/Ps5Backport.Tests/golden/` (re-record with `PS5BP_RECORD=1` after an intended change). Older entries below mention `ps5bp` as it was then. Python is still fine for throwaway scripts outside the software.
+
 ## Relationship map
 
 ```mermaid
@@ -553,7 +555,7 @@ Devices are attached through LVD or `/dev/mdctl`. Default scan paths cover `/dat
 
 ## Part 5: Plan for our own backport tool
 
-The GUI application (C#/.NET 10/WPF port of `ps5bp`) has its own plan: [APP_PLAN.md](APP_PLAN.md).
+The GUI application (C#/.NET 10/WPF port of `ps5bp`) has its own plan: [APP_PLAN.md](APP_PLAN.md). Since 2026-10-08 the fix tables live in `data/*.json` (shared by both engines); older mentions of `fixes.py` / `candidates.py` below refer to the same tables.
 
 > The forward-looking phase plan (hardening, console test bench, firmware data, fakelib supply, game ports) is in [PLAN.md](PLAN.md).
 
@@ -817,6 +819,7 @@ Both GT7 (FW 4 set) and Control (4.03 set) ship them unpatched and both run. So 
 - Control's `libSceAmpr` (24 Aug build, the one its README says works) embeds the compiler `__DATE__` **`Aug 24 2026`** plus a `[AMPR_EMU] name=libSceAmpr version=%s build=%s %s` log line. GT7's older ampr_emu has neither, and PlayGo has no date.
 - The store manifest now records `build_date`; `store.KNOWN_BUILDS` marks `Aug 24 2026` ok and `Sep  6 2026` broken (Control README: "the 6/9 build reads dump data wrong, the game asks for ~9 GB"; the year is inferred).
 - Control's README also says that backport was **tested on FW 10.01**, not on a 4.xx console.
+- **`param.json` line endings:** all three sample `param.json` files are CRLF, including the one Control lowered and console-tested. `ps5bp --patch-param` used to write the lowered copy with LF (Python text mode); since 2026-10-08 it keeps the original line endings, so only the version strings change (`tests/test_phase4.py`).
 
 ---
 
@@ -841,6 +844,7 @@ The report adds `left unpatched by: <backport>`. This is evidence, not a fix: th
 ### Ghidra: are GT7's left-unpatched eboot imports reachable? (2026-10-08)
 - **PSVR2 (`sceHmd2*`, `sceVrTracker2*`) is gated by a function that exists on old firmware.** `0x942d40`: `sceSysmoduleLoadModule(0x12a)` (result ignored), then `sceHmd2Initialize` (`c812oYs7Vsc`, exported on 3.20). If it returns non-zero, the code jumps past everything: `GetDeviceInformation`, `GetFieldOfViewWithoutHandle`, `VrTracker2Initialize`, and the flag at `0x631a614` that the single writer at `0x943119` sets to 1. Every other PSVR2 call site (`sceHmd2Open` at `0x1a41067`, etc.) checks that flag first. So with no PSVR2 support, none of the missing PSVR2 functions run. Ghidra's auto-analysis had not even created functions there; they are reached through vtables.
 - **Text-to-speech 2 is gated by its own missing init function.** `FUN_00bd3970` calls `sceTextToSpeech2Initialize` first; only on 0 does it call `Open` and the rest. The routine is reached through a callback table built by a static initializer (`0x18097f8`, `0x180956f`), so when it runs depends on runtime state (probably the system screen-reader setting). The AnyPS5 candidate stub (`return 0x8002002D`) makes `Initialize` fail, so the routine returns cleanly. Kept as an opt-in candidate (`--candidate-fixes`), because GT7's tested backport didn't stub it.
+- *(Corrected in Part 13: the exact 4.00 export list contains `D-CzAxQL0XI`, so the conclusion below about GT7's test firmware is withdrawn.)*
 - **`D-CzAxQL0XI` (libSceUserServicePlatformPrivacyWs1) is called unconditionally at startup.** `FUN_00bd2e10` registers each signed-in user (map lookup, user name, trophies) and calls `FUN_00bd3dc0`, which always calls `D-CzAxQL0XI(userId, &out)`. GT7 shipped this unpatched and ran, so **GT7's test firmware exports it**. 3.20 has no such library. So GT7 was probably tested above 4.xx, and its "left unpatched" list is evidence for that firmware, not for 4.xx. A real 4.xx target may need a stub here; its meaning (`out == 1` combined with another flag into an argument of `FUN_00586ea0`) is unknown, so no rule yet.
 - **Generic lesson (gate pattern):** a feature library's missing functions are harmless when an init call that **exists** on the target fails first (Hmd2). When the init function is itself missing (TTS2), an error stub on it alone disables the feature. Prefer stubbing the gate with an error over stubbing every function with 0.
 - `sceShareGetRunningStatus` (`0x25f09a`) sits in code Ghidra did not analyse (reached by a vtable call); not traced further.
@@ -852,7 +856,7 @@ The report adds `left unpatched by: <backport>`. This is evidence, not a fix: th
 Neither becomes a `fixes.py` rule. Who made them and why is still open (they were already in the dump the user has).
 
 ### Code space and shim PRX (PLAN 4.3 / 4.4)
-- **Page gap:** PS5 modules end the code segment mid-page and start the next segment on a 16 KB page. The gap is zero in the file and unmapped-but-in-page in memory: GT7 eboot `0x18d4`, GT7 libc `0x812`, Control eboot `0x2084`, nakama `0x1c62`; page-exact modules (GT7 fakelib Psml) have none. `patch.extend_text` grows the segment's `p_filesz`/`p_memsz` into it (`--extend-text`). Console test pending.
+- **Page gap:** PS5 modules end the code segment mid-page and start the next segment on a 16 KB page. The gap is zero in the file and unmapped-but-in-page in memory: GT7 eboot `0x18d4`, GT7 libc `0x812`, Control eboot `0x2084`, nakama `0x1c62`; page-exact modules (GT7 fakelib Psml) have none. `patch.extend_text` grows the segment's `p_filesz`/`p_memsz` into it (`--extend-text`). Console test pending. The new bytes are 64-byte blocks of `ret` + 63 `int3`: a cave must follow a `ret`, and placed code ends with a `jmp`, so one long run would hold only one fix (found while porting to C#; all 10 NOT_BACKPORT libc fixes now fit).
 - **No open toolchain for SCE PRX:** `backport-helper` (a replacement `libSceRtc` with runtime hooks and raw-NID exports via a post-link NID rename and `.hash` rebuild) and ampr_emu (`C:/dev/ps5/ampr_emu/out/Prospero_ReleaseHooks`) are built with Sony's Prospero SDK. ps5-payload-sdk builds `.so` files for its own payload loader only. A shim PRX for `ps5bp` would need a `.so` → SCE PRX converter.
 
 ---
@@ -866,6 +870,560 @@ Details and sources in [CONSOLE_BENCH.md](CONSOLE_BENCH.md).
 - **Logs:** `/data/shadowmount/debug.log` (+ `.1`), `/data/shadowmount/notify.txt`, the ShadowMountPlus API `/api/v1/debug-log` (port 10101, loopback), the Relapse host's `klosrv`/`ftpsrv` options, and Control's ampr_emu `/app0/ampr_emu.log`.
 - **ampr auto-update** (`auto_update_ampr`, off by default) would replace our manifest-tracked ampr_emu build; keep it off while testing.
 - Known bug: folder games can fail to relaunch on 13.60 with `CE-105773-3` (ShadowMountPlus issue #128, open).
+
+---
+
+## Part 13: Firmware dumps for 46 firmwares, exact export lists, new samples (2026-10-09)
+
+### What arrived
+- `.original/.PS5OriginalLibs/Firmware X.YY/`: system library dumps for **46 firmwares, 1.00 to 13.60**. Decrypted ELFs except **4.30, 7.00, 13.60** (encrypted SELFs) and half of 11.20 (the other half is decrypted). 7.00 also has an unreadable SELF (malformed trailing PT_SCE_VERSION).
+- `.original/backports/<Game>/{default,4.00+,decrypted}`: GT7 (default = old NOT_BACKPORT), **Control's original dump** (`default`, new), and a new game, **Ghost of Yōtei Complete Edition** (`default` + `4.00+ NOT TESTED`).
+
+### Exact export lists (PLAN 2.3)
+- `python tools/import_firmware_dumps.py` imports every dump's `*/common/lib` (what games load; `system_1`/`system_2` duplicates merged) into `firmware_db/<fw>.json`. A firmware is imported only if every module has a decrypted copy, so 4.30, 7.00 and 13.60 are skipped. **43 exact lists**, 300–400 KB each (16 MB together), data symbols included.
+- Managed **Mono/.NET assemblies** (`*.dll.sprx`, `*.exe.sprx`: mscorlib, System*, I18N…) sit in some dumps' common/lib (186 in 3.20) and carry ~250k NIDs. Games don't import them; both engines' `import_dump` skip them.
+- `firmware_db/3.20.json` now comes from the real dump. The old PS5-3.20_Libs genstub list is contained in it except `mscorlib.dll`'s 375 NIDs. **The genstub list was incomplete**: it has no `libSceTextToSpeech2` at all, which is why TTS2 looked missing on old firmware.
+- **4.00 and 4.03 export the same 17,901 NIDs.** For a FW 4 target the report is now exact.
+
+### What the exact 4.00 list settles
+- **Every fix we apply for a missing function targets a function that really is missing on 4.00** (all 33 stub/swap/adapter/redirect fixes). The three argument fixes (`sceSaveDataMount3`, `sceSaveDataPrepare`, `sceAudioOut2GetSpeakerInfo`) target functions that exist on 4.00, as intended.
+- Of the 40 imports the tested backports shipped unpatched, **33 exist on 4.00** (TTS2, PSVR2 except two, Share, `D-CzAxQL0XI`, the four kernel/VideoOut queries in the fakelibs, `sceKernelDebugWriteCppExceptionInfo`). Missing on 4.00: `sceHmd2ReprojectionSetAllowPositionalReprojection` and `sceHmd2ReprojectionSetParamWithBuffer` (behind the `sceHmd2Initialize` check, Part 11), and the five libc imports Control stubbed (Wait8, Wait16, `OQ-dzhlnM28`, `tB59hFLH3SA`, `qBS714-Jr3g`).
+- **Correction to Part 11:** `D-CzAxQL0XI` exists on 4.00, so its unconditional call says nothing about GT7's test firmware. The conclusion "GT7 was probably tested above 4.xx" is withdrawn.
+- GT7 backported to FW 4 with the exact list: the same 19 fixes; **only 2 imports stay unresolved** (the two PSVR2 functions, status `missing`), instead of 37 `unknown` against the 3.20 genstub list.
+- Control's 4.03 fakelib set: **every import resolved** against the exact 4.03 list (the four "unresolved" kernel/VideoOut queries of Part 10 exist on 4.03).
+
+### When fixed functions appear (first decrypted dump exporting them)
+| Function | First firmware |
+|---|---|
+| `sceSaveDataMount3`, `sceSaveDataPrepare`, `sceAudioOut2GetSpeakerInfo`, TTS2 | 1.00 |
+| `sceVideoOutVrr*`, `sceHttp2WebSocket*` | 5.02 |
+| `sceKernelSyncOnAddressWake`/`Wait`, `sceAudioOut2Set3DLatency`, `sceSaveDataCancel`, `sceNpEntitlementAccessGetGameTrialsFlag` | 6.00 |
+| `sceKernelIsTrinityMode`/`HasTrinityMode`, `sceKernelMapNamedFlexibleMemoryInternal`, `sceVideoOutLatency*` | 7.01 |
+| `sceKernelSyncOnAddressWait32`/`Wait64` | 9.00 |
+| `sceAcmBatchJobPriority` | 10.01 |
+| `sceKernelGetOperationMode`, libSceLibcInternalExt `OQ-dzhlnM28`/`tB59hFLH3SA`/`qBS714-Jr3g` | 11.00 |
+| `sceKernelSyncOnAddressWait8`/`Wait16` | 12.00 |
+| libkernel `La9uyZv4Kvw` | 12.40 |
+| `sceShaderTranscode*` (5 functions) | **never**: no firmware exports them; only the fakelibs' own stubs satisfy them |
+
+`sceKernelIsTrinityMode` is in 7.01 (6.50 lacks it; 7.00 is encrypted), not 7.61 as Control's README said; `data/introduced.json` is corrected. The report's "introduced" column now comes from the dumps.
+
+### Functions are removed too
+Consecutive firmwares drop NIDs, including game-facing ones: libSceVideoOut (1.00→2.00), libSceUserService (−27 at 6.00), libSceNpUniversalDataSystem (several releases), libwebrtc, PlayReady. So an older list is **not** a strict lower bound for a newer target. With 43 exact lists the lower bound is now rarely used (only for firmwares without a dump, e.g. 4.10 → 4.03).
+
+### BackPork patches against the real 10.01 libraries (PLAN 3.3)
+- **10 of 12 patches match the 10.01 dump** (size + CRC32) and apply with the right target CRC: all five 7xx patches and the 6xx Fiber, NpAuth, NpAuthAuthorizedAppDialog, Psml, SaveData.native.
+- The **6xx libSceAgc / libSceAgcDriver** patches expect other sources (CRC `f98b1366` / `f719b950`). They are not the 7xx output and not any Agc in the 10.01–10.60 dumps. Their source is unknown, so a FW 6 set can't be built yet.
+- **`fakelibs/7` built**: the five 7xx libraries patched, fake-signed (SDK 0x07000038/0x10590001), stored with provenance. Checked against the exact 7.01 and 7.61 lists, one import stays missing: `sceFsBfsGetAvailableSize` (libSceSaveData.native), which BackPork leaves unpatched too.
+
+---
+
+## Part 14: Audit findings (2026-10-09)
+
+### PT_SCE_VERSION records may carry two different versions
+- Each record in the trailing PT_SCE_VERSION block is `00 00`, u16 payload size, `08`, `name:`, then two 8-byte versions. Upstream `make_fself` (and our ports of it) assumed the two versions are always equal and rejected anything else as "malformed trailing PT_SCE_VERSION data".
+- **Ghost of Yōtei's eboot breaks that assumption**: 2 of its 135 records (`libScePsmlMfsr2:` and `libScePsml_mfsr2_stub_weak:`, the PS5 Pro PSSR libraries) have `13 00 00 81 …` and `09 00 00 87 …`. Every structural check still holds (markers, tag, printable `name:`, sizes ending exactly at the block end), so the file is valid and the equality test was too strict.
+- Fixed in both engines (`ps5bp/vendor/make_fself_batch.py` `is_complete_sceversion`, `Self.IsCompleteSceVersion`): the versions are no longer compared. Both engines now unwrap the Yōtei eboot to the same ELF; sign → unwrap returns it byte for byte. Tests: `TestSceVersionRecords` (Python), `SceVersionTests` (C#).
+- Re-signing Yōtei's eboot differs from the shipped file in the digest (as for GT7) and in where the trailing block sits: the original packer put it 8 bytes before the declared file size, our signer at it. Same bytes; the unwrapper accepts both positions.
+- The 7.00 dump's one unreadable SELF (Part 13) failed with the same message and may have the same cause; 7.00 stays skipped anyway (its other modules are encrypted).
+
+### Ghost of Yōtei (PPSA26344 v02.002.000) through the pipeline
+- Backports to FW 4 and FW 7 now complete; both engines give identical output (9 files) and reports.
+- FW 4 (exact 4.00 list): the same 4 derived fixes as GT7 apply; **one import stays missing**: `gWT7X8H0bYs` in `libSceVideoOutVrrStatus` (eboot, refs=3), first exported by FW 10.01. GT7 needed proven stubs for two other VrrStatus NIDs (`kP2L8t3j-aM`, `LibwuIonIBw`), so a stub is the likely fix, but it needs triage (what it returns, how the 3 call sites use it) and a tester run before it goes into `data/fixes.json`.
+
+### Tester checklist assumptions, checked against the ShadowMountPlus and ampr_emu sources
+- **debug.log**: `log_debug` writes only when `debug_enabled` is set; `debug=1` is the default (`config.ini.example`, `sm_config_mount.c`). The log is rotated (`debug.log` → `debug.log.1`) when **ShadowMountPlus starts** (`main.c`), not per game launch: after a crash, reboot and re-jailbreak, the failed run's log is `debug.log.1`.
+- **notify.txt is never written**: `TOAST_FILE` is defined in `sm_paths.h` but used nowhere. Removed from the checklist (CONSOLE_BENCH 1.3 listed it too).
+- **Folder dumps get the backport as a unionfs layer** above `/system_ex/app/<TITLE_ID>` when ShadowMountPlus mounts the game (`mount_backport_overlay`, `sm_filesystem.c`), logged as `[IMG] backport overlay mounted (rw|ro): <backport> -> /system_ex/app/<TITLE_ID>` or `[IMG] backport overlay failed: …` plus a popup. (The NSFS file redirects and their 256 limit are the installed-package path, `sm_pkg_backport.c`.) The overlay is looked up under the game's own scan folder first, then every scan folder plus `/data/homebrew`, which is always included (`get_backport_scan_path`).
+- Because the backport folder is the **upper, writable layer**, files the game creates in `/app0` (ampr_emu's `ampr_emu.index`, its log) presumably land in the backport folder. This is inferred from unionfs semantics and not console-checked. Hence the checklist: delete stale indexes in both places, and delete an old backport folder before installing a new build.
+- **ampr_emu.log is compiled out by default** (`AMPR_EMU_DEBUG_LOG 0` in `ampr_emu_config.h`). Our `fakelibs/4.03` build (24 Aug) contains `/app0/ampr_emu.log`; the `fakelibs/4` build (GT7) has no log path at all, so FW 4 backports write no ampr_emu log. Index autobuild is on by default (`/app0/ampr_emu.index`).
+- Config keys confirmed: `/data/shadowmount/config.ini`, `auto_update_ampr=0` default, `kstuff_no_pause=<TITLE_ID>` (repeatable). ShadowMountPlus stops a running BackPork payload itself (`main.c`).
+
+### Gap: the FW 7 fakelib set can't run a dump on its own
+`fakelibs/7` holds only the five BackPork 7xx libraries. It has **no `libSceAmpr` (ampr_emu) and no `libScePlayGo` stub**, which every dump needs under ShadowMountPlus (Part 4), and **no `libScePsml`**: a Yōtei FW 7 backport leaves 9 `libScePsml_mfsr2` imports (FW 12.00) unknown that the FW 4 set's Psml provides. A FW 7 backport would depend on whatever ampr_emu the tester's ShadowMountPlus provides (global fakelib or auto-update). **Fixed (2026-10-09):** ampr_emu (24 Aug) and the PlayGo stub copied into `fakelibs/7` (manifest source says so); both engines now warn when neither the game nor the fakelib set has `fakelib/libSceAmpr.sprx` / `libScePlayGo.sprx` (`check_dump_fakelibs`, `GameScan.DumpFakelibWarning`). Psml stays out until a tester shows it's needed (its imports matter only on PS5 Pro).
+
+---
+
+## Part 15: AC Black Flag Resynced and Ghost of Yōtei backport diffs (2026-10-09)
+
+Sample folders were renamed again: `.original/backports/<TITLE_ID>/{default,4xx+,10xx+,decrypted}`: PPSA01317 = GT7, PPSA34547 = Control, PPSA26344 = Ghost of Yōtei, PPSA28183 = AC Black Flag (was `<Game>/4.00+`); both test suites updated.
+
+### AC Black Flag Resynced (PPSA28183 v01.006.038, Ubisoft Scimitar/Anvil engine)
+Three variants. All SELFs in `default` are decrypted (PS5-style SELF, unwrap works); the backports are make_fself SELFs.
+- `default`: original dump; SDK 0x12000038/0x13090001, param 13.60/12.00.
+- `4xx+`: "FW 4.xx + PSSR + Quality 60 FPS (v2)", **PS5 Pro only**, tested on a Pro at FW 10.01. SDK 4.00 on every module, a "4xx-kit" libc, an 8-file fakelib set (Agc, AgcDriver, Ampr, AppContent, GameUpdate, NpEntitlementAccess, PlayGo, Psml 13.60), `psml_package/KPN9_v070.psp`. README in the folder.
+- `10xx+`: only `eboot.bin`, `ShaderData.bin`, `fakelib/libSceAgcDriver.sprx` (a different AgcDriver build). It is a delta laid over `4xx+`: the user's note says "fix black screen crash on Pro, tested on 10.20".
+
+**eboot `default` → `4xx+`: 408 bytes in 139 ranges.**
+| Change | How | Generic? |
+|---|---|---|
+| SDK pair → 0x04000031/0x09040001 | procparam | yes (we do it) |
+| `sceSaveDataMount3` `systemBlocks -1 → 0` | call site: `mov qword [rbp-0x88], -1` → `0` (VA `0x2bced72`) | **yes: the third game with this exact fix.** The README gives the reason: *ShellCore rejects -1 when the game SDK is below 5.00*. |
+| `sceAudioOut2Set3DLatency` | call → `xor eax,eax` | yes (we stub it ret0) |
+| `sceVideoOutAllowOutputResolutionWqhdDetection` (FW 6.00) | 3 calls → `nop` | **new rule**: ret0 |
+| `sceNpCommerceDialogOpen2` (FW 7.01) | call → `mov eax, 0x80000001` | **new rule**: error stub |
+| 126 `s_trap 1` → `s_nop` (`010092bf` → `000080bf`) in shader code inside a RW data segment, plus 168 more in `ShaderData.bin` | GPU hang fix for FW < 12 (BVH asserts), together with an AgcDriver hook that allocates a 24 MB compute scratch ring (`COMPUTE_TMPRING_SIZE`) | **new category: shader binaries.** The pattern is a library/hardware rule, not game logic, but it patches game data. Not supported yet. |
+| `sceKernelGetOperationMode` → mode 3 (PLT + one call site), `sceKernelIsTrinityMode` → 1, `sceAgcGetIsTrinityMode` → 1 | PLT entries overwritten with stubs | **forces PS5 Pro mode**; an option, not a backport fix |
+| Target-FPS clamp floor 20 → 60 (VA `0x304000a`, rip-relative operand pointed at a 60.0 constant) | game logic | game-specific tweak (Quality 60 FPS) |
+
+**`4xx+` → `10xx+` (128 bytes, 14 ranges)** undoes everything Pro-specific and the 60 FPS tweak, and uses GT7's GOT→stub technique instead of overwriting PLT entries: a new cave stub `mode 2, lowEnergy 0` (= our `opmode_normal`), GOT of `sceKernelGetOperationMode` → it, GOT of `sceKernelIsTrinityMode` and `...WqhdDetection` → the `xor eax,eax; ret` tail. The 3 Wqhd calls and `sceNpCommerceDialogOpen2` are restored (they exist on 10.x). The savedata fix, Set3DLatency, the s_trap patches and SDK 4.00 stay. So the "Pro black screen" was the Pro-forcing itself on a console/firmware where PSSR doesn't work.
+
+**Modules:** FontGsm, JobManager, NpCppWebApi, Pfs, memorywrapper: SDK only. `libaegir_f.prx`: SDK + 4 Http2 WebSocket calls (CreateRequest, SendDataMessage, SendTextMessage, Close; FW 5.02) → `mov eax, 0x80000001` at the call site. libc: replaced by the "4xx-kit" libc (README: 3 libSceLibcInternalExt functions → 0).
+
+**`ps5bp backport default --firmware 4.50` compared:** SDK, savedata, Set3DLatency, IsTrinityMode, GetOperationMode (mode 2) and WebSocketCreateRequest are covered. **Missing** (reported `missing`): `sceVideoOutAllowOutputResolutionWqhdDetection`, `sceNpCommerceDialogOpen2`, `sceHttp2WebSocketSendDataMessage`/`SendTextMessage`/`Close`. Not covered: the shader `s_trap` fix and the AgcDriver scratch-ring hook. `sceSaveDataPrepare` is not patched by this game (our rule only rewrites the value 2, so it's a no-op if AC passes another value).
+
+### Ghost of Yōtei `4xx+ NOT TESTED` is really an SDK 10.00 backport
+- eboot SDK 0x11000040/0x12590001 → **0x10000040/0x12090001**; param.json `requiredSystemSoftwareVersion`/`sdkVersion` 0x10000000. Despite the folder name it targets FW 10.x, which is why only one function needed fixing: `sceKernelGetOperationMode` (FW 11.00).
+- Fix technique (new): the PLT entry is overwritten with a stub returning **mode 3 (Pro)**, and the import's NID string in `.dynstr` is renamed from `NH6xARDOVv8` to `+L98PIbGttk` (`scePthreadRwlockUnlock`, exists everywhere) so the loader resolves the slot. The slot is never used because the PLT no longer jumps through it.
+- **The `default` eboot is not pristine** (like GT7's NOT_BACKPORT): 15 entitlement-label strings are replaced with `YOTEIDUPLEX`, an `or byte [rbp-0x240], 0x20` became `, 0`, and a `jmp rcx` became `jmp short 0xc9f776`. The backport eboot has the original values, so it was built from a different (clean) eboot. These differences are dump artefacts, not backport changes.
+
+### Update (2026-10-09, later): Yōtei `decrypted` and `dump` added, `4xx+` completed
+- **`dump`** (same v02.002.000, same libc, same param.json as `default`) is the **clean eboot**: unwrap(`dump`) differs from unwrap(`default`) only in the 15 `YOTEIDUPLEX` labels, the `or`/`jmp` bytes and ELF header byte 0x3c. Its fakelib/ holds the dump's homebrew set: ampr_emu **Sep 6** (the same file as AC's), AppContent, GameUpdate, NpEntitlementAccess stubs (make_fself, SDK 2.00). No PlayGo stub.
+- **`decrypted`** = unwrap(`dump`) byte for byte (eboot and libc), plain ELFs, no param.json.
+- **The backport was built from `dump`**: dump → `4xx+` eboot is only 4 changes (ELF header 0x3c, SDK pair, the GetOperationMode PLT stub → mode 3, the NID rename). Everything from the earlier section stands.
+- **`4xx+` now also ships `k9.psp` and `fakelib/libScePsml.sprx`**: the same files as the GT7 backport and our `fakelibs/4` set (13.60 Psml, J03950001, reads /app0/k9.psp). This is the third backport (GT7 FW 4, UFC 6 FW 9.60, Yōtei FW 10.x) that pairs that Psml with k9.psp. It confirms our automatic k9.psp rule. There's no ampr_emu in `4xx+`: under the ShadowMountPlus overlay the dump's own Sep 6 build stays in use, the build that ran on a Pro at 10.01 (AC).
+- **libc (new in this delta)**: SDK → 10.00, and the three FW 11.00 libSceLibcInternalExt imports (`tB59hFLH3SA`, `OQ-dzhlnM28`, `qBS714-Jr3g`) get PLT stubs `xor eax,eax; ret`, with their NID strings renamed to `EHsF2i9FXPM` (`sceLibcInternalBacktraceForGame`, in every firmware). It's the same PLT-stub-plus-rename technique as the eboot. We stub the first two ret0 too. `qBS714-Jr3g` we **redirect** to the local `__cxa_thread_atexit_impl` (proven on GT7/Control) instead of ret0, so our output differs there on purpose.
+- **Our pipeline on `dump`**:
+  - **FW 4:** everything resolves except the known `gWT7X8H0bYs` (VrrStatus, FW 10.01, still to triage). The store set adds ampr_emu Aug 24, PlayGo and Psml, plus k9.psp.
+  - **FW 10.01:** this is the tester's target. There is **no store set for FW 10** (lookup is exact folder, then major), so the 9 `libScePsml_mfsr2` imports (FW 12.00) stay missing. The tester solved them with the 13.60 Psml + k9.psp. We also warn about the Sep 6 ampr_emu and the missing PlayGo stub.
+- **Added (same day): `fakelibs/10` and `fakelibs/11`**, each with only that Psml + `app0/k9.psp` (NOT TESTED, like the source). FW 11 also got an **SDK pair, `0x11000040/0x12590001`**, in both engines. Kitchen's table stops at 10. The pair is Yōtei's original modules' value; the FW 11.00 system libraries have the same PS4 half (`0x11000043/0x12590001`). The `dump` now backports to FW 10.01 and 11.00 with nothing missing, and both engines give identical output.
+
+### Conclusions
+- **Saves:** no save-path redirect in any of the four games. `systemBlocks -1 → 0` is in GT7, Control and AC, so it's confirmed as a generic rule. Its condition is the **target SDK < 5.00**, not "always"; for FW 5+ targets it is unnecessary. GT7's `mount_mode → RDONLY` (Part 11) is still the only save patch that is game-specific.
+- **"Force PS5 Pro mode" is a recurring, generic option** (AC 4xx+, Yōtei): `sceKernelGetOperationMode` → 3, `sceKernelIsTrinityMode` → 1, `sceAgcGetIsTrinityMode` → 1. It is a per-function rule set, but must be opt-in: on a base console or a Pro firmware where PSSR fails it gives a black screen (AC `10xx+`).
+- New default rules (added 2026-10-09): Wqhd detection ret0, CommerceDialogOpen2 `ret:0x80000001`, WebSocket SendDataMessage/SendTextMessage/Close `err_http2` (same as CreateRequest). `sceSaveDataMount3` now has `"below": "5.00"`. AC at FW 4.50: nothing left unresolved in the eboot or `libaegir_f`.
+
+### Optional fixes (implemented 2026-10-09)
+- `data/fixes.json` `"options"`: opt-in groups, never applied by default; a selected option's fixes replace the default fix for the same NID. CLI `--option KEY` (both engines), report line `options:` plus a WARNING with the option's warning text, JSON `options`.
+- New fix kind **`plt_stub`**: stub body in a cave, the PLT entry jumps to it, the GOT slot is left alone. This is how AC and Yōtei force values, and it works even where the target firmware has the function (a GOT-only stub could be overwritten if the loader binds the slot).
+- First option **`force_pro`**: `sceKernelGetOperationMode` → `opmode_pro` (mode 3), `sceKernelIsTrinityMode` → `ret:1`, `sceAgcGetIsTrinityMode` → `byte1`. Both engines produce byte-identical AC output with it.
+
+### The shader `s_trap` fix and the AgcDriver scratch hook (investigated 2026-10-09)
+- **AC replaced every `01 00 92 BF` (`s_trap 1`) with `00 00 80 BF` (`s_nop 0`)**: all 164 in the eboot (all 4-aligned, all in the RW segment 7) and all 168 in `ShaderData.bin` (only 20 of them 4-aligned in the file). It's a blind byte-pattern replace; nothing else in `ShaderData.bin` changed.
+- **The 164 come from SDK code, not the game**: the original eboots of **Yōtei and Control also have exactly 164** (GT7: 202), in the same kind of RW segment. README: they are BVH (ray-tracing acceleration structure) asserts. **Neither GT7's nor Control's console-tested backport touched them** (Control ran on FW 10.01, GT7 on FW 4), so the patch is not required by itself; AC applied it together with the scratch hook below.
+- **`libSceAgcDriver` scratch hook.** Both AC AgcDrivers are a stock Sony build plus the same 1,373-byte hook: `4xx+` = Control's build (J03718109, our `fakelibs/4.03`), `10xx+` = GT7's build (J03828141, our `fakelibs/4`). The code segment is extended (`p_filesz`/`p_memsz` 0xb9ce → 0xbf2d, the `--extend-text` technique) and the first instruction of `sceAgcDriverSubmitMultiDcbs` (0x4cc0) and `sceAgcDriverSubmitMultiAcbs` (0x4d40) jumps to a wrapper. The wrapper saves the argument registers and calls a PM4 scanner on each submitted command buffer (≤ 0x40000 dwords). The scanner:
+  - walks type-3 packets, follows `INDIRECT_BUFFER` (op 0x63) chains, and tracks `SET_SH_REG` (op 0x76) writes to registers 0x213, 0x218 and the compute user-data registers 0x240–0x249;
+  - on `DISPATCH_DIRECT`/`DISPATCH_INDIRECT` (op 0x15/0x16) with scratch enabled, it allocates a **24 MB direct-memory block named `ac_scratch`** once, writes its address into the scratch descriptor, and rewrites the tmpring size dword to `0x40080`.
+
+  The README calls this "COMPUTE_TMPRING_SIZE"; older firmware does not set up a compute scratch area. The `10xx+` "Pro black-screen fix" is the same hook moved onto GT7's AgcDriver build, plus removal of the Pro forcing.
+- **Implemented as option `gpu_scratch` (2026-10-09):** the two hooked AgcDrivers are store variants `fakelibs/4/gpu_scratch` (AC 10xx+) and `fakelibs/4.03/gpu_scratch` (AC 4xx+); the option also applies the `s_trap 1` → `s_nop` pattern to modules (4-aligned hits in non-executable segments only: all 164/202 hits in AC, Control, Yōtei and GT7 are there; the 3 unaligned hits in Control's Agc fakelib are skipped) and to every hit in `ShaderData.bin`. On AC at FW 4.50 it reproduces AC's `ShaderData.bin` and `10xx+` AgcDriver byte for byte. GUI: Overview tab, "Optional patches" (per game, not remembered).
+- **Generic?** The hook acts on Agc command buffers for any game, so it belongs to the fakelib, not to a game; the name `ac_scratch` is cosmetic. Whether a game needs it depends on its compute shaders using scratch; GT7 and Control ran without it. Candidate approach: keep it as an **opt-in fakelib variant** in the store (AgcDriver + hook, with provenance) and the `s_trap` replace as a companion option. Shader patching needs a new pipeline step, because `ShaderData.bin` is not a module and the pattern is unaligned there.
+
+---
+
+## Part 16: Battlefield 6 (PPSA19534) backport diff (2026-10-09)
+
+Frostbite engine. `default` works on FW 10.xx and later (its executables are already fake SELFs with SDK 0x10000040; param.json requires 12.70); `4xx+` is the FW 4.xx backport.
+
+### Two executables
+- Besides `eboot.bin` the game ships **`SP/BattlefieldGame.Main_Ps5_retail.elf`**, a second fake-signed executable (the single-player game, 249 MB). The backport patched it like the eboot (SDK 4.00, two guarded wrappers).
+- **Our tool skipped it**: module discovery only took `eboot.bin` and `*.prx`/`*.sprx`. **Fixed**: both engines now also take `*.elf` (`game.EXECUTABLE_EXTENSIONS`, `GameScan.ModuleExtensions`). With that, `SP/…elf` gets SDK 4.00 and the same fixes as the eboot.
+
+### What `default` → `4xx+` changed
+| Module | Change |
+|---|---|
+| all | SDK → 0x04000031/0x09040001 |
+| `libc.prx` | only the known `MapNamedFlexibleMemoryInternal` → `MapFlexibleMemory` NID swap |
+| `libSceNpCppWebApi.prx` | SDK only |
+| `eboot.bin`, `SP/…elf`, both `Engine.Render.Core2.PlatformPs5.retail.prx` | **guarded wrappers** for `scePadIsRemoteController` (FW 10.01), `sceKernelIsTrinityMode` (7.01), `sceVideoOutAllowOutputResolutionWqhdDetection` (6.00) |
+| `eboot.bin` | memory hooks on `sceKernelMapDirectMemory2`, `sceKernelBatchMap2` and one `sceKernelAllocateDirectMemory` call site (below) |
+| `fakelib/` | the store-like set (Agc, AgcDriver, Ampr, PlayGo, Psml) plus AppContent, GameUpdate, NpEntitlementAccess and a **`libkernel.sprx`** |
+
+### Guarded wrapper (new technique)
+The PLT entry jumps to a chain that loads the import's GOT value into r11 and returns a fallback when r11 is 0, or equals the PLT entry's own `push` address (never bound), or equals **`0x800032780`** (libkernel base `0x8_0000_0000` + `0x32780`: the address the loader binds unresolved imports to, which raises `PRX_NOT_RESOLVED_FUNCTION`). Otherwise it `jmp r11`, so the real function is used on firmware that has it.
+- Fallbacks: `scePadIsRemoteController` → `*(u8*)rsi = 0; return 0`; WqhdDetection → `0x8029001c` (a VideoOut error; AC used `return 0`, which we keep); IsTrinityMode → GOT pointed at `xor eax,eax; ret`.
+- **Trade-off**: one backport works on every firmware and uses the real function where present, but the trap address is firmware-specific (libkernel layout). Candidate future fix kind (`guarded`), needs the trap offset per firmware from our libkernel dumps.
+
+### Memory hooks (firmware-specific, not rules)
+- `sceKernelMapDirectMemory2`: GOT → `mov eax, 1; ret` and one call site forced to `eax = 1` (a non-zero result makes the engine take its other mapping path).
+- `sceKernelBatchMap2`: PLT → code that, when the GOT holds the not-resolved trap, jumps to **trap address − 0x19d70**: libkernel's internal implementation on the target firmware, reached by a fixed offset.
+- One call site (`0x1c92fe2`) now goes through a dispatcher that compares the low 32 bits of `sceKernelAllocateDirectMemory`'s GOT value with several known offsets (0x17d60, 0x17990, 0x17a10, 0x18430, …): **it identifies the firmware by where libkernel's export sits**, then jumps to a per-firmware internal function.
+These rely on per-firmware libkernel offsets. Our 43 firmware dumps could provide such tables, but it's a large step; recorded only.
+
+### `fakelib/libkernel.sprx`
+A Sony libkernel (build J03718109, the "4xx kit" build id; SDK 12.00), fake-signed. Its exports are closest to FW 9.x and include 12 functions from FW 10.01–12.00, among them `sceKernelGetOperationMode`, `SyncOnAddressWait8/16` and the `CreateUuidV1/V4/V7` set. Shipping a newer libkernel as a fakelib is another way to provide missing kernel functions. ShadowMountPlus deletes `fakelib/libkernel.sprx` for installed packages (Part 4), so it only works for dumps.
+
+### Our tool on `default` at FW 4 (after the `.elf` fix)
+- New rule `scePadIsRemoteController` → `out2_byte0` (BF6's fallback).
+- Still `missing` in eboot and `SP/…elf`: `WxLcN76q19o`, `8weiQyIdI3A` (libSceNpPremiumAddcont, FW 9.00, refs=1 each). BF6's backport left them unpatched too; recorded in `data/left_unpatched.json`.
+- Everything else BF6 needed is covered by existing rules (IsTrinityMode, Wqhd, VRR peg, CommerceDialogOpen2, SyncOnAddress, the libc swap, saves).
+
+---
+
+## Part 17: Beast of Reincarnation (PPSA29343) backport diff (2026-10-09)
+
+Game Freak, Wwise audio (25 `prx/ak*.prx` plugins). `default` = original dump (SDK 0x11000040, param requires 12.60; works on FW 11.xx+), `4xx+` = FW 4.xx backport.
+
+### What `default` → `4xx+` changed
+- **All 30 modules**: SDK → 0x04000031/0x09040001 (the Wwise plugins and sce_module libraries: nothing else).
+- `libc.prx`: the known `MapNamedFlexibleMemoryInternal` swap, and the `qBS714-Jr3g` call retargeted to libc's own `__cxa_atexit` (our redirect rule, done at the call site).
+- `eboot.bin`: `sceKernelIsTrinityMode` GOT → ret0, `sceAudioOut2Set3DLatency` call → `xor eax,eax` (both existing rules), plus:
+  - **Wwise 7.1.4 → 7.1**: the channel mask `0x2d63f10c` → `0x63f108` at two sites, the same fix CONTROL made (Part 7). Both games carry the **same Wwise build**: the speaker-setup site (`mov [rbp-0x30], rdx; mov edx, 0x2d63f10c; mov eax, 0x63f108`) and a channel-switch site (`mov ecx, 0x3102; jmp; mov ecx, 0x2d63f10c; jmp; mov ecx, 0x4101`) each occur exactly once in Beast and CONTROL and in no other sample (AC has a different Wwise build; GT7, Yōtei and BF6 use other audio). CONTROL patched the first, Beast both.
+  - **`usleep` → busy-wait**: the PLT entry becomes `push rdi; call scePthreadYield; call sceKernelGetProcessTimeCounter; deadline = counter + usec * 0x63a`, then a loop on `sceKernelGetProcessTimeCounter` until the deadline, `return 0`. `usleep` exists on FW 4, so this is a behaviour change (probably precise frame pacing; 0x63a = 1594 counter ticks per µs). Not made a rule: its reason is unknown and it spins a core. Candidate opt-in option if a tester reports stutter.
+- `sceCoredumpWriteUserString` (FW 8.00, eboot, refs=1) was shipped unpatched (recorded in `data/left_unpatched.json`).
+
+### Implemented
+- **Default byte patterns** (`data/fixes.json` `"patterns"`, applied with the known fixes): name, find/replace, `code: true` = search executable segments at any offset (the find bytes carry enough context to match one function). The two Wwise sites are the first entries; on Beast at FW 4 they reproduce the backport's audio patch exactly (`0x2d63f10c` 3 left, `0x63f108` 12, as in `4xx+`). Report: `pattern  Wwise 7.1.4 -> 7.1 (…)  x1`. Both engines identical.
+- With this, `ps5bp backport default --firmware 4` covers everything the Beast backport did except the `usleep` busy-wait; the only unresolved import is `sceCoredumpWriteUserString`, which the backport left too.
+
+---
+
+## Part 18: Borderlands 4 (PPSA01494) backport diff (2026-10-09)
+
+Unreal Engine 5, Wwise, Coherent (libcohtml, librenoircore), libbifrost. `default` = original dump (SDK 0x10000040, param requires 12.70; works on FW 10.xx–12.xx), `4xx+` = FW 4.xx backport.
+
+### SELFs with data after the version block (unwrapper fix)
+- The backport's eboot, libbifrost, libcohtml and librenoircore are PS5-style SELFs with header byte 4 = `0x10` and flags `0x32` (the same variant as AC's `10xx+` AgcDriver). **0x1E8 bytes follow the trailing PT_SCE_VERSION block** (apparently an appended signature), so our unwrapper, which took the block from the file's end, failed with "truncated trailing PT_SCE_VERSION data".
+- **Fixed in both engines**: when the end position doesn't fit, the block is looked for at the declared file size ± 0xF and accepted only if every record is well-formed. Both engines unwrap the four files to identical ELFs. Tests: `tests/test_bl4.py`, `SceVersionTests.AppendedDataAfterVersionBlock_UnwrapsLikePython`.
+
+### What `default` → `4xx+` changed
+- **libc replaced** by an older Sony libc (build J01397812, 2,565 exports instead of 2,925). The modules' libc++ imports it lacks (`_Throw_bad_weak_ptr`, `__throw_bad_variant_access`, `_Cnd_init_with_default_name_override`) are pointed at `xor eax,eax; ret`. We keep and patch the game's own libc instead, so this doesn't apply to us.
+- **eboot**:
+  - **`sceSaveDataMount3` systemBlocks −1 → 0**, the fourth game with it. Done as an adapter in an **extended code segment** (`p_filesz` 0x13b5dc → 0x13c000), with four call sites retargeted to it (`cmp qword [rdi+0x18], -1; jne; mov qword [rdi+0x18], 0; jmp` to the PLT).
+  - GOT → `ret0` **and the symbols rewritten into local definitions** (`st_shndx = 1`, our `--define-symbol`): `sceKernelIsTrinityMode`, `scePadIsRemoteController` (plain ret0, which leaves `*isRemote` unset; our `out2_byte0` also clears it), `sceVideoOutVrrPeg/UnpegFromFixedRate`, `sceAudioOut2Set3DLatency`.
+  - **Wwise 7.1.4 → 7.1 at three sites**: the speaker-setup and channel-switch sites already in our patterns (same Wwise build as CONTROL and Beast), plus a **packed default** `movabs rdx, 0x2d63f10c2d63f10c` whose low half becomes `0x63f108`. CONTROL and Beast left that one; added as the third pattern (unique in every sample, present in BL4, Beast and CONTROL).
+  - **`sceNetPoolCreate` → `mov eax, 1; ret`** in the eboot and in libbifrost (PLT and symbol). The function exists since FW 1.00 and no other sample touches it; returning pool id 1 skips the real call. Reason unknown (maybe the newer SDK's size or flags are refused on FW 4). Recorded, not a rule: a fake pool id could break later net calls.
+- **Other modules**: SDK only (mediadecoders, FontGsm, JobManager, NpCppWebApi, Pfs). The three middleware libraries got only the libc++ stubs and libbifrost the NetPoolCreate stub.
+
+### Our tool on `default` at FW 4
+Nothing unresolved: all 31 imports BL4 needed are covered (existing rules + the three Wwise patterns). Differences from the backport: we keep the game's libc (patched), clear `*isRemote`, and leave `sceNetPoolCreate` alone.
+
+---
+
+## Part 19: Dying Light: The Beast (PPSA24003) backport diff (2026-10-09)
+
+Techland (C-Engine), Wwise, Epic Online Services (`EOSSDK-PS5-Shipping.prx`), ffmpeg, NVIDIA NRD. Three folders: `default` = original dump (SDK 0x11000040, param 13.60/11.00), `decrypted` = the same modules as plain ELFs, `4xx+` = FW 4.xx backport.
+
+### `decrypted` = what our unwrapper produces
+Every segment of `decrypted/*.prx` equals our unwrap of `default/*`; only stale section-header fields in the ELF header differ (`e_shoff`/`e_shnum` point past the file end). Backporting `decrypted` gives the same fixes as `default`. **Our output for ELF input used to be plain ELF**, which the console can't load; **since 2026-10-09 both engines always write fake-signed SELFs** (the user's choice), so `decrypted` and `default` give byte-identical output, and the report warns about plain-ELF modules left unchanged in the game folder (they're not in the overlay and won't load). Tests: `tests/test_decrypted.py`, `DecryptedInputTests`.
+
+### What `default` → `4xx+` changed
+- SDK only: the five Wwise `Ak*.prx` plugins, ffmpeg, libNRD, runtime_prospero.
+- `libc.prx`: the known `MapNamedFlexibleMemoryInternal` swap and the `qBS714-Jr3g` → `__cxa_atexit` redirect (here as GOT → a `jmp` stub in padding).
+- `EOSSDK-PS5-Shipping.prx`: `sceKernelGetOperationMode` → mode 2, written over the PLT entry (our `opmode_normal`).
+- `eboot.bin`:
+  - IsTrinityMode GOT → ret0, Set3DLatency call → `xor eax,eax` (existing rules).
+  - `scePadIsRemoteController` calls → `mov byte [rsi], 0; xor eax, eax; ret`, in a page-extended code segment: **identical to our `out2_byte0`** (BF6's fallback).
+  - VRR calls (`PegToFixedRate`, `UnpegFromFixedRate`, VrrStatus `kP2L8t3j-aM`, `LibwuIonIBw`, `-q-vbO859Tw`) → `mov eax, 0x8029001c; ret` (a VideoOut error), where GT7 used ret0. We keep ret0 and **added `-q-vbO859Tw` → ret0** (FW 5.02), the third VrrStatus function.
+  - **No Wwise patch**, although DL has the same Wwise build (all three of our Wwise patterns match). So DL's backport ran without the 7.1.4 → 7.1 fix: the fix is needed only when the console reports 3D audio. It stays a default (its cost is 7.1 instead of 7.1.4).
+- **EOS SDK: 112 `libSceNpCppWebApi` C++ imports left missing.** DL doesn't ship its own `sce_module/libSceNpCppWebApi.prx` (most samples do), so the console's FW 4 library is used, and it lacks the newer friends, presence, blocking and profanity-filter APIs. The backport left them all unpatched (reached only from online features; lazy binding). Recorded in `data/left_unpatched.json` (source DL).
+
+### Our tool on `default` at FW 4
+All eboot imports resolved after the new VrrStatus rule; only the 112 EOS WebApi imports stay `missing`, now tagged "left unpatched by" DL.
+
+### Test fix
+`tests/test_phase4.py` compared the whole `LEFT_UNPATCHED` table with GT7's unresolved set. Since other backports add entries (BF6, Beast, DL), it now compares GT7's own entries, as it already did for Control.
+
+---
+
+## Part 20: EA SPORTS FC 27 (PPSA34015): two backports that differ only in ampr_emu (2026-10-09)
+
+Frostbite (like BF6). **No original dump**: `default` (works on FW 12.xx and later) and `4xx+` (FW 4.xx) are both backports, already fake-signed with fakelibs.
+
+### The only difference is the ampr_emu build
+Every module is byte-identical between the two folders except `fakelib/libSceAmpr.sprx` (and `default` carries a `sce_sys/param.json`):
+- `default`: ampr_emu **Sep 6 2026** (`Prospero_ReleaseHooksLooseStdio`, 303,878 bytes). The same file ships in AC Black Flag's `default` and `4xx+`.
+- `4xx+`: ampr_emu **Aug 24 2026** (`Prospero_ReleaseHooks`, 255,126 bytes): our `fakelibs/4.03` and `fakelibs/7` build, also in Control's and Dying Light's backports.
+
+So the Sep 6 build is what limits `default` to FW 12.xx+. That matches Control's README ("reads dump data wrong, asks for ~9 GB"). AC's Pro build ran with it at FW 10.01, so it is broken on older firmware rather than everywhere. `data/known_builds.json`'s note now says so (state stays `broken`, Aug 24 stays `ok`).
+
+All ampr_emu files across the samples: GT7's (`8248448608f3`, no build date, 218,678 bytes; also BF6 `default`, Control `default`, `fakelibs/4`), BF6 `4xx+` (`d906bb7b014d`, same size, another undated build), Aug 24 (`362c84e31e3a`), Sep 6 (`0aadd31dbe72`).
+
+### Implemented: check the game's own fakelibs too
+Known-broken builds were flagged only for the fakelib store's files (via its manifest). Both engines now also check the game's own `fakelib/*` modules that the store or `--fakelib` doesn't replace (build date read from the module), and warn: `fakelib/libSceAmpr.sprx (libSceAmpr built Sep  6 2026) is a known-broken build: …`. Tests: `tests/test_decrypted.py` `TestGameFakelibBuilds`, `GameFakelibBuildTests` (Python-matched warnings).
+
+### What the FC 27 backport left unpatched
+Running our tool over the already-backported `4xx+` at FW 4 (store off) adds what the backport did not do: the three argument fixes (`always`), `sceNpCommerceDialogOpen2`, `sceNpEntitlementAccessGetGameTrialsFlag`, VRR peg/unpeg (Engine.Render), and in libc the `qBS714-Jr3g` redirect, the SyncOnAddress adapters and the four libSceLibcInternalExt stubs (the MapNamedFlexibleMemory swap was already there). Reapplying the argument fixes is harmless (each only rewrites the newer value). The game evidently never calls the others on its tested paths. Its three still-missing imports (`sceCoredumpWriteUserString`, two libSceNpPremiumAddcont) are the ones Beast and BF6 also left; FC 27 added as a source in `data/left_unpatched.json`.
+
+---
+
+## Part 21: EA SPORTS UFC 6 (PPSA23566), a plain-ELF backport tested on a PS5 Pro at FW 9.60 (2026-10-09)
+
+Frostbite (EA Sports). `default` = a fake-signed dump (SDK 0x12000038, param 13.60/12.00) with ampr_emu and a PlayGo stub; `tested on PS5 Pro 9.60` = its backport. No README; the folder name is the only information.
+
+### Update (2026-10-09, later): `decrypted` and `dump` added
+- `decrypted` (dated 2026-09-19): the **original v1.004 modules as plain ELFs** (SDK 0x12000038), with a partial `sce_sys` (no `param.json`). Every segment equals our unwrap of `default`, so it is the exact baseline the tester backported; `decrypted` → `tested` differs only by the changes listed below.
+- `dump` (dated 2026-10-07): **v1.005.000**, a newer game update, as decrypted PS5-style SELFs (no encrypted segments), without `fakelib/`. `ps5bp backport dump` resolves every import at **FW 9.60** (`fakelibs/9.60`, `k9.psp` added: the game imports libScePsml) and at **FW 4** (`fakelibs/4`). The EA Sports Frostbite pattern and all rules still match the update (the Mount3 adapter even lands at the same cave), so the rules carry over from one game version to the next. The store sets supply ampr_emu and the PlayGo stub the dump lacks.
+
+### The tested backport ships plain ELFs
+Every module in the tested folder is a **plain, unsigned ELF**, and it ran on a PS5 Pro at FW 9.60. So with that loader setup plain ELFs load too. Our output stays fake-signed (what every other tested backport ships); the plain-ELF warning now says "most tested backports ship fake SELFs … sign them if the game does not start" instead of "the console loads signed files".
+
+### What changed (default → tested)
+- SDK → **0x04000031/0x09040001 (4.00)** on every module, although the console was at 9.60.
+- eboot: `sceSaveDataMount3` systemBlocks −1 → 0 at the call site (**the fifth game**), and one EA Sports Frostbite value: in the branch where a global format equals `0x30c`, the size field `[rbp-0xf0]` = `0xc00` → `0x800` (read as 12 × 0x100 → 8 × 0x100: probably 12 → 8 audio channels, the Frostbite counterpart of the Wwise fix; inferred, not traced).
+- libc: MapNamedFlexibleMemory swap; the `qBS714-Jr3g` wrapper made `return 0` (Control's variant).
+- Engine.Render, NpCppWebApi: SDK only.
+- fakelibs: **Agc, AgcDriver and Psml from Sony build J03950001** (FW 13.x, newer than our newest decrypted dump, 12.70) with SDK 4.00, and ampr_emu **Aug 24** (the dump ships the **Sep 6** build, "PackedStdio" flavour): the same swap as FC 27.
+
+### Implemented
+- **Default pattern** "EA Sports Frostbite: 0x30c output buffer 0xc00 -> 0x800" (34-byte signature). FC 27 already carries `0x800` in both its backports and UFC's tested backport made the change, so two EA backports agree; not in Battlefield 6 (different code). On UFC `default` it matches once.
+- **Store set `fakelibs/9.60`** from the tested backport: Agc, AgcDriver, Psml (J03950001), ampr_emu Aug 24, and the dump's PlayGo stub. The tested files are plain ELF; they were fake-signed for the store (an unchanged store fakelib is copied as it is). With it, `ps5bp backport default --firmware 9.60` resolves every import (without it: 14 Agc/Psml imports of FW 10.01–12.00 missing, and no fakelibs at all for 9.x targets).
+- At FW 4 UFC resolves fully with the existing rules and `fakelibs/4`.
+
+### Sony build id → firmware (from the 43 dumps' libSceAgcDriver)
+The `W:/Build/J…` id in a Sony library identifies the firmware it came from: e.g. J01675412 = 4.00, J01736804 = 4.03, J03308729 = 9.60, J03376575 = 10.01, **J03718109 = 12.00** (Control's and AC's "4xx kit" Agc/AgcDriver/Psml, BF6's libkernel), **J03828141 = 12.70** (GT7's Agc set, `fakelibs/4`), J03950001 = newer than 12.70 (13.x; 13.60 is encrypted). Each firmware has three ids (one per Sony build tree), rising with time; 5.02 and 5.10 share theirs.
+- **Implemented**: `data/sony_builds.json` (generated by `tools/gen_sony_builds.py` from the dumps: 123 ids; an `evidence` section adds J03950001 = 13.60 from AC's README). Both engines print `Sony build J03828141 = FW 12.70` per Sony module in the report (JSON `sony_build`), `fakelib list` shows it, and the app's Store page has a Firmware row. Unknown ids are placed by number ("between FW 12.70 and 13.60"). A game's own `sce_module` libraries show the SDK they came with (UFC 6's libc: between 11.60 and 12.00).
+- Our store sets: `4` = Agc/AgcDriver from **12.70**, Psml from **13.60**; `4.03` = **12.00**; `7` = **10.01** (our BackPork build); `9.60` = **13.60**.
+
+### PSSR models and k9.psp
+- **PSSR** (PlayStation Spectral Super Resolution, the PS5 Pro's ML upscaler) runs in **libScePsml** (`scePsmlMfsr*` / `libScePsml_mfsr2`). Its neural-network weights are **`.psp` model packages** (magic `PSP `) in the firmware: `/system/common/psml_package/` holds `MFSR4K_v070.psp`, `MFSR8K_v070.psp`, `BCSISR_v070.psp`, `MFSRLW_v070.psp` (11.20+) and **`KPN9_v070.psp`** (from 12.40: 349 KB there, **4,135,904 bytes in 13.60**). Psml builds the path with `"/%s/common/psml_package/%s"`. The models change with firmware (MFSR4K: 8.0 MB in 9.60, 10.7 MB in 10.20, 13.4 MB in 11.20, 8.2 MB from 12.40).
+- **`k9.psp` is FW 13.60's `KPN9_v070.psp`, byte for byte, renamed.** Games built against a 13.x SDK use the KPN9 model, which older firmware lacks (or has in its early 12.40 form). The **13.60 Psml** used as a fakelib (Sony build J03950001: GT7, Yōtei, UFC 6, our `fakelibs/4` and `fakelibs/9.60`) is patched to read **`/app0/k9.psp`** (a fixed string; the zones `KPN9::zone0..2` are the 13.x model's), so the backport ships the model in the game folder. AC uses another layout: its 13.60 Psml reads `/app0/psml_package/%.0s%s` and ships `psml_package/KPN9_v070.psp` (2,757,600 bytes, a version between 12.40 and 13.60). The 12.00 "4xx kit" Psml (Control, BL4, BF6, Beast, DL, FC 27, `fakelibs/4.03`) reads only the system folder.
+- It matters on a **PS5 Pro** only (PSSR); a base PS5 never loads the model. Without `k9.psp` an app0-patched Psml can't load KPN9 on a Pro: PSSR fails (black or unupscaled image, depending on the game).
+- **Implemented**: a store set can have an **`app0/` folder** (`fakelibs/4/app0/k9.psp`, `fakelibs/9.60/app0/k9.psp`). A file is added to the output's game root **only when it is needed**: a fakelib of the set that the game uses (it exports a function some game module imports) contains `"/app0/<file>"`, and the game doesn't ship the file itself (report: `added file k9.psp (from the fakelib set)`, JSON `app0_files`; both engines).
+- **Not an optional patch**, by design: the model is read only on a PS5 Pro, for a game that imports `libScePsml`, when the set's Psml is the app0-patched 13.60 build. A base PS5 never loads it, so shipping it costs only 4 MB, while leaving it out breaks PSSR on a Pro. The automatic rule adds it exactly when a Pro could need it. Example: *Harvest Moon: The Winds of Anthos* (PPSA28548) imports no Psml at all, so its FW 4 backport no longer gets `k9.psp` (the first cook, before this rule, did); GT7 imports `libScePsml`/`_mfsr2`/`_quality8K`/`_specularAA` and gets it.
+- Online: nothing public documents `k9.psp` or app0-patched Psml (searches return only spam); PSSR is a PS5 Pro feature, and a 2026 firmware made PSSR 2.0 the Pro default even for games built for 1.0 (VGC), which fits KPN9 being the newer model in 12.40/13.60.
+
+---
+
+## Part 22: God of War Sons of Sparta (PPSA28997), a Unity FW 4.xx backport (2026-10-09)
+
+The folder is a single flat backport, with no original dump next to it and no tester note, so its test status is unknown. Contents: v01.008.001, param.json left at 13.20/11.00. **Every module is a make_fself SELF at SDK 0x04000031/0x09040001**, `sce_sys/about/right.sprx` included. The first **Unity (IL2CPP)** game in the samples:
+- Modules: `eboot.bin` (PS5Player_IL2CPP, Unity "PS5_11_00"), `Media/Modules/{Il2cppUserAssemblies (114 MB), PS5Util}.prx`, `Media/Plugins/{CommonDialog, PSN, SaveData, VoiceInputPlugin, lib_burst_generated, libfmod, libfmodstudio, libresonanceaudio}.prx`, `sce_module/{libc, libSceNpCppWebApi}.prx`. Our module scan already finds them all (any `.prx/.sprx` under the game).
+- fakelib/: Agc, AgcDriver and PlayGo are **GT7's** (= `fakelibs/4`), ampr_emu is the **Aug 24** build (= `fakelibs/4.03`/`7`), and Psml is the 12.70 build J03828141 shipped by DL and FC 27. There's no `k9.psp`, and none is needed: we add none either, because no game module imports a function that this Psml exports.
+
+### Gap found and fixed: opaque PT_SCE_VERSION data
+- `Media/Modules/PS5Util.prx` (Unity's playstation-extras psutils) failed to unwrap with "malformed trailing PT_SCE_VERSION data". Its PT_SCE_VERSION segment (0x125 bytes) sits **exactly at the declared size and ends the file**, but its bytes aren't `name:` records (opaque, hash-like).
+- Fixed in both engines (`unpack_fself_file`, `Self.Unwrap`): a block at exactly the declared size that ends the file is taken as-is. The record check now runs only when the block is found by searching around that position (the Yōtei −8 and BL4 appended-data cases). Unwrap is identical in both engines, and sign → unwrap gives the same ELF back. Tests: `tests/test_gowsos.py`, `SceVersionTests.OpaqueVersionBlock_UnwrapsLikePython_AndSignRoundTrips`.
+
+### What the tester patched
+- **eboot**: `sceKernelGetOperationMode` gets a GOT stub `mov dword [rdi],2; mov dword [rsi],0; xor eax,eax; ret` (mode 2 = base PS5), equivalent to our `opmode_normal` (source `GOWSOS` added to that rule).
+- **Left unpatched, with untouched PLT entries** (lazy binding: each fails only if called):
+  - eboot: `sceKernelIsTrinityMode`, `scePadIsRemoteController`, `sceVideoOutVrrPeg/UnpegFromFixedRate`, `sceHttp2SetRequestNoContentLength` (FW 5.02);
+  - PSN.prx: `sceNpCommerceDialogOpen2`;
+  - libc: all 7 FW 6–11 imports (`tB59hFLH3SA`, `OQ-dzhlnM28`, `qBS714-Jr3g`, SyncOnAddressWait32/64/Wake/Wait).
+
+  We have proven rules for all of them except the HTTP/2 one; recorded in `data/left_unpatched.json` as `GOWSOS`. The libc ones matter if the game calls them on FW 4. GT7 needed the SyncOnAddress adapters.
+
+### New rule
+- **`bEegosRhgM0` `sceHttp2SetRequestNoContentLength` → ret0, DERIVED (not console-tested).** The Unity player calls it once, only when a request has no known length (else `sceHttp2SetRequestContentLength`), and ignores the result in both branches.
+
+### Our pipeline on it (FW 4)
+Every import resolves. Fixes applied:
+- eboot: IsTrinity, PadIsRemote and Vrr stubs, plus the new HTTP/2 stub;
+- PSN.prx: CommerceDialogOpen2 → 0x80000001;
+- **SaveData.prx** (the Unity plugin, not the eboot): Mount3/Prepare adapters;
+- libc: the full GT7 set.
+
+Both engines produce identical files.
+
+---
+
+## Part 23: Hades II (PPSA36082), a console-tested FW 4.03 backport with a full README (2026-10-09)
+
+Folders: `default` (original v01.006.000, SDK 0x12000038/0x13090001, param 13.60/12.00; FMOD audio, no Psml import) and `4xx+`. The `4xx+` backport is console-tested on FW 4.03 (boots, saves, loads). Its README (Vietnamese/English) documents every change, and the diff `default` → `4xx+` matches it exactly. The README is the most useful one so far, because it explains why each change was made.
+
+### What the backport does
+- **SDK fields**: 0x04030031/0x09040001 on every module (FW 4.03 preset). param.json lowered to 4.03. The .sceversion block is left as-is ("firmware doesn't enforce it").
+- **Signing**: every module make_fself (PS4-style). fakelib/ = **our `fakelibs/4.03` Agc + AgcDriver byte for byte** ("4xx kit"), no Psml (not imported), no ampr_emu or PlayGo.
+- **eboot**: 3 **PLT entries overwritten in place, NIDs not renamed** (the unresolved imports stay; the game still loads on 4.03, which confirms lazy binding again):
+  - `La9uyZv4Kvw` → `mov eax,0xff; ret`;
+  - `sceKernelGetOperationMode` → `xor eax,eax; ret` (the caller pre-initialises both outputs and branches only on `*rsi == 1`);
+  - Wqhd detection → ret0.
+
+  Plus the save fix at the call site: `mov qword [rbp-0x138], -1` → `0`, field +0x18 of the Mount3 struct. This is the **sixth game with the systemBlocks fix**. The README adds that libSceSaveData is identical on 4.03, 4.50 and 12.00, so the 0x809F0000 comes from the old save-data service.
+- **libc replaced** by the SDK 11 libc of Beast of Reincarnation's console-run backport. On top of it:
+  - 7 PLT stubs `xor eax,eax; ret` (libSceLibcInternalExt ×3, SyncOnAddress ×4);
+  - `mov ecx,0x8000` → `mov ecx,0` at both `sceKernelMapFlexibleMemory` call sites (VA 0xb0ad, 0xb2c0), "heap fix";
+  - libSceJobManager's `g0mZgRTFPoQ` (`std::_Xbad_function_call`, FW 11) renamed to `L1SBTkC+Cvw` (abort), only because the replacement libc doesn't export it. We keep the game's own libc, which does, so this doesn't apply to our output.
+
+### Rule changes (both engines, data only)
+1. **`La9uyZv4Kvw` ret0 → `ret:0xff`.** It is the process CPU-affinity mask, verified in FW 12.70 libkernel: a pthread_once initialiser reads the app info and caches **0xff** (native title) or **0x1fff**, never 0 for a game. Hades II feeds it to thread affinity (`and rax,0xaa`) and checks `popcnt(mask) >= 5`, so ret0 breaks it. GT7 (our old source) only forwards the value to another call, so 0xff is just as valid there. `test_gt7.TestStub` now skips the body comparison for this NID. Our dumps say the function first appears in FW 12.40 (the README says 12.70).
+2. **`4h6F1LLbTiw` swap → adapter**: `and ecx, 0xffff7fff`, then jump to `sceKernelMapFlexibleMemory` (`IWIBBdTHit4`). libc's heap growth passes flags **0x8000**, which only the *internal* entry accepts. The public function rejects it on **every** firmware:
+   - FW 1.00–6.50: `and ecx, 0xffbfff6f` (allowed bits 0x400090);
+   - FW 12.70: `test ecx, 0x88000` → `0x80020016` (EINVAL) as its first instruction.
+
+   So the old plain swap failed as soon as libc grew its heap ("Failed to create the heap", 0xa002000e; the README says Onimusha PPSA27836 died at boot from it). GT7 got away with it because it never took that path. The swap stays console-proven, and the flag clearing ships in this console-tested backport.
+3. Source `HADES2` added to GetOperationMode, Wqhd, Mount3 and both rules above.
+
+### Our pipeline on `default` (FW 4.03)
+Everything resolves, using the `fakelibs/4.03` set. Both engines give identical files and reports. Differences from the tester's build, all deliberate:
+- We keep the game's own libc, with our proven adapters for SyncOnAddress, the libSceLibcInternalExt redirect/stubs and the new MapFlexibleMemory adapter.
+- We use GOT stubs instead of PLT overwrites.
+- We copy the whole store set (Ampr, PlayGo, Psml too). The tester shipped only Agc + AgcDriver, since Hades II doesn't import Psml.
+
+---
+
+## Part 24: Hollow Knight: Silksong (PPSA12544), a Unity FW 4.xx backport (2026-10-09)
+
+Folders: `default` (original v01.000.010, SDK 0x11000040/0x12590001, param 13.00/11.00; works 11.xx+; the dump's fakelib/ has the Sep 6 ampr_emu, PlayGo and the AppContent/GameUpdate/NpEntitlementAccess stubs) and `4xx+`. There's no README and the test status is unknown. Same Unity layout as Sons of Sparta (Part 22): `Media/Modules/{Il2cppUserAssemblies,PS5Util}.prx`, `Media/Plugins/{CommonDialog,PSN,SaveData,Share,lib_burst_generated}.prx`.
+
+### What the backport does
+- **Signing**: every module is an unencrypted PS5-style SELF (not make_fself). SDK 0x04000031/0x09040001 everywhere. param.json gets `requiredSystemSoftwareVersion` 0x09000000…, `sdkVersion` **0** (new). `sce_sys/about/right.sprx` is replaced by a **retail-encrypted** right.sprx from elsewhere (12,752 bytes; nothing can unwrap it).
+- **fakelib/**:
+  - Agc + AgcDriver = **our `fakelibs/4.03` byte for byte** (4xx kit; the third backport using them, after Hades II and Control);
+  - the three dump stubs re-signed;
+  - **ampr_emu and PlayGo removed**, so the console's own are used;
+  - new **`libSceSaveData.native.sprx`**: Sony build J03718123 (FW 12.00), SDK lowered to 4.00. Our pipeline sees no SaveData import missing at FW 4, so its purpose is unclear (BackPork's 7xx set patches the same library). Recorded, not adopted.
+- **eboot**, mostly at the call sites (the PLT stays):
+  - IsTrinityMode → `xor eax,eax` ×2;
+  - PadIsRemoteController → `mov byte [rsi],0; xor eax,eax` ×2 (= our `out2_byte0`);
+  - GetOperationMode PLT → `xor eax,eax; ret`;
+  - **`sceUserServiceGetGamePresets` struct size 0x30 → 0x28** (new, see below);
+  - plus edits inside the PT_SCE_VERSION records (no effect on loading).
+- **SaveData.prx** (Unity plugin): the 16-byte copy of `{blocks, systemBlocks}` into the Mount3 struct becomes an 8-byte copy of `blocks`, so systemBlocks stays 0. That's the systemBlocks fix again (7th game, 2nd time inside SaveData.prx), and our Mount3 adapter covers it.
+- **libc**: GT7's recipe:
+  - FW 11 libSceLibcInternalExt ×3 → PLT ret0;
+  - SyncOnAddress adapters written straight into the PLT (our Wait32 bytes);
+  - the MapNamedFlexibleMemoryInternal → MapFlexibleMemory and Wait32 → `_umtx_op` NID renames.
+
+  The **heap flag 0x8000 is left in place** (Part 23: EINVAL on every firmware when libc grows its heap).
+- **PS5Util.prx**:
+  - the **code segment is extended from 0x3ee to 0x4000** (into the zero gap before the next page; Sons of Sparta's PS5Util has the same 0x4000 size);
+  - three import slots are repurposed: `puts` → `clock_gettime`, SyncOnAddressWait → `_umtx_op`, SyncOnAddressWake → `__error`;
+  - hand-written Wait (UMTX_OP_WAIT, op 2, ETIMEDOUT handling) and Wake (op 3) are placed in the new space.
+
+### Gaps found
+1. **New rule `-sD02mFDBh4` `sceUserServiceGetGamePresets`**: adapter, `when: always`, `below: 11.00`, DERIVED. It clamps the struct's size field to 0x28 (`cmova`, branch-free). The size check lives in the system service: FW 4.03's library just forwards the call over IPC, and that service isn't in our dumps. So the first firmware that accepts 0x30 is unknown, and 11.00 is the earliest one we know works. The game zeroes the struct first and reads only 0x28 bytes back.
+2. **PS5Util has no room for our SyncOnAddress adapters.** Without `--extend-text` its backport ends in ERROR ("no int3 padding left for a 11-byte code piece"). With it, both engines extend the segment to 0x4000 (+0x3c12), exactly where the tester's ends, and both produce identical files. Two independent Unity backports used the same extension. **Changed (same day): extension is now the automatic fallback** in both engines, the CLI and the app. It happens only when a module has no padding left, and the report notes it. Opt out with `--no-extend-text` or the app toggle. The app stores the setting under a new key, `AutoExtendText`, so a saved value from the old off-by-default doesn't carry over. Still not console-confirmed.
+
+Our pipeline otherwise covers everything the tester did (eboot stubs, Mount3 in SaveData.prx, the libc set plus the heap-flag adapter) at FW 4, with the store set.
+
+---
+
+## Part 25: Horizon Call of the Mountain (PPSA05666), a PSVR2 game, FW 5.xx backport (2026-10-09)
+
+Folders: `default` (v01.004.011, Guerrilla "Azimuth" engine, SDK **0x05000033/0x09590001**, param 5.00/5.00; the user notes it works on 7.xx+) and `5xx+`. The `5xx+` README is only donation links, and the test status is unknown. Modules: eboot (10,465 imports), 33 Wwise/audio plugins in `prx/` (ak*, auro, izotope, mcdsp, masteringsuite, sceaudio3d), and `sce_module/` Face, FaceTracker, JobManager, NpCppWebApi, Pfs, libc.
+- **`default` is not a pristine dump.** Its fakelib/ already holds a backport-style set:
+  - Agc, AgcDriver and PlayGo = **our `fakelibs/4` (GT7's)**;
+  - Psml = the 12.70 build from DL/FC 27/Sons of Sparta;
+  - an **undated ampr_emu** (86 imports, no `__DATE__`), plus AppContent and NpEntitlementAccess stubs.
+- **What the backport does**:
+  - every module make_fself'd at SDK 0x04000031/0x09040001: the game, all plugins, `right.sprx` (1.00 → 4.00), and **even the homebrew stubs (2.00 → 4.00)**;
+  - no param.json, so the overlay keeps 5.00 (hence "5xx+");
+  - libc and every plugin: SDK change only. A SDK 5 game needs nothing more at FW 4/5, apart from the one import below.
+- **eboot: one guarded wrapper** for `uv0Ae+jCeWY` `sceHmd2ReprojectionSetAllowPositionalReprojection` (libSceHmd2ReprojectionPositional, FW 6.50). The PLT entry jumps into a 5-piece chain in int3 padding:
+  - `r11 = GOT`;
+  - if `r11 >> 32 == 8` and `r11d == 0x32782`: return 0;
+  - else `jmp r11`.
+
+  BF6 (Part 16) compared with **0x800032780**. This build uses **0x800032782**.
+
+### The unresolved-function trap per firmware
+Every libkernel has exactly one `int 0x43; ret` after int3 padding: the function the loader binds unresolved imports to (PRX_NOT_RESOLVED_FUNCTION). Offsets (libkernel loads at 0x8_0000_0000):
+
+| FW | trap | FW | trap |
+|---|---|---|---|
+| 1.00 | 0x2fb60 | 7.01 | 0x350a0 |
+| 2.00–2.50 | 0x30c00 | 7.20–7.61 | 0x35100 |
+| 3.00–3.20 | 0x31dd0 | 8.00–8.60 | 0x354e0 |
+| **4.00–4.51** | **0x32780** | 9.00–9.60, 11.00–11.60 | 0x362e0 |
+| 5.02–5.10 | 0x33380 | 10.01–10.60 | 0x35b90 |
+| 5.50 | 0x33450 | 12.00–12.20 | 0x369c0 |
+| 6.00–6.02 | 0x342c0 | 12.40–12.70 | 0x36a80 |
+| 6.50 | 0x34330 | | |
+
+- BF6's 0x800032780 is the FW 4.00–4.51 trap exactly. Horizon's **0x800032782 is the `ret` after it**, and it matches no firmware's trap, at 4.xx or at 5.xx (0x33380). Either the loader binds to trap+2 (not seen anywhere) or the guard never fires and the call reaches the trap. That's a console question for the testers.
+- This table is what a generic **`guarded` fix kind** needs: the trap address for the target firmware, so one backport would use the real function where it exists and a fallback elsewhere. It isn't implemented yet. For the firmwares we can't decrypt (4.30, 7.00, 11.20, 13.60), neighbours with the same trap are likely but unconfirmed.
+
+### PS VR2 detection (implemented 2026-10-09)
+- **Signal: imports from `libSceHmd2*` (headset, reprojection) or `libSceVrTracker2`.** Of the 14 sample games only GT7 (optional VR mode: Hmd2 ×17, VrTracker2 ×6) and Horizon (VR-only: Hmd2 ×22, Hmd2ReprojectionPositional ×1, VrTracker2 ×7) import them.
+- **Not usable**:
+  - param.json `attribute` bit 29 (0x20000000) is also set on BF6, BL4, UFC 6 and DL, so it isn't VR;
+  - `attribute3` differs for Horizon (0x001c0c00), but one VR-only sample can't name a "requires PS VR2" bit. The PS5 dev wiki's param.json page is behind a bot check.
+  - The firmware lists can't date headset support either: 29 of Horizon's 30 VR imports exist from FW 2.00–4.00, and only the reprojection call is FW 6.50. When the console got headset support isn't visible in the libraries.
+- Both engines: `GameResult.psvr2` (per game module and library, distinct NIDs; JSON `psvr2`), plus one WARNING saying that VR-only games can't run below the headset firmware and that optional-VR games usually run without it. App: a **"PS VR2" badge** in the game header after Analyze, whose tooltip lists the libraries; the warning appears in Overview → Warnings. Tests: `tests/test_psvr2.py`, `Psvr2BadgeTests`.
+- Open: "supports" vs "requires" needs the param.json attribute bit (more VR samples or the wiki).
+
+### Rule change
+- **`uv0Ae+jCeWY` → ret0, DERIVED** (new). GT7 imports it too, so GT7's FW 4 backport now gets 7 eboot stubs and 29 unresolved imports (30 before); `test_gt7` and `GuiSupportTests` are updated. GT7 (console-tested at FW 4) left it unpatched because it doesn't call it without a headset, while a VR-only game does. Our pipeline at FW 4 now leaves nothing unresolved in Horizon, and both engines give identical files. We also apply the derived Mount3/Prepare and GetSpeakerInfo adapters, which the tester didn't need for a FW 5 target with a 5.00 param.
+
+---
+
+## Part 26: Kena: Bridge of Spirits (PPSA01746), a re-signed dump and an SDK-only FW 4.xx backport (2026-10-09)
+
+Folders: `default` (v02.008.000, SDK 0x05000033/0x09590001, param 6.02/5.00; the user notes it works 5.xx–10.xx) and `4xx+`. Wwise plus the same audio plugin set as Horizon (`prx/ak*`, auro, izotope, mcdsp, masteringsuite, sceaudio3d), and `sce_module/` Face, FaceTracker, JobManager, NpCppWebApi, Pfs, libc. There's no README and the test status is unknown. The backport renames the title to "Kena: Bridge of Spirits By BADERLINK".
+
+### `default` is a re-signed decrypted dump
+- Every module has a **`.esbak`** next to it: the decrypted original ELF, with section headers. The PS5-style SELFs in `default` were rebuilt from them by an unknown tool, and the code is identical (`test_kena`). That tool:
+  - **zeroed** the digest bytes after the program-header table;
+  - **zeroed** the PT_SCE_VERSION block (plugins, eboot), or **cut it off**: the `sce_module` SELFs end at their last segment, and libc/libSceFace are 8 or 4 bytes short of their declared size;
+  - **damaged `sce_sys/about/right.sprx`**: its last segment runs 0x40 bytes past the end of the file. Both engines refuse it, which is correct, and the backport ships a working one.
+- **Sony system modules' PT_SCE_VERSION is a build-path string**, not records: e.g. libc's 0x1a bytes = `Prospero_Release/libc.prx `.
+
+### Unwrapper generalised (both engines)
+The trailing PT_SCE_VERSION block is now found in this order:
+1. `name:` records at the end of the file, or within 0xF of the declared size (Yōtei −8, BL4 appended data);
+2. otherwise the bytes after the last SELF segment, as they are (path string, Unity's opaque PS5Util block, zeros);
+3. if nothing follows the last segment, zeros. The loader doesn't check this segment (Hades II README).
+
+A declared size larger than the file is tolerated, as long as every entry lies inside the file. The "malformed/truncated trailing PT_SCE_VERSION data" errors are gone, and Part 22's special case is folded into rule 2. All 75 of Kena's readable modules unwrap identically in both engines.
+
+### Wwise plugins without SDK fields
+21 of the `prx/ak*` plugins (decrypted originals included) have an **all-zero PT_SCE_MODULE_PARAM**: no magic, no SDK. Our pipeline errored on them ("param segment magic 0x0"). Now `sdk.read_sdk`/`Sdk.Read` return (0, 0) and `write_sdk` changes nothing, so they're analysed and kept, reported as "SDK 0x00000000/0x00000000 (kept)". The tester shipped them unchanged too.
+
+### What the backport does
+- **SDK fields only**: eboot, libc and the SDK-carrying plugins go 5.00 → 0x04000031/0x09040001. No code patch anywhere, no fakelib/. param.json: `sdkVersion` 4.00, `requiredSystemSoftwareVersion` **left at 6.02**.
+- `sce_module` SELFs re-signed with their version strings restored.
+- An SDK 5 game needs nothing else at FW 4 by the tester's account. Our pipeline additionally applies the derived Mount3/Prepare and GetGamePresets adapters, plus the store's FW 4 fakelib set (the dump has no fakelib/). Both engines give identical files and reports.
+
+---
+
+## Part 27: Review of every sample folder (2026-10-09)
+
+A sweep over all 15 samples with the current engines. Scripts are in the session scratchpad, not the repo.
+
+### 1. Unwrap: every module in every folder (568 files), both engines
+- **564 unwrap**, and C# matches Python byte for byte on all 536 SELFs (the other 32 are plain ELFs).
+- The 4 failures are all non-code: GT7 `default/fakelib/libSceAmpr.sprx` (0 bytes), Kena's damaged `right.sprx` (Part 26), Silksong's retail-encrypted backport `right.sprx`, and **UFC 6's tested `right.sprx`, which is 12,512 zero bytes**.
+- 42 modules have no SDK fields: Kena's Wwise plugins, `default` and `4xx+`.
+
+### 2. Our pipeline on every original at the tester's firmware (20 runs)
+- No crash. The only module error is Kena's damaged `right.sprx`.
+- Unresolved imports that remain, all with evidence:
+  - GT7: `sceHmd2ReprojectionSetParamWithBuffer` (FW 5.02, PSVR2; GT7 left it unpatched);
+  - BF6/FC 27: libSceNpPremiumAddcont ×2 (FW 9.00; both backports left them);
+  - Beast/FC 27: `sceCoredumpWriteUserString` (FW 8.00; both left it);
+  - DL: the 112 EOS imports (left by the tested backport).
+- **Closed: `gWT7X8H0bYs` (libSceVideoOutVrrStatus, FW 10.01), open since Part 14.** FW 10.01's libSceVideoOut shows it's a VRR status getter `(handle, status*)`. It writes exactly 0x50 bytes, or returns an error without writing. Yōtei ignores the return value and reads the struct (sometimes from uninitialised stack), so a plain ret0 is wrong. New stub **`out2_zero50`** (zero 0x50 bytes at rsi if not null, return 0): an all-zero status takes the game's "VRR off" path. Rule DERIVED. Yōtei now backports to FW 4 with nothing unresolved, identically in both engines.
+
+### 3. Imports the testers touched vs our rules (14 original/backport pairs)
+Every import a tester redirected, stubbed or renamed is covered by a rule, recorded as a firmware-specific technique (BF6 memory hooks, Beast `usleep`, BL4 `sceNetPoolCreate`), or a side effect of swapping libc (BL4, AC, Hades II: different libc builds, so the symbol-index comparison is noise there; the JobManager rename). **Nothing new was missed.**
+
+### 4. Other files the testers add or change
+- **`SHA256SUMS`** ships with three backports from different testers (AC, Control, Hades II), so testers can verify a copy.
+- **`dlc_emu.ini`** (AC `4xx+`). The homebrew AppContent / NpEntitlementAccess / GameUpdate stubs that many dumps ship are **dlc_emu** (`C:/dev/ps5/dlc_emu`, the ampr_emu author's tree). They fake the entitlement services and read `/app0/dlc_emu.ini` (`[PSAL]` entries: label, download_status, *_visible, active_flag, entitlement_key…) and log to `/app0/dlc_emu.log`. AC's tester listed the game's ULC labels to unlock paid DLC. Recorded as fact; **not a Studio feature** (it unlocks content the user hasn't bought).
+- `ampr_emu.index` ships in GT7's and AC's backports (stale-index risk, Part 14 checklist); `k9.psp` as before; Wwise games' `ShaderData.bin` (AC option).
+- **Homebrew stubs re-signed at SDK 4.00** (BF6, Horizon): only the SDK field differs from the 2.00 originals. We keep 2.00, which is below every target.
+- **ampr_emu inventory**: Aug 24 builds (ok), Sep 6 builds (known broken), and undated builds. GT7's (our `fakelibs/4`, also in BF6's and Control's dumps; 146 imports) and Horizon's (86 imports) carry no `__DATE__`, so `known_builds` can't name them.
+
+### Follow-ups proposed (not done)
+- **Done (same day): an unreadable `sce_sys/about/right.sprx` is a warning, not a module error** (both engines). It's left out of the output, and the dump's own copy stays in use under the overlay. It is **still lowered like any module when its SDK is above the target**: GT7's is SDK 10.00 (`0x10000040`; all other originals are 1.00), and GT7's console-tested FW 4 backport lowered it, so skipping the file outright would undo something a tested backport did. Evidence it isn't needed to start a game: UFC 6 ran on a Pro with an all-zero one, and Hades II, AC and Yōtei ship none. Tests: `test_phase0.test_unreadable_rights_module_is_a_warning`, `RightsModuleTests`.
+- Write a **`SHA256SUMS`** next to the backport output (both engines), the convention three testers already use.
+
+---
+
+## Part 28: Kingdom Come: Deliverance II (PPSA21704), a minimal FW 4.xx backport (2026-10-09)
+
+CryEngine (Warhorse), FMOD audio (`bin/prosperoshared/libfmod*.prx`, plus `pros.sdk.Prospero-9.000.prx` and `Quatmosphere.prx`), `sce_module/` libc and NpCppWebApi. `default` = v01.052.000 (SDK 0x09000040/0x11590001, param `sdkVersion` 9.00 and `requiredSystemSoftwareVersion` **12.20**; the user notes it works on **9.xx and higher**), with the dlc_emu AppContent / GameUpdate / NpEntitlementAccess stubs in `fakelib/`. `4xx+` = the FW 4.xx backport. No README, test status unknown.
+
+### `4xx+` is an overlay, not a full folder
+It has no `sce_sys/param.json` and no dlc_emu stubs: only the changed modules plus its own `fakelib/`. It's meant to be copied over the dump, so the dump's param.json (12.20 / 9.00) and dlc_emu stay in use.
+
+### What changed (default → 4xx+)
+- Every module re-signed as a PS4-style fake SELF (make_fself) with **SDK 0x04000031/0x09040001 (4.00)**. That includes `right.sprx`, whose SDK the tester **raised** from 1.00 to 4.00 (a blanket SDK pass; we keep 1.00, which is below every target).
+- **libc**: the MapNamedFlexibleMemory → MapFlexibleMemory NID swap (rule `4h6F1LLbTiw`). libc's SyncOnAddressWait/Wake (`Hc4CaR6JBL0`, `q2y-wDIVWZA`) were **left unpatched**, as in GOWSOS.
+- **eboot, 5 patches at call sites**, all `call <PLT>` → `xor eax,eax` + NOPs, except the last:
+  - `sceVideoOutVrrPegToFixedRate`, `sceVideoOutVrrUnpegFromFixedRate`: ret0, as our stubs do.
+  - `sceKernelIsTrinityMode` ×2: ret0, as our stub does.
+  - **`scePsmlMfsrInit` (`3WVD91e12ZQ`)**: the game's one-instruction thunk `jmp scePsmlMfsrInit` became `xor eax,eax; ret`, so PSSR is never initialised and init reports success. **New: no other sample backport touches it.**
+- SaveData Mount3/Prepare call sites untouched (our derived argument fixes are applied anyway: `when: always`).
+- `fakelib/` = Agc, AgcDriver, Psml **byte-identical to `fakelibs/4.03`** (the FW 12.00 "4xx kit", Sony J03718109). No ampr_emu and no PlayGo stub: KCD2 imports nothing from libSceAmpr. (Our output still gets them from the store set: a dump needs them under ShadowMountPlus, Part 4.)
+
+### Why KCD2 needed `scePsmlMfsrInit` disabled and other games didn't
+`scePsmlMfsrInit` (and libScePsml as a whole) first appears in **FW 9.00** (firmware_db). Eight sample games import it, KCD2 included. Every other one calls it **only behind a PS5 Pro check**:
+- Dying Light: `sceKernelIsTrinityMode() != 0` and `sceSysmoduleLoadModule(0x137) == 0`, then init;
+- Borderlands 4: a flag plus `LoadModule(0x137)` succeeding;
+- Control and GT7: global flags (Control's is a "Pro" bool getter).
+
+With `sceKernelIsTrinityMode` stubbed to 0 those games never reach it on old firmware. **KCD2 calls `sceSysmoduleLoadModule(0x137)` and then `scePsmlMfsrInit` unconditionally**, from a renderer constructor (`0x1c0e24c`), and ignores the result. A second helper (`0x2a24330`, reached only through data) returns `init == 0` as "PSSR available". (0x137 is the libScePsml sysmodule id: every game loads it right before init. Inferred.) So on any console, KCD2 always runs MFSR init. The 9.xx floor the user observed for the original matches the firmware where libScePsml appears. Inferred, not console-verified: the FW 12.00 Psml fakelib's init fails or hangs below FW 9.00, and only KCD2 runs into it.
+
+### Our pipeline on `default`
+At FW 4 (`fakelibs/4`) and FW 4.03 (`fakelibs/4.03`), every import resolves, 0 errors. The VRR, Trinity and MapNamedFlexibleMemory rules cover the tester's other patches; KCD2 was added to their `sources` and to `left_unpatched` for SyncOnAddress. **Gap: `scePsmlMfsrInit` isn't stubbed**, because the Psml fakelib provides it (rules only fire for missing imports, unless a rule says `always`).
+
+### Implemented: a default `scePsmlMfsrInit` rule below FW 9.00
+- `data/fixes.json` `3WVD91e12ZQ`: `plt_stub` `ret0`, `when: always`, `below: 9.00`, DERIVED (source KCD2). It's `always` and `plt_stub` because the Psml fakelib provides the function. It's `below 9.00` because libScePsml first appears in 9.00 and the original runs from 9.xx. Other games only reach the call on a Pro, so the rule doesn't change what they do.
+- **Option fix kind `none`** (new, both engines' fix-table builder): an option entry with `kind: "none"` removes the default fix for that NID. **`force_pro`** uses it to keep the real `scePsmlMfsrInit`, since PSSR needs it.
+- KCD2 at FW 4 now gets `PLT -> ret0` for it, and at FW 9.60 nothing. C# and Python give byte-identical output folders (13 files). Test: `KnowledgeTests.FixTable_OptionOverridesDefault_AndBelowLimitsTargets` (the Python twin went with ps5bp on 2026-10-10). The GT7, Control, BF6, BL4 and AC `force_pro` parity runs still pass.
 
 ---
 

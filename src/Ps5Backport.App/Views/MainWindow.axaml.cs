@@ -1,0 +1,108 @@
+using Avalonia;
+using Avalonia.Controls;
+using Avalonia.Data;
+using Avalonia.Media;
+using Avalonia.Input;
+using Avalonia.Input.Platform;
+using Avalonia.Platform.Storage;
+using Ps5Backport.App.ViewModels;
+
+namespace Ps5Backport.App.Views;
+
+public partial class MainWindow : Window
+{
+    public MainWindow()
+    {
+        InitializeComponent();
+        LogList.DoubleTapped += (_, _) => (DataContext as MainViewModel)?.JumpTo(LogList.SelectedItem as LogEntry);
+
+        // drop a game folder (or a file in it) anywhere on the Backport page; other pages handle their own drops
+        DragDrop.SetAllowDrop(this, true);
+        AddHandler(DragDrop.DragOverEvent, (_, e) =>
+        {
+            if (DataContext is MainViewModel { Page: AppPage.Backport })
+                e.DragEffects = e.DataTransfer.TryGetFiles() is { Length: > 0 } ? DragDropEffects.Copy : DragDropEffects.None;
+        });
+        AddHandler(DragDrop.DropEvent, (_, e) =>
+        {
+            if (DataContext is MainViewModel { Page: AppPage.Backport } vm
+                && e.DataTransfer.TryGetFiles()?.FirstOrDefault()?.TryGetLocalPath() is { } path)
+                vm.DropGame(path);
+        });
+
+        // Windows 11 Mica (Acrylic on Windows 10); the theme's solid background where neither is available
+        TransparencyLevelHint = [WindowTransparencyLevel.Mica, WindowTransparencyLevel.AcrylicBlur, WindowTransparencyLevel.None];
+        Background = Brushes.Transparent;
+        Opened += (_, _) =>
+        {
+            if (ActualTransparencyLevel == WindowTransparencyLevel.None)
+                this[!BackgroundProperty] = this.GetResourceObservable("SystemControlBackgroundAltHighBrush").ToBinding();
+        };
+    }
+
+    /// <summary>Restores the remembered size, position and log height.</summary>
+    public void ApplySettings(AppSettings s)
+    {
+        if (s.WindowWidth is > 400 and var w && s.WindowHeight is > 300 and var h)
+        {
+            Width = w;
+            Height = h;
+        }
+        if (s.WindowX is { } x && s.WindowY is { } y)
+        {
+            WindowStartupLocation = WindowStartupLocation.Manual;
+            Position = new PixelPoint(x, y);
+        }
+        if (s.Maximized)
+            WindowState = WindowState.Maximized;
+        Body.RowDefinitions[3].Height = new GridLength(Math.Clamp(s.LogHeight, 80, 600));
+    }
+
+    /// <summary>Copies the current size, position and log height into the settings (before saving).</summary>
+    public void CaptureSettings(AppSettings s)
+    {
+        s.Maximized = WindowState == WindowState.Maximized;
+        if (WindowState == WindowState.Normal)
+        {
+            s.WindowWidth = Width;
+            s.WindowHeight = Height;
+            s.WindowX = Position.X;
+            s.WindowY = Position.Y;
+        }
+        s.LogHeight = Body.RowDefinitions[3].ActualHeight;
+    }
+
+    async Task<string[]> PickFiles(string title, string typeName, string[] patterns, bool multiple)
+    {
+        var files = await StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
+        {
+            Title = title, AllowMultiple = multiple, FileTypeFilter = [new FilePickerFileType(typeName) { Patterns = patterns }],
+        });
+        return files.Select(f => f.TryGetLocalPath()).OfType<string>().ToArray();
+    }
+
+    protected override void OnDataContextChanged(EventArgs e)
+    {
+        base.OnDataContextChanged(e);
+        if (DataContext is not MainViewModel vm)
+            return;
+        vm.PickFolder = async title =>
+        {
+            var folders = await StorageProvider.OpenFolderPickerAsync(new FolderPickerOpenOptions { Title = title, AllowMultiple = false });
+            return folders.Count > 0 ? folders[0].TryGetLocalPath() : null;
+        };
+        vm.PickFile = async (title, typeName, pattern) => (await PickFiles(title, typeName, [pattern], false)).FirstOrDefault();
+        vm.Store.PickFiles = PickFiles;
+        vm.SetClipboard = async text =>
+        {
+            if (Clipboard is { } clipboard)
+                await clipboard.SetTextAsync(text);
+        };
+        // keep the newest log line in view
+        vm.Log.Visible.CollectionChanged += (_, _) =>
+        {
+            if (vm.Log.Visible.Count > 0)
+                LogList.ScrollIntoView(vm.Log.Visible.Count - 1);
+        };
+    }
+}

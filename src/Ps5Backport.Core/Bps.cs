@@ -1,7 +1,7 @@
 namespace Ps5Backport.Core;
 
 /// <summary>
-/// BPS patches (beat format), as shipped by BackPork for 10.01 libraries -> 6xx/7xx (port of ps5bp/bps.py).
+/// BPS patches (beat format), as shipped by BackPork for 10.01 libraries -> 6xx/7xx.
 ///
 ///     "BPS1" varint(source_size) varint(target_size) varint(metadata_size) metadata
 ///     actions...  source_crc32 target_crc32 patch_crc32   (little-endian u32 each)

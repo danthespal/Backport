@@ -2,19 +2,21 @@ using Ps5Backport.Core;
 
 namespace Ps5Backport.Tests;
 
-/// <summary>Phase 0.4: NID, name DB and firmware primitives, checked against ps5bp.</summary>
+/// <summary>Phase 0.4: NID, name DB and firmware primitives (golden results recorded from ps5bp).</summary>
 public class NidTests
 {
     [Theory]
     [InlineData("sceKernelIsTrinityMode", "tU5e3f9gSiU")]          // CONTROL README
     [InlineData("sceKernelSyncOnAddressWait8", "dFym5b41JLU")]      // REFERENCE_OVERVIEW Part 8
     [InlineData("sceKernelSyncOnAddressWait16", "XgVs4jRehcY")]
+    [InlineData("sceKernelGetOperationMode", "NH6xARDOVv8")]
+    [InlineData("sceSaveDataMount3", "ZP4e7rlzOUk")]
     public void Compute_KnownValues(string name, string nid) => Assert.Equal(nid, Nid.Compute(name));
 
     [Fact]
-    public void Compute_MatchesPython_ForAerolibNames()
+    public void Compute_MatchesGolden_ForAerolibNames()
     {
-        string aerolib = Oracle.Need(".original", "reference", "sce_symbols_new", "aerolib.csv");
+        string aerolib = Repo.Need(".original", "reference", "sce_symbols_new", "aerolib.csv");
         // every 7th name: a broad, deterministic sample (incl. C++ mangled names)
         string[] names = File.ReadLines(aerolib)
             .Select(l => l.Split(' ', 2))
@@ -22,14 +24,7 @@ public class NidTests
             .Select(p => p[1].Trim())
             .Where((_, i) => i % 7 == 0)
             .ToArray();
-        string list = System.Text.Json.JsonSerializer.Serialize(names);
-        var expected = Oracle.Json<string[]>($$"""
-            import json
-            from ps5bp.nid import compute_nid
-            names = json.loads({{System.Text.Json.JsonSerializer.Serialize(list)}})
-            print(json.dumps([compute_nid(n) for n in names]))
-            """);
-        Assert.Equal(expected, names.Select(Nid.Compute).ToArray());
+        Golden.Match("aerolib-nids.txt", $"{names.Length} names, sha256 {Golden.Sha(string.Join("\n", names.Select(n => $"{Nid.Compute(n)} {n}")))}\n");
     }
 
     [Theory]
@@ -47,20 +42,12 @@ public class NidTests
     public void SplitSymbol_NonNid(string symbol) => Assert.Null(Nid.SplitSymbol(symbol));
 
     [Fact]
-    public void NameDb_MatchesPython()
+    public void NameDb_MatchesGolden()
     {
-        string aerolib = Oracle.Need(".original", "reference", "sce_symbols_new", "aerolib.csv");
+        string aerolib = Repo.Need(".original", "reference", "sce_symbols_new", "aerolib.csv");
         var db = new NameDb(aerolib);
-        var expected = Oracle.Json<Dictionary<string, object>>("""
-            import json
-            from ps5bp.nid import NameDb
-            db = NameDb('.original/reference/sce_symbols_new/aerolib.csv')
-            probe = ['tU5e3f9gSiU', 'GGeRJk1XdWc', 'D-CzAxQL0XI', 'XXXXXXXXXXX']
-            print(json.dumps({'count': len(db.names), 'names': [db.name(n) for n in probe]}))
-            """);
-        Assert.Equal(((System.Text.Json.JsonElement)expected["count"]).GetInt32(), db.Count);
-        string[] names = ((System.Text.Json.JsonElement)expected["names"]).EnumerateArray().Select(e => e.GetString()!).ToArray();
-        Assert.Equal(names, new[] { "tU5e3f9gSiU", "GGeRJk1XdWc", "D-CzAxQL0XI", "XXXXXXXXXXX" }.Select(db.Name).ToArray());
+        string[] probe = ["tU5e3f9gSiU", "GGeRJk1XdWc", "D-CzAxQL0XI", "XXXXXXXXXXX"];
+        Golden.Match("namedb.txt", $"{db.Count}\n" + string.Join("", probe.Select(n => $"{n} {db.Name(n)}\n")));
     }
 }
 
@@ -69,26 +56,15 @@ public class FirmwareTests
     static readonly string[] Versions = ["1", "4", "4.03", "4.3", " 7.61 ", "10", "10.01", "4.30"];
 
     [Fact]
-    public void Firmware_MatchesPython()
+    public void Firmware_MatchesGolden()
     {
-        string list = System.Text.Json.JsonSerializer.Serialize(Versions);
-        var expected = Oracle.Json<string[][]>($$"""
-            import json
-            from ps5bp import sdk, fwdb
-            out = []
-            for v in json.loads({{System.Text.Json.JsonSerializer.Serialize(list)}}):
-                ps5, ps4 = sdk.sdk_for_firmware(v)
-                major, minor = sdk.parse_firmware(v)
-                out.append([str(major), str(minor), fwdb.fw_name(v), f'{ps5:#010x}', f'{ps4:#010x}', sdk.param_version(v)])
-            print(json.dumps(out))
-            """);
         var actual = Versions.Select(v =>
         {
             var (major, minor) = Firmware.Parse(v);
             var (ps5, ps4) = Firmware.SdkFor(v);
-            return new[] { major.ToString(), minor.ToString(), Firmware.Name(v), $"0x{ps5:x8}", $"0x{ps4:x8}", Firmware.ParamVersion(v) };
-        }).ToArray();
-        Assert.Equal(expected, actual);
+            return $"'{v}' {major} {minor} {Firmware.Name(v)} 0x{ps5:x8} 0x{ps4:x8} {Firmware.ParamVersion(v)}\n";
+        });
+        Golden.Match("firmware.txt", string.Concat(actual));
     }
 
     [Fact]
@@ -106,5 +82,5 @@ public class FirmwareTests
     public void Parse_Invalid(string value) => Assert.Throws<FormatException>(() => Firmware.Parse(value));
 
     [Fact]
-    public void SdkFor_UnknownMajor() => Assert.Throws<ArgumentException>(() => Firmware.SdkFor("11"));
+    public void SdkFor_UnknownMajor() => Assert.Throws<ArgumentException>(() => Firmware.SdkFor("12"));
 }

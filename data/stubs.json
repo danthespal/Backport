@@ -1,0 +1,45 @@
+{
+  "_about": "Stub bodies (x86-64, position independent), referenced by name from fixes.json. \"ret:<value>\" in a fix means mov eax, <value>; ret (ret0 when 0).",
+  "stubs": {
+    "ret0": {
+      "hex": "31c0c3",
+      "asm": "xor eax, eax; ret",
+      "note": "return 0"
+    },
+    "opmode_normal": {
+      "hex": "c7070200000083260031c0c3",
+      "asm": "mov dword [rdi], 2; and dword [rsi], 0; xor eax, eax; ret",
+      "note": "int sceKernelGetOperationMode(int* mode, int* lowEnergy): *mode = 2; *lowEnergy = 0; return 0"
+    },
+    "flag0": {
+      "hex": "c7070000000031c0c3",
+      "asm": "mov dword [rdi], 0; xor eax, eax; ret",
+      "note": "out-parameter flag = 0 (sceNpEntitlementAccessGetGameTrialsFlag: not a trial): *rdi = 0; return 0"
+    },
+    "err_http2": {
+      "hex": "b801104380c3",
+      "asm": "mov eax, 0x80431001; ret",
+      "note": "return an error so the caller takes its 'unavailable' path (CONTROL's sceHttp2WebSocket* stubs)"
+    },
+    "opmode_pro": {
+      "hex": "c7070300000083260031c0c3",
+      "asm": "mov dword [rdi], 3; and dword [rsi], 0; xor eax, eax; ret",
+      "note": "sceKernelGetOperationMode forcing PS5 Pro: *mode = 3; *lowEnergy = 0; return 0 (AC 4xx+, Yotei)"
+    },
+    "byte1": {
+      "hex": "c6070131c0c3",
+      "asm": "mov byte [rdi], 1; xor eax, eax; ret",
+      "note": "bool out-parameter = 1 (sceAgcGetIsTrinityMode forcing PS5 Pro, AC 4xx+): *(u8*)rdi = 1; return 0"
+    },
+    "out2_byte0": {
+      "hex": "c6060031c0c3",
+      "asm": "mov byte [rsi], 0; xor eax, eax; ret",
+      "note": "second argument is a bool out-parameter = 0 (scePadIsRemoteController: not remote): *(u8*)rsi = 0; return 0"
+    },
+    "out2_zero50": {
+      "hex": "31c04885f6740a4889f7b950000000f3aac3",
+      "asm": "xor eax, eax; test rsi, rsi; je .ret; mov rdi, rsi; mov ecx, 0x50; rep stosb; .ret: ret",
+      "note": "second argument is a 0x50-byte output struct: zero it (when not null); return 0"
+    }
+  }
+}
