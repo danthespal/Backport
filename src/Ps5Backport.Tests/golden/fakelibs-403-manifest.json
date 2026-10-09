@@ -1,0 +1,53 @@
+{
+  "libSceAgc.sprx": {
+    "container": "PS5-style SELF",
+    "module": "libSceAgc",
+    "ps5_sdk": "0x04000031",
+    "ps4_sdk": "0x09040001",
+    "build_path": "W:/Build/J03718109/sys/build/integration/orbis-build_0005c/package/target/phase2/usermode/src/graphics/gen2/agc/prx/libSceAgc.prx",
+    "sha256": "e1c8f6dc384e0a5927f863fc6fd698e3da603ed41de512ae3529ad06dea2e191",
+    "size": 326617,
+    "source": "test source"
+  },
+  "libSceAgcDriver.sprx": {
+    "container": "PS5-style SELF",
+    "module": "libSceAgcDriver",
+    "ps5_sdk": "0x04000031",
+    "ps4_sdk": "0x09040001",
+    "build_path": "W:/Build/J03718109/sys/build/integration/orbis-build_0005c/package/target/phase2/usermode/src/graphics/gen2/agc_driver/libSceAgcDriver.prx",
+    "sha256": "d83edb3a0b57c4a2476d902e16da051db82ef36b81b791d6e8d2d998f083e27b",
+    "size": 122383,
+    "source": "test source"
+  },
+  "libSceAmpr.sprx": {
+    "container": "PS4-style fake SELF (make_fself.py)",
+    "module": "libSceAmpr",
+    "ps5_sdk": "0x02000009",
+    "ps4_sdk": "0x08050001",
+    "build_path": "C:/dev/ps5/ampr_emu/out/Prospero_ReleaseHooks/libSceAmpr.prx",
+    "build_date": "Aug 24 2026",
+    "sha256": "362c84e31e3a06a42f50fe4d6ea124d15e73f77c901470f90823935d7f36ca76",
+    "size": 255126,
+    "source": "test source"
+  },
+  "libScePlayGo.sprx": {
+    "container": "PS4-style fake SELF (make_fself.py)",
+    "module": "libScePlayGo",
+    "ps5_sdk": "0x02000009",
+    "ps4_sdk": "0x08050001",
+    "build_path": "C:/dev/ps5/playgo/./out/libScePlayGo.prx",
+    "sha256": "35c437b7e9365e3183974ab5bfbf489ea1db12b7f711c829813ff14ce4d1790e",
+    "size": 17741,
+    "source": "test source"
+  },
+  "libScePsml.sprx": {
+    "container": "PS5-style SELF",
+    "module": "libScePsml",
+    "ps5_sdk": "0x04000031",
+    "ps4_sdk": "0x09040001",
+    "build_path": "W:/Build/J03718109/sys/internal/usermode/src/psml/Prospero_Game_PRX_psml_prx/libScePsml.prx",
+    "sha256": "6632020e026d7cec0af89604de96e64f42cc4764af0a28de7ed20fa78f56a36d",
+    "size": 1524286,
+    "source": "test source"
+  }
+}

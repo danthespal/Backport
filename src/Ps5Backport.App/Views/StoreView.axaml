@@ -1,0 +1,131 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Ps5Backport.App.ViewModels"
+             xmlns:app="using:Ps5Backport.App"
+             x:Class="Ps5Backport.App.Views.StoreView"
+             x:DataType="vm:StoreViewModel">
+
+  <!-- list and detail: firmware sets on the left, the selected set's libraries on the right -->
+  <Grid ColumnDefinitions="230,*">
+
+    <Border Classes="panel" BorderThickness="0,0,1,0">
+      <DockPanel Margin="10,14,10,10">
+        <Grid DockPanel.Dock="Top" ColumnDefinitions="*,Auto" Margin="4,0,0,8">
+          <TextBlock Classes="section" Text="Fakelib sets" VerticalAlignment="Center" />
+          <Button Grid.Column="1" Content="Add" Padding="10,2" ToolTip.Tip="Add libraries to a set (a new firmware makes a new set)">
+            <Button.Flyout>
+              <Flyout Placement="BottomEdgeAlignedLeft">
+                <StackPanel Spacing="6" Width="320">
+                  <TextBlock Classes="section" Text="Add libraries" />
+                  <TextBlock Classes="caption" Text="Firmware of the set (a new one creates the set)" />
+                  <TextBox Text="{Binding AddFirmware}" PlaceholderText="4.03" />
+                  <TextBlock Classes="caption" Text="Where the files come from" />
+                  <TextBox Text="{Binding AddSource}" PlaceholderText="Where the files came from, e.g. a backport tested on FW 10.01" />
+                  <Button Classes="accent" Content="Choose files and add" Command="{Binding AddFilesCommand}" HorizontalAlignment="Right" />
+                </StackPanel>
+              </Flyout>
+            </Button.Flyout>
+          </Button>
+        </Grid>
+        <TextBlock DockPanel.Dock="Bottom" Classes="caption" Text="{Binding StoreText}" TextWrapping="Wrap" Margin="4,8,0,0" />
+        <ListBox ItemsSource="{Binding Sets}" SelectedItem="{Binding SelectedSet}" Background="Transparent">
+          <ListBox.ItemTemplate>
+            <DataTemplate x:DataType="vm:StoreSetRow">
+              <StackPanel Margin="0,2">
+                <TextBlock FontWeight="Medium" Text="{Binding Title}" />
+                <TextBlock Classes="caption" Text="{Binding Summary}"
+                           Foreground="{Binding Tone, Converter={x:Static app:ToneBrushConverter.Instance}}" />
+              </StackPanel>
+            </DataTemplate>
+          </ListBox.ItemTemplate>
+        </ListBox>
+      </DockPanel>
+    </Border>
+
+    <Panel Grid.Column="1" Margin="16,14,16,8">
+      <TextBlock Classes="muted" Text="No fakelib sets yet. Add libraries to start one." IsVisible="{Binding !HasSet}" />
+      <DockPanel IsVisible="{Binding HasSet}">
+        <Grid DockPanel.Dock="Top" ColumnDefinitions="*,Auto" Margin="0,0,0,10">
+          <TextBlock Classes="title" Text="{Binding SetTitle}" VerticalAlignment="Center" />
+          <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="6">
+            <Button Content="Apply BPS patch">
+              <Button.Flyout>
+                <Flyout Placement="BottomEdgeAlignedRight">
+                  <StackPanel Spacing="6" Width="380">
+                    <TextBlock Classes="section" Text="Build a library from a BPS patch" />
+                    <TextBlock Classes="caption" Text="Patch (.bps, e.g. from BackPork)" />
+                    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="6">
+                      <TextBlock Classes="mono muted" Text="{Binding BpsPatch}" TextTrimming="PathSegmentEllipsis" VerticalAlignment="Center" />
+                      <Button Grid.Column="1" Content="Choose" Command="{Binding ChooseBpsPatchCommand}" />
+                    </Grid>
+                    <TextBlock Classes="caption" Text="{Binding BpsInfo}" TextWrapping="Wrap" />
+                    <TextBlock Classes="caption" Text="Library it applies to (decrypted, from a firmware dump)" />
+                    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="6">
+                      <TextBlock Classes="mono muted" Text="{Binding BpsInput}" TextTrimming="PathSegmentEllipsis" VerticalAlignment="Center" />
+                      <Button Grid.Column="1" Content="Choose" Command="{Binding ChooseBpsInputCommand}" />
+                    </Grid>
+                    <TextBlock Classes="caption" Text="Add to the set for firmware" />
+                    <TextBox Text="{Binding AddFirmware}" PlaceholderText="7" />
+                    <TextBlock Classes="caption" Text="Where it comes from (empty: patch and file name)" />
+                    <TextBox Text="{Binding AddSource}" />
+                    <CheckBox IsChecked="{Binding BpsSign}" Content="Fake-sign the result" />
+                    <Button Classes="accent" Content="Apply and add" Command="{Binding ApplyBpsCommand}" HorizontalAlignment="Right" />
+                  </StackPanel>
+                </Flyout>
+              </Button.Flyout>
+            </Button>
+            <Button Content="Open folder" Command="{Binding OpenFolderCommand}" />
+          </StackPanel>
+        </Grid>
+
+        <Grid DockPanel.Dock="Top" ColumnDefinitions="Auto,120,Auto,*" ColumnSpacing="8" Margin="0,0,0,8">
+          <TextBlock Text="Check imports against" VerticalAlignment="Center" />
+          <ComboBox Grid.Column="1" ItemsSource="{Binding CheckFirmwares}" SelectedItem="{Binding CheckFirmware}" HorizontalAlignment="Stretch" />
+          <Button Grid.Column="2" Content="Check" Command="{Binding CheckCommand}" IsEnabled="{Binding !Busy}" />
+          <TextBlock Grid.Column="3" Classes="caption" Text="{Binding CheckSummary}" VerticalAlignment="Center" TextWrapping="Wrap" />
+        </Grid>
+
+        <!-- inspector for the selected library -->
+        <Border DockPanel.Dock="Bottom" Classes="card" Margin="0,10,0,0" IsVisible="{Binding HasFile}">
+          <StackPanel Spacing="4">
+            <StackPanel Orientation="Horizontal" Spacing="8">
+              <SelectableTextBlock FontWeight="Medium" Text="{Binding SelectedFile.Name, FallbackValue=''}" />
+              <TextBlock Classes="caption" Text="{Binding SelectedFile.Size, FallbackValue=''}" VerticalAlignment="Center" />
+            </StackPanel>
+            <Grid ColumnDefinitions="90,*" RowDefinitions="Auto,Auto,Auto,Auto,Auto" RowSpacing="3">
+              <TextBlock Classes="caption" Text="Source" />
+              <SelectableTextBlock Grid.Column="1" Text="{Binding SelectedFile.Source, FallbackValue=''}" TextWrapping="Wrap" />
+              <TextBlock Grid.Row="1" Classes="caption" Text="Firmware" IsVisible="{Binding SelectedFile.HasSonyBuild, FallbackValue=False}" />
+              <SelectableTextBlock Grid.Row="1" Grid.Column="1" Text="{Binding SelectedFile.SonyBuild, FallbackValue=''}"
+                                   IsVisible="{Binding SelectedFile.HasSonyBuild, FallbackValue=False}" ToolTip.Tip="Sony build id and the firmware it shipped with" />
+              <TextBlock Grid.Row="2" Classes="caption" Text="Build path" />
+              <SelectableTextBlock Grid.Row="2" Grid.Column="1" Classes="mono" FontSize="12" Text="{Binding SelectedFile.BuildPath, FallbackValue=''}" TextWrapping="Wrap" />
+              <TextBlock Grid.Row="3" Classes="caption" Text="SHA-256" />
+              <SelectableTextBlock Grid.Row="3" Grid.Column="1" Classes="mono" FontSize="12" Text="{Binding SelectedFile.Sha256, FallbackValue=''}" />
+              <TextBlock Grid.Row="4" Classes="caption" Text="Imports" />
+              <TextBlock Grid.Row="4" Grid.Column="1" TextWrapping="Wrap"
+                         Text="{Binding SelectedFile.CheckText, FallbackValue=''}"
+                         Foreground="{Binding SelectedFile.CheckTone, FallbackValue='muted', Converter={x:Static app:ToneBrushConverter.Instance}}" />
+            </Grid>
+          </StackPanel>
+        </Border>
+
+        <TableView ItemsSource="{Binding Files}" SelectedItem="{Binding SelectedFile}">
+          <TableView.Columns>
+            <TableViewColumn Header="Library" Binding="{Binding Module}" Width="*" x:DataType="vm:StoreFileRow" />
+            <TableViewColumn Header="Container" Binding="{Binding Container}" Width="150" x:DataType="vm:StoreFileRow" />
+            <TableViewColumn Header="SDK" Binding="{Binding Sdk}" Width="70" x:DataType="vm:StoreFileRow" />
+            <TableViewColumn Header="Built" Binding="{Binding BuildDate}" Width="110" x:DataType="vm:StoreFileRow" />
+            <TableViewColumn Header="State" Width="190" x:DataType="vm:StoreFileRow">
+              <TableViewColumn.CellTemplate>
+                <DataTemplate x:DataType="vm:StoreFileRow">
+                  <TextBlock Text="{Binding State}" Foreground="{Binding Tone, Converter={x:Static app:ToneBrushConverter.Instance}}" />
+                </DataTemplate>
+              </TableViewColumn.CellTemplate>
+            </TableViewColumn>
+          </TableView.Columns>
+        </TableView>
+      </DockPanel>
+    </Panel>
+  </Grid>
+</UserControl>

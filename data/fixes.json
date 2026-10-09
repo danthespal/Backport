@@ -1,0 +1,764 @@
+{
+  "_about": "Known fixes at the game <-> system-library boundary, keyed by the imported NID. Per library function, never per game. Read by Ps5Backport.Core. Fields: kind (stub | swap | adapter | redirect | plt_stub = stub body in a cave and the PLT entry jumps to it, the GOT slot is left alone: forces a value even where the target firmware has the function | none = only in an option: removes the default fix for that NID), name, area, sources (keys of \"sources\" or free text), stub (a name in stubs.json, or \"ret:<value>\"), new_nid (swap/adapter target), export_nid (redirect target, exported by the same module), insns (adapter code, one \"hex  ; asm\" per instruction, branch-free; \"call_got\" = call the real function through its GOT slot), when (missing = only when the import is missing on the target [default] | always = argument fixes), below (optional firmware: apply only when the target is lower, e.g. 5.00), post_call (adapter runs after the real function), proven (default true; false = derived, not console-tested), note, rationale. \"options\": opt-in groups (never applied by default; selected per backport). Each has name, description, warning, sources and its own fixes (a selected option's fixes replace the default fix for the same NID), optionally fakelib_variant (files in the fakelib set's <variant>/ subfolder replace the same-named fakelibs) and patterns (byte replacements: find/replace hex; in modules only 4-aligned hits inside non-executable segments, in the listed data files every hit). \"patterns\": byte replacements applied with the known fixes (name, area, sources, find/replace hex, code = search executable segments at any offset instead of 4-aligned data, note, rationale); the find bytes carry enough context to match one function only.",
+  "sources": {
+    "GT7": "GT7 1.71 FW4",
+    "CONTROL": "CONTROL Resonant 1.300 FW4.03",
+    "AC": "AC Black Flag Resynced 01.006.038 FW4.xx/10.xx",
+    "YOTEI": "Ghost of Yotei 02.002.000 FW10 (not tested)",
+    "BF6": "Battlefield 6 PPSA19534 FW4.xx",
+    "BEAST": "Beast of Reincarnation PPSA29343 FW4.xx",
+    "BL4": "Borderlands 4 PPSA01494 FW4.xx",
+    "DL": "Dying Light: The Beast PPSA24003 FW4.xx",
+    "FC27": "EA SPORTS FC 27 PPSA34015 FW4.xx",
+    "UFC6": "EA SPORTS UFC 6 PPSA23566 (tested on PS5 Pro FW 9.60)",
+    "GOWSOS": "God of War Sons of Sparta PPSA28997 FW4.xx (test status unknown)",
+    "HADES2": "Hades II PPSA36082 FW4.03 (console-tested)",
+    "HKSS": "Hollow Knight: Silksong PPSA12544 FW4.xx (test status unknown)",
+    "HCOTM": "Horizon Call of the Mountain PPSA05666 FW4.xx/5.xx (test status unknown)",
+    "KCD2": "Kingdom Come: Deliverance II PPSA21704 FW4.xx (test status unknown)"
+  },
+  "umtx_op": "04AjkP0jO9U",
+  "fixes": {
+    "NH6xARDOVv8": {
+      "kind": "stub",
+      "name": "sceKernelGetOperationMode",
+      "area": "libkernel",
+      "sources": [
+        "GT7",
+        "CONTROL",
+        "DL",
+        "GOWSOS",
+        "HADES2",
+        "HKSS"
+      ],
+      "stub": "opmode_normal",
+      "note": "*mode = 2 (normal), *lowEnergy = 0"
+    },
+    "tU5e3f9gSiU": {
+      "kind": "stub",
+      "name": "sceKernelIsTrinityMode",
+      "area": "libkernel",
+      "sources": [
+        "GT7",
+        "CONTROL",
+        "BL4",
+        "DL",
+        "HKSS",
+        "KCD2"
+      ],
+      "stub": "ret0",
+      "note": "PS5 Pro query (libkernel from FW 7.01); 0 = not Pro"
+    },
+    "3WVD91e12ZQ": {
+      "kind": "plt_stub",
+      "name": "scePsmlMfsrInit",
+      "area": "PS5 Pro",
+      "sources": [
+        "KCD2"
+      ],
+      "stub": "ret0",
+      "when": "always",
+      "below": "9.00",
+      "proven": false,
+      "note": "PSSR (MFSR) init skipped, reports success",
+      "rationale": "libScePsml first appears in FW 9.00. Most games call scePsmlMfsrInit only on a PS5 Pro (behind sceKernelIsTrinityMode or a Pro flag), so with Trinity stubbed to 0 they never reach it. Kingdom Come: Deliverance II calls sceSysmoduleLoadModule(0x137) and then scePsmlMfsrInit on every console, and its tester replaced the call with return 0. plt_stub because the Psml fakelib provides the function. Lifted by the force_pro option (REFERENCE_OVERVIEW Part 28)."
+    },
+    "yu17wG8L5FI": {
+      "kind": "stub",
+      "name": "sceKernelHasTrinityMode",
+      "area": "libkernel",
+      "sources": [
+        "GT7"
+      ],
+      "stub": "ret0"
+    },
+    "La9uyZv4Kvw": {
+      "kind": "stub",
+      "name": "libkernel La9uyZv4Kvw",
+      "area": "libkernel",
+      "sources": [
+        "GT7",
+        "HADES2"
+      ],
+      "stub": "ret:0xff",
+      "note": "CPU affinity mask of the process (FW 12.40+): the firmware returns 0xff for a native title (0x1fff otherwise)",
+      "rationale": "FW 12.70 libkernel computes the mask once from the app info: 0xff or 0x1fff, never 0 for a game. Callers pass it to thread-affinity calls; one game checks popcnt(mask) >= 5, so ret0 breaks it. A FW 4.03 backport (console-tested) returns 0xff; an earlier backport's ret0 only worked because its caller just forwards the value."
+    },
+    "XgVs4jRehcY": {
+      "kind": "stub",
+      "name": "sceKernelSyncOnAddressWait16",
+      "area": "libkernel",
+      "sources": [
+        "CONTROL"
+      ],
+      "stub": "ret0",
+      "rationale": "Names from AnyPS5 (NIDs computed; not in aerolib). FreeBSD _umtx_op has no 8/16-bit compare, so Wait8/Wait16 stay return-0 stubs as in CONTROL (callers re-check and spin)."
+    },
+    "dFym5b41JLU": {
+      "kind": "stub",
+      "name": "sceKernelSyncOnAddressWait8",
+      "area": "libkernel",
+      "sources": [
+        "CONTROL"
+      ],
+      "stub": "ret0",
+      "rationale": "Names from AnyPS5 (NIDs computed; not in aerolib). FreeBSD _umtx_op has no 8/16-bit compare, so Wait8/Wait16 stay return-0 stubs as in CONTROL (callers re-check and spin)."
+    },
+    "5tRaBjtdTzY": {
+      "kind": "stub",
+      "name": "sceVideoOutVrrPegToFixedRate",
+      "area": "video out",
+      "sources": [
+        "GT7",
+        "BL4",
+        "DL",
+        "KCD2"
+      ],
+      "stub": "ret0"
+    },
+    "T4ucGB8CsnM": {
+      "kind": "stub",
+      "name": "sceVideoOutVrrUnpegFromFixedRate",
+      "area": "video out",
+      "sources": [
+        "GT7",
+        "BL4",
+        "DL",
+        "KCD2"
+      ],
+      "stub": "ret0"
+    },
+    "kP2L8t3j-aM": {
+      "kind": "stub",
+      "name": "libSceVideoOutVrrStatus kP2L8t3j-aM",
+      "area": "video out",
+      "sources": [
+        "GT7",
+        "DL"
+      ],
+      "stub": "ret0"
+    },
+    "LibwuIonIBw": {
+      "kind": "stub",
+      "name": "libSceVideoOutVrrStatus LibwuIonIBw",
+      "area": "video out",
+      "sources": [
+        "GT7",
+        "DL"
+      ],
+      "stub": "ret0"
+    },
+    "-q-vbO859Tw": {
+      "kind": "stub",
+      "name": "libSceVideoOutVrrStatus -q-vbO859Tw",
+      "area": "video out",
+      "sources": [
+        "DL"
+      ],
+      "stub": "ret0",
+      "note": "VRR status query (FW 5.02 and later have it): return 0, like the other two VrrStatus functions"
+    },
+    "eb-gvTYQcoY": {
+      "kind": "stub",
+      "name": "sceVideoOutLatencyControlWaitBeforeInput",
+      "area": "video out",
+      "sources": [
+        "CONTROL"
+      ],
+      "stub": "ret0"
+    },
+    "MCJ8SkzsQxY": {
+      "kind": "stub",
+      "name": "sceVideoOutLatencyMeasureSetStartPoint",
+      "area": "video out",
+      "sources": [
+        "CONTROL"
+      ],
+      "stub": "ret0"
+    },
+    "w7Ipp9Xl7hg": {
+      "kind": "stub",
+      "name": "sceVideoOutAllowOutputResolutionWqhdDetection",
+      "area": "video out",
+      "sources": [
+        "AC",
+        "HADES2"
+      ],
+      "stub": "ret0",
+      "note": "no WQHD output detection: return 0 (FW 6.00 and later have it)"
+    },
+    "TViD1EZXkNI": {
+      "kind": "stub",
+      "name": "sceAudioOut2Set3DLatency",
+      "area": "audio / ACM",
+      "sources": [
+        "CONTROL",
+        "BL4",
+        "DL"
+      ],
+      "stub": "ret0"
+    },
+    "GTfJ64qFCPw": {
+      "kind": "stub",
+      "name": "sceAcmBatchJobPriority",
+      "area": "audio / ACM",
+      "sources": [
+        "CONTROL"
+      ],
+      "stub": "ret0"
+    },
+    "e6y3WMBYbiM": {
+      "kind": "stub",
+      "name": "sceSaveDataCancel",
+      "area": "save data, entitlements, HTTP2",
+      "sources": [
+        "CONTROL"
+      ],
+      "stub": "ret0"
+    },
+    "y7JD1gfwyfA": {
+      "kind": "stub",
+      "name": "sceNpEntitlementAccessGetGameTrialsFlag",
+      "area": "save data, entitlements, HTTP2",
+      "sources": [
+        "CONTROL"
+      ],
+      "stub": "flag0",
+      "note": "*flag = 0: not a trial (full game)"
+    },
+    "IXmfUaze9So": {
+      "kind": "stub",
+      "name": "sceNpCommerceDialogOpen2",
+      "area": "save data, entitlements, HTTP2",
+      "sources": [
+        "AC"
+      ],
+      "stub": "ret:0x80000001",
+      "note": "store dialog unavailable: returns an error (FW 7.01 and later have it)"
+    },
+    "fCWdlnmB1Ks": {
+      "kind": "stub",
+      "name": "scePadIsRemoteController",
+      "area": "input",
+      "sources": [
+        "BF6",
+        "BL4",
+        "DL",
+        "HKSS"
+      ],
+      "stub": "out2_byte0",
+      "note": "not a remote controller: *isRemote = 0, return 0 (FW 10.01 and later have it)",
+      "rationale": "BF6 4xx+ routes the PLT entry through a guard that calls the real function when its GOT slot is bound and otherwise does mov byte [rsi], 0; xor eax, eax; ret. The stub is that fallback."
+    },
+    "WYszaHaIkWs": {
+      "kind": "stub",
+      "name": "sceHttp2WebSocketSendTextMessageAsync",
+      "area": "save data, entitlements, HTTP2",
+      "sources": [
+        "CONTROL"
+      ],
+      "stub": "err_http2",
+      "note": "online disabled"
+    },
+    "ksn0O9Iilb0": {
+      "kind": "stub",
+      "name": "sceHttp2WebSocketSendDataMessageAsync",
+      "area": "save data, entitlements, HTTP2",
+      "sources": [
+        "CONTROL"
+      ],
+      "stub": "err_http2",
+      "note": "online disabled"
+    },
+    "-0wUiGX74GQ": {
+      "kind": "stub",
+      "name": "sceHttp2WebSocketCreateRequest",
+      "area": "save data, entitlements, HTTP2",
+      "sources": [
+        "CONTROL"
+      ],
+      "stub": "err_http2",
+      "note": "online disabled"
+    },
+    "BlZ8niq3nHU": {
+      "kind": "stub",
+      "name": "sceHttp2WebSocketCloseAsync",
+      "area": "save data, entitlements, HTTP2",
+      "sources": [
+        "CONTROL"
+      ],
+      "stub": "err_http2",
+      "note": "online disabled"
+    },
+    "D1IAo-CNswA": {
+      "kind": "stub",
+      "name": "sceHttp2WebSocketSendDataMessage",
+      "area": "save data, entitlements, HTTP2",
+      "sources": [
+        "AC"
+      ],
+      "stub": "err_http2",
+      "note": "online disabled: returns an error (FW 5.02 and later have it)"
+    },
+    "jSHMX1oSE+E": {
+      "kind": "stub",
+      "name": "sceHttp2WebSocketSendTextMessage",
+      "area": "save data, entitlements, HTTP2",
+      "sources": [
+        "AC"
+      ],
+      "stub": "err_http2",
+      "note": "online disabled: returns an error (FW 5.02 and later have it)"
+    },
+    "v2hFBiyS13w": {
+      "kind": "stub",
+      "name": "sceHttp2WebSocketClose",
+      "area": "save data, entitlements, HTTP2",
+      "sources": [
+        "AC"
+      ],
+      "stub": "err_http2",
+      "note": "online disabled: returns an error (FW 5.02 and later have it)"
+    },
+    "bEegosRhgM0": {
+      "kind": "stub",
+      "name": "sceHttp2SetRequestNoContentLength",
+      "area": "save data, entitlements, HTTP2",
+      "sources": [
+        "GOWSOS"
+      ],
+      "stub": "ret0",
+      "proven": false,
+      "note": "FW 5.02 and later have it; marks an HTTP/2 request as having no Content-Length",
+      "rationale": "A Unity PS5 player calls it once, only for a request without a known length (the other branch calls sceHttp2SetRequestContentLength), and ignores the result in both branches; that game's FW 4.xx backport left it unpatched (lazy binding: it fails only if called). Returning 0 skips the flag."
+    },
+    "79WM0NIP4P8": {
+      "kind": "stub",
+      "name": "sceShaderTranscodeIsRequired",
+      "area": "shader transcode (fakelib libSceAgc)",
+      "sources": [
+        "GT7",
+        "CONTROL"
+      ],
+      "stub": "ret0"
+    },
+    "Pe7m8Y4BZ68": {
+      "kind": "stub",
+      "name": "sceShaderTranscodeWithAllocator",
+      "area": "shader transcode (fakelib libSceAgc)",
+      "sources": [
+        "GT7",
+        "CONTROL"
+      ],
+      "stub": "ret0"
+    },
+    "rzsfUFKB+L8": {
+      "kind": "stub",
+      "name": "sceShaderTranscodeGetCode",
+      "area": "shader transcode (fakelib libSceAgc)",
+      "sources": [
+        "GT7",
+        "CONTROL"
+      ],
+      "stub": "ret0"
+    },
+    "wDAAPuG6uN4": {
+      "kind": "stub",
+      "name": "sceShaderTranscodeGetHeader",
+      "area": "shader transcode (fakelib libSceAgc)",
+      "sources": [
+        "GT7",
+        "CONTROL"
+      ],
+      "stub": "ret0"
+    },
+    "prHBgnJWBb4": {
+      "kind": "stub",
+      "name": "libSceShaderTranscode prHBgnJWBb4",
+      "area": "shader transcode (fakelib libSceAgc)",
+      "sources": [
+        "GT7",
+        "CONTROL"
+      ],
+      "stub": "ret0"
+    },
+    "OQ-dzhlnM28": {
+      "kind": "stub",
+      "name": "libSceLibcInternalExt OQ-dzhlnM28",
+      "area": "libSceLibcInternalExt (game libc.prx)",
+      "sources": [
+        "CONTROL",
+        "HKSS"
+      ],
+      "stub": "ret0"
+    },
+    "tB59hFLH3SA": {
+      "kind": "stub",
+      "name": "libSceLibcInternalExt tB59hFLH3SA",
+      "area": "libSceLibcInternalExt (game libc.prx)",
+      "sources": [
+        "CONTROL",
+        "HKSS"
+      ],
+      "stub": "ret0"
+    },
+    "qBS714-Jr3g": {
+      "kind": "redirect",
+      "name": "libSceLibcInternalExt qBS714-Jr3g (used by __cxa_thread_atexit)",
+      "area": "libSceLibcInternalExt (game libc.prx)",
+      "sources": [
+        "GT7",
+        "CONTROL",
+        "DL",
+        "UFC6",
+        "HKSS"
+      ],
+      "export_nid": "tsvEmnenz48",
+      "note": "-> libc's own __cxa_atexit (keeps destructors)"
+    },
+    "4h6F1LLbTiw": {
+      "kind": "adapter",
+      "name": "sceKernelMapNamedFlexibleMemoryInternal",
+      "area": "memory",
+      "sources": [
+        "GT7",
+        "CONTROL",
+        "BackPork 6xx",
+        "DL",
+        "UFC6",
+        "HADES2",
+        "HKSS",
+        "KCD2"
+      ],
+      "new_nid": "IWIBBdTHit4",
+      "insns": [
+        "81e1ff7fffff  ; and ecx, 0xffff7fff"
+      ],
+      "note": "-> sceKernelMapFlexibleMemory (name argument ignored), flag 0x8000 cleared",
+      "rationale": "libc's heap growth passes flags 0x8000, which only the internal entry accepts: the public sceKernelMapFlexibleMemory masks flags with 0xffbfff6f on FW 1.00-6.50 and rejects 0x88000 outright on FW 12.70, returning 0x80020016 (EINVAL) on every firmware, so a plain swap fails as soon as libc grows its heap ('Failed to create the heap', 0xa002000e). The swap is console-proven where that path was not taken; a FW 4.03 backport (console-tested) cleared the flag at both call sites, and so does this adapter."
+    },
+    "B2n8aDorSH4": {
+      "kind": "adapter",
+      "name": "sceKernelSyncOnAddressWait32",
+      "area": "SyncOnAddress -> _umtx_op",
+      "sources": [
+        "GT7",
+        "CONTROL",
+        "HKSS"
+      ],
+      "new_nid": "04AjkP0jO9U",
+      "insns": [
+        "4989d0  ; mov r8, rdx",
+        "89f2  ; mov edx, esi",
+        "6a0b  ; push 0xb",
+        "5e  ; pop rsi",
+        "41b9ffffffff  ; mov r9d, -1",
+        "31c9  ; xor ecx, ecx"
+      ],
+      "rationale": "GT7's exact register transforms to _umtx_op op 11 (WAIT_UINT); CONTROL stubbed it to return 0."
+    },
+    "PZQhiiLXRFs": {
+      "kind": "adapter",
+      "name": "sceKernelSyncOnAddressWait64",
+      "area": "SyncOnAddress -> _umtx_op",
+      "sources": [
+        "GT7",
+        "CONTROL",
+        "HKSS"
+      ],
+      "new_nid": "04AjkP0jO9U",
+      "insns": [
+        "4989d0  ; mov r8, rdx",
+        "4889f2  ; mov rdx, rsi",
+        "6a02  ; push 2",
+        "5e  ; pop rsi",
+        "41b9ffffffff  ; mov r9d, -1",
+        "31c9  ; xor ecx, ecx"
+      ],
+      "rationale": "GT7's exact register transforms to _umtx_op op 2 (WAIT); CONTROL stubbed it to return 0."
+    },
+    "q2y-wDIVWZA": {
+      "kind": "adapter",
+      "name": "sceKernelSyncOnAddressWake",
+      "area": "SyncOnAddress -> _umtx_op",
+      "sources": [
+        "GT7",
+        "CONTROL",
+        "HKSS"
+      ],
+      "new_nid": "04AjkP0jO9U",
+      "insns": [
+        "4863d6  ; movsxd rdx, esi",
+        "6a03  ; push 3",
+        "5e  ; pop rsi",
+        "4531c0  ; xor r8d, r8d",
+        "41b9ffffffff  ; mov r9d, -1",
+        "31c9  ; xor ecx, ecx"
+      ],
+      "rationale": "GT7's exact register transforms to _umtx_op op 3 (WAKE); CONTROL stubbed it to return 0."
+    },
+    "Hc4CaR6JBL0": {
+      "kind": "adapter",
+      "name": "sceKernelSyncOnAddressWait",
+      "area": "SyncOnAddress -> _umtx_op",
+      "sources": [
+        "GT7",
+        "CONTROL",
+        "AnyPS5 signature",
+        "HKSS"
+      ],
+      "new_nid": "04AjkP0jO9U",
+      "insns": [
+        "4989d0  ; mov r8, rdx",
+        "89f2  ; mov edx, esi",
+        "6a0b  ; push 0xb",
+        "5e  ; pop rsi",
+        "41b9ffffffff  ; mov r9d, -1",
+        "31c9  ; xor ecx, ecx"
+      ],
+      "proven": false,
+      "rationale": "AnyPS5 shows the generic Wait has Wait32's signature (u32* addr, u32 expected, KernelUseconds* timeout, name), so it gets Wait32's translation (the console-proven Wait32 path, op 11 WAIT_UINT). GT7's own patch passed `expected` as the _umtx_op op code (spins instead of sleeping)."
+    },
+    "ZP4e7rlzOUk": {
+      "kind": "adapter",
+      "name": "sceSaveDataMount3",
+      "area": "save data, entitlements, HTTP2",
+      "sources": [
+        "GT7",
+        "CONTROL",
+        "AC",
+        "BL4",
+        "UFC6",
+        "HADES2",
+        "HKSS"
+      ],
+      "insns": [
+        "488b4718  ; mov rax, [rdi+0x18]",
+        "4c8d5801  ; lea r11, [rax+1]",
+        "4d85db  ; test r11, r11",
+        "490f44c3  ; cmove rax, r11",
+        "48894718  ; mov [rdi+0x18], rax"
+      ],
+      "when": "always",
+      "below": "5.00",
+      "proven": false,
+      "note": "SaveDataMount3.systemBlocks (+0x18) -1 -> 0",
+      "rationale": "Argument fix: the function exists on old firmware but rejects values newer SDKs pass (AC README: ShellCore rejects -1 when the game SDK is below 5.00, hence below 5.00). All three games patched this at the call site in their own code; doing it at the import boundary covers every game. rax = [rdi+0x18]; r11 = rax+1; if r11 == 0 (value was -1): rax = 0; [rdi+0x18] = rax."
+    },
+    "sDCBrmc61XU": {
+      "kind": "adapter",
+      "name": "sceSaveDataPrepare",
+      "area": "save data, entitlements, HTTP2",
+      "sources": [
+        "CONTROL"
+      ],
+      "insns": [
+        "8b4604  ; mov eax, [rsi+4]",
+        "83f802  ; cmp eax, 2",
+        "41bb01000000  ; mov r11d, 1",
+        "410f44c3  ; cmove eax, r11d",
+        "894604  ; mov [rsi+4], eax"
+      ],
+      "when": "always",
+      "proven": false,
+      "note": "SaveDataPrepareParam.prepareMode (+0x04) 2 -> 1",
+      "rationale": "Argument fix (CONTROL patched the call site). eax = [rsi+4]; if eax == 2: eax = 1; [rsi+4] = eax (r11 scratch)."
+    },
+    "DImz2Ft9E2g": {
+      "kind": "adapter",
+      "name": "sceAudioOut2GetSpeakerInfo",
+      "area": "audio / ACM",
+      "sources": [
+        "CONTROL README + eboot analysis",
+        "AnyPS5 struct"
+      ],
+      "insns": [
+        "57  ; push rdi (SpeakerInfo*; also aligns the stack)",
+        "call_got  ; call the real function through its GOT slot",
+        "5f  ; pop rdi",
+        "836708fe  ; and dword [rdi+8], ~1   flags: no 3D audio",
+        "816704ff000000  ; and dword [rdi+4], 0xff   <= 8 speakers",
+        "c3  ; ret (eax = the real result)"
+      ],
+      "when": "always",
+      "post_call": true,
+      "proven": false,
+      "note": "SpeakerInfo.flags bit 0 cleared, available_bits & 0xff",
+      "rationale": "On newer firmware the OS reports 3D audio / 7.1.4 speakers, the game then opens a 12-channel AudioOut2 port, and an old-SDK binary is refused: no sound (CONTROL README; CONTROL fixed it inside Wwise). The game decides from GetSpeakerInfo (CONTROL eboot 0x3ca27f1: flags & 1 = 3D audio, popcnt(available_bits) > 8 = height speakers; struct layout from AnyPS5). Post-call fix: run the real function, then clear the 3D flag and cap the report at 8 speakers. Derived from references, not console-tested."
+    },
+    "-sD02mFDBh4": {
+      "kind": "adapter",
+      "name": "sceUserServiceGetGamePresets",
+      "area": "user service",
+      "sources": [
+        "HKSS"
+      ],
+      "insns": [
+        "488b06  ; mov rax, [rsi]",
+        "41bb28000000  ; mov r11d, 0x28",
+        "4c39d8  ; cmp rax, r11",
+        "490f47c3  ; cmova rax, r11",
+        "488906  ; mov [rsi], rax"
+      ],
+      "when": "always",
+      "below": "11.00",
+      "proven": false,
+      "note": "SceUserServiceGamePresets.size (+0x00) clamped to 0x28",
+      "rationale": "Argument fix: newer SDKs pass a 0x30-byte struct (size field first); a FW 4.xx backport changed the game's size from 0x30 to 0x28 at its only call site. The size check is in the system service (the FW 4.03 library forwards the call over IPC), so the first firmware that accepts 0x30 is unknown; the original game runs on 11.xx, hence below 11.00. The game zeroes the struct first and reads back only the first 0x28 bytes. rax = [rsi]; if rax > 0x28: rax = 0x28; [rsi] = rax."
+    },
+    "uv0Ae+jCeWY": {
+      "kind": "stub",
+      "name": "sceHmd2ReprojectionSetAllowPositionalReprojection",
+      "area": "PSVR2",
+      "sources": [
+        "HCOTM"
+      ],
+      "stub": "ret0",
+      "proven": false,
+      "note": "FW 6.50 and later have it; PSVR2 reprojection setting",
+      "rationale": "A PSVR2 game's FW 4.xx/5.xx backport wraps the import in a guard that returns 0 when the loader left it unresolved and calls the real function otherwise. A console-tested FW 4 backport of a game with an optional VR mode left it unpatched (never called without a headset); a VR-only game calls it, so returning 0 (success, setting ignored) is the fallback."
+    },
+    "gWT7X8H0bYs": {
+      "kind": "stub",
+      "name": "libSceVideoOutVrrStatus gWT7X8H0bYs",
+      "area": "VRR",
+      "sources": [
+        "FW 10.01 libSceVideoOut"
+      ],
+      "stub": "out2_zero50",
+      "proven": false,
+      "note": "VRR status getter (FW 10.01): zero the 0x50-byte status, i.e. VRR off",
+      "rationale": "FW 10.01 libSceVideoOut: (handle, status*); the export returns an error without writing when VideoOut is not initialised or status is null, otherwise the implementation writes exactly 0x50 bytes (+0x00..+0x30 and a 32-byte block at +0x30). A game calling it ignores the return value and reads the struct (+0x04 == 2, bit 0x10 at +0x10, words at +0x30..+0x34), sometimes from uninitialised stack, so ret0 alone is not enough; an all-zero status takes the game's 'VRR off' path. Derived from the firmware code, not console-tested."
+    }
+  },
+  "options": {
+    "force_pro": {
+      "name": "Force PS5 Pro mode",
+      "description": "Makes the game treat the console as a PS5 Pro (Pro graphics mode, PSSR when the game supports it): sceKernelGetOperationMode reports mode 3, sceKernelIsTrinityMode and sceAgcGetIsTrinityMode report true, and scePsmlMfsrInit is called again (the default skips it below FW 9.00).",
+      "warning": "PS5 Pro only. On a base PS5 or Slim, or on a Pro firmware where the game's PSSR path fails, the game shows a black screen. PSSR may also need a newer libScePsml fakelib and the PSSR model file.",
+      "sources": [
+        "AC",
+        "YOTEI"
+      ],
+      "fixes": {
+        "NH6xARDOVv8": {
+          "kind": "plt_stub",
+          "name": "sceKernelGetOperationMode",
+          "area": "PS5 Pro",
+          "sources": [
+            "AC",
+            "YOTEI"
+          ],
+          "stub": "opmode_pro",
+          "when": "always",
+          "note": "*mode = 3 (Pro), *lowEnergy = 0"
+        },
+        "tU5e3f9gSiU": {
+          "kind": "plt_stub",
+          "name": "sceKernelIsTrinityMode",
+          "area": "PS5 Pro",
+          "sources": [
+            "AC"
+          ],
+          "stub": "ret:1",
+          "when": "always",
+          "note": "return 1 (Trinity = PS5 Pro)"
+        },
+        "BfBDZGbti7A": {
+          "kind": "plt_stub",
+          "name": "sceAgcGetIsTrinityMode",
+          "area": "PS5 Pro",
+          "sources": [
+            "AC"
+          ],
+          "stub": "byte1",
+          "when": "always",
+          "note": "*(bool*)out = 1, return 0"
+        },
+        "3WVD91e12ZQ": {
+          "kind": "none",
+          "name": "scePsmlMfsrInit",
+          "area": "PS5 Pro",
+          "sources": [
+            "KCD2"
+          ],
+          "note": "keeps the real init (PSSR needs it)"
+        }
+      }
+    },
+    "gpu_scratch": {
+      "name": "GPU compute scratch fix (firmware below 12)",
+      "description": "Uses the fakelib set's libSceAgcDriver variant that hooks command-buffer submission and gives compute shaders a 24 MB scratch area (older firmware sets none up), and turns every s_trap 1 (asserts in the SDK's ray-tracing BVH shaders) into s_nop in the game's modules and ShaderData.bin.",
+      "warning": "Not needed by most games. Use it when a game hangs or shows a black screen during GPU work on firmware below 12. Needs a fakelib set with a gpu_scratch variant (fakelibs/4, fakelibs/4.03).",
+      "sources": [
+        "AC"
+      ],
+      "fixes": {},
+      "fakelib_variant": "gpu_scratch",
+      "patterns": [
+        {
+          "name": "s_trap 1 -> s_nop",
+          "find": "010092bf",
+          "replace": "000080bf",
+          "files": [
+            "ShaderData.bin"
+          ]
+        }
+      ]
+    }
+  },
+  "patterns": [
+    {
+      "name": "Wwise 7.1.4 -> 7.1 (speaker setup)",
+      "area": "audio / ACM",
+      "sources": [
+        "CONTROL",
+        "BEAST",
+        "BL4"
+      ],
+      "find": "488955d0ba0cf1632db808f16300",
+      "replace": "488955d0ba08f16300b808f16300",
+      "code": true,
+      "note": "Wwise speaker setup: 7.1.4 (12 channels) -> 7.1, which an SDK-4 binary can open",
+      "rationale": "A newer OS reports 3D audio, so Wwise picks 7.1.4 (channel mask 0x2d63f10c); a port opened by a low-SDK binary is refused at 12 channels and there is no sound. The mask becomes 7.1 (0x63f108). Same Wwise build in CONTROL (patched the speaker-setup site), Beast of Reincarnation and Borderlands 4 (both sites; BL4 also the packed default below)."
+    },
+    {
+      "name": "Wwise 7.1.4 -> 7.1 (channel switch)",
+      "area": "audio / ACM",
+      "sources": [
+        "BEAST",
+        "BL4"
+      ],
+      "find": "b902310000eb1ab90cf1632deb13b901410000",
+      "replace": "b902310000eb1ab908f16300eb13b901410000",
+      "code": true,
+      "note": "Wwise speaker setup: 7.1.4 (12 channels) -> 7.1, which an SDK-4 binary can open",
+      "rationale": "A newer OS reports 3D audio, so Wwise picks 7.1.4 (channel mask 0x2d63f10c); a port opened by a low-SDK binary is refused at 12 channels and there is no sound. The mask becomes 7.1 (0x63f108). Same Wwise build in CONTROL (patched the speaker-setup site), Beast of Reincarnation and Borderlands 4 (both sites; BL4 also the packed default below)."
+    },
+    {
+      "name": "Wwise 7.1.4 -> 7.1 (packed default)",
+      "area": "audio / ACM",
+      "sources": [
+        "BL4"
+      ],
+      "find": "48ba0cf1632d0cf1632d488908c64008004889500c",
+      "replace": "48ba08f163000cf1632d488908c64008004889500c",
+      "code": true,
+      "note": "Wwise speaker setup: 7.1.4 (12 channels) -> 7.1, which an SDK-4 binary can open",
+      "rationale": "movabs rdx, 0x2d63f10c2d63f10c (two 7.1.4 masks) stored as a default; Borderlands 4 changes the low one to 7.1 (0x63f108). CONTROL and Beast left it, so it is the least proven of the three Wwise sites."
+    },
+    {
+      "name": "EA Sports Frostbite: 0x30c output buffer 0xc00 -> 0x800",
+      "area": "audio / ACM",
+      "sources": [
+        "UFC6",
+        "FC27"
+      ],
+      "find": "4181f90c0300007521b801000000c78500ffffff00000000c78510ffffff000c0000",
+      "replace": "4181f90c0300007521b801000000c78500ffffff00000000c78510ffffff00080000",
+      "code": true,
+      "note": "probably 12 -> 8 audio channels (format 0x30c), the Frostbite counterpart of the Wwise 7.1.4 -> 7.1 fix",
+      "rationale": "In the branch taken when a global format equals 0x30c (read as type 3, 12 channels; 0x201 nearby), a size field [rbp-0xf0] is set to 0xc00 (12 x 0x100); both EA Sports backports set 0x800 (8 x 0x100). The meaning is inferred from the values, not traced. UFC 6 tested on a PS5 Pro at FW 9.60; FC 27 ships it in both its backports. Not in Battlefield 6 (different code)."
+    }
+  ]
+}

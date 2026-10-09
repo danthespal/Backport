@@ -1,0 +1,44 @@
+exit 0
+1.00    228 modules  16380 NIDs  functions+data  own dump: Firmware 1.00 system/common/lib
+2.00    231 modules  17060 NIDs  functions+data  own dump: Firmware 2.00 system/common/lib
+2.50    232 modules  17058 NIDs  functions+data  own dump: Firmware 2.50 system/common/lib
+3.00    235 modules  17456 NIDs  functions+data  own dump: Firmware 3.00 system/common/lib
+3.20    314 modules  41710 NIDs  functions+data  own dump: Firmware 3.20 system/common/lib
+4.00    240 modules  17901 NIDs  functions+data  own dump: Firmware 4.00 system/common/lib
+4.03    242 modules  17901 NIDs  functions+data  own dump: Firmware 4.03 system_1/common/lib; system_2/common/lib
+4.50    240 modules  17902 NIDs  functions+data  own dump: Firmware 4.50 system/common/lib
+4.51    241 modules  17902 NIDs  functions+data  own dump: Firmware 4.51 system/common/lib
+5.02    242 modules  18234 NIDs  functions+data  own dump: Firmware 5.02 system/common/lib
+5.10    241 modules  18234 NIDs  functions+data  own dump: Firmware 5.10 system/common/lib
+5.50    242 modules  18235 NIDs  functions+data  own dump: Firmware 5.50 system/common/lib
+6.00    241 modules  18379 NIDs  functions+data  own dump: Firmware 6.00 system/common/lib
+6.02    242 modules  18379 NIDs  functions+data  own dump: Firmware 6.02 system/common/lib
+6.50    242 modules  18381 NIDs  functions+data  own dump: Firmware 6.50 system/common/lib
+7.01    245 modules  19696 NIDs  functions+data  own dump: Firmware 7.01 system/common/lib
+7.20    244 modules  19698 NIDs  functions+data  own dump: Firmware 7.20 system/common/lib
+7.40    244 modules  19698 NIDs  functions+data  own dump: Firmware 7.40 system/common/lib
+7.60    245 modules  19699 NIDs  functions+data  own dump: Firmware 7.60 system/common/lib
+7.61    245 modules  19699 NIDs  functions+data  own dump: Firmware 7.61 system/common/lib
+8.00    249 modules  19213 NIDs  functions+data  own dump: Firmware 8.00 system/common/lib
+8.20    248 modules  19218 NIDs  functions+data  own dump: Firmware 8.20 system/common/lib
+8.40    248 modules  19218 NIDs  functions+data  own dump: Firmware 8.40 system_1/common/lib; system_2/common/lib
+8.60    248 modules  19219 NIDs  functions+data  own dump: Firmware 8.60 system_1/common/lib; system_2/common/lib
+9.00    254 modules  19773 NIDs  functions+data  own dump: Firmware 9.00 system/common/lib
+9.05    254 modules  19773 NIDs  functions+data  own dump: Firmware 9.05 system/common/lib
+9.20    255 modules  19773 NIDs  functions+data  own dump: Firmware 9.20 system/common/lib
+9.40    256 modules  19793 NIDs  functions+data  own dump: Firmware 9.40 system/common/lib
+9.60    255 modules  19775 NIDs  functions+data  own dump: Firmware 9.60 system_1/common/lib; system_2/common/lib
+10.01   253 modules  19692 NIDs  functions+data  own dump: Firmware 10.01 system/common/lib
+10.20   253 modules  19693 NIDs  functions+data  own dump: Firmware 10.20 system_1/common/lib; system_2/common/lib
+10.40   252 modules  19694 NIDs  functions+data  own dump: Firmware 10.40 system/common/lib
+10.60   252 modules  19695 NIDs  functions+data  own dump: Firmware 10.60 system/common/lib
+11.00   254 modules  21377 NIDs  functions+data  own dump: Firmware 11.00 system/common/lib
+11.20   254 modules  21381 NIDs  functions+data  own dump: Firmware 11.20 system_1/common/lib (275 encrypted skipped); system_2/common/lib
+11.40   254 modules  21385 NIDs  functions+data  own dump: Firmware 11.40 system/common/lib
+11.60   254 modules  21388 NIDs  functions+data  own dump: Firmware 11.60 system/common/lib
+12.00   254 modules  22012 NIDs  functions+data  own dump: Firmware 12.00 system/common/lib
+12.02   253 modules  22012 NIDs  functions+data  own dump: Firmware 12.02 system/common/lib
+12.20   257 modules  22167 NIDs  functions+data  own dump: Firmware 12.20 system/common/lib
+12.40   254 modules  22014 NIDs  functions+data  own dump: Firmware 12.40 system_1/common/lib; system_2/common/lib; system_3/common
+12.60   343 modules  22014 NIDs  functions+data  own dump: Firmware 12.60 lib; system/common/lib
+12.70   254 modules  22016 NIDs  functions+data  own dump: Firmware 12.70 system/common/lib

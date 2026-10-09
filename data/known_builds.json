@@ -1,0 +1,17 @@
+{
+  "_about": "Homebrew fakelib builds by (module, compiler __DATE__ build date) with their console result. state: ok | broken. Dates are space-padded like __DATE__ (\"Sep  6 2026\").",
+  "builds": [
+    {
+      "module": "libSceAmpr",
+      "build_date": "Aug 24 2026",
+      "state": "ok",
+      "note": "CONTROL Resonant and EA SPORTS FC 27 FW 4.xx backports (console-tested)"
+    },
+    {
+      "module": "libSceAmpr",
+      "build_date": "Sep  6 2026",
+      "state": "broken",
+      "note": "broken on old firmware: CONTROL Resonant README (reads dump data wrong, the game asks for ~9 GB) and EA SPORTS FC 27 (its build with this ampr_emu works on FW 12.xx and later only; the FW 4.xx backport swaps in the Aug 24 build). AC Black Flag shipped it and ran on a PS5 Pro at FW 10.01. Use the Aug 24 build (year inferred from the Aug 24 binary)"
+    }
+  ]
+}

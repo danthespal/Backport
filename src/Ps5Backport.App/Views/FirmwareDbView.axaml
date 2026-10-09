@@ -1,0 +1,112 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Ps5Backport.App.ViewModels"
+             xmlns:app="using:Ps5Backport.App"
+             x:Class="Ps5Backport.App.Views.FirmwareDbView"
+             x:DataType="vm:FirmwareDbViewModel">
+
+  <!-- list and detail: firmwares on the left, the selected one compared with another on the right -->
+  <Grid ColumnDefinitions="230,*">
+
+    <Border Classes="panel" BorderThickness="0,0,1,0">
+      <DockPanel Margin="10,14,10,10">
+        <Grid DockPanel.Dock="Top" ColumnDefinitions="*,Auto" Margin="4,0,0,8">
+          <TextBlock Classes="section" Text="Firmwares" VerticalAlignment="Center" />
+          <Button Grid.Column="1" Content="Import" Padding="10,2" ToolTip.Tip="Import an export list from a firmware dump">
+            <Button.Flyout>
+              <Flyout Placement="BottomEdgeAlignedLeft">
+                <StackPanel Spacing="6" Width="340">
+                  <TextBlock Classes="section" Text="Import an export list" />
+                  <TextBlock Classes="caption" TextWrapping="Wrap"
+                             Text="Only the NIDs each module exports are stored, no Sony code. Encrypted modules are refused." />
+                  <TextBlock Classes="caption" Text="Firmware" />
+                  <TextBox Text="{Binding ImportFirmware}" PlaceholderText="9.60" />
+                  <TextBlock Classes="caption" Text="Where the dump comes from" />
+                  <TextBox Text="{Binding ImportSource}" PlaceholderText="own dump: Firmware 9.60 system/common/lib" />
+                  <CheckBox IsChecked="{Binding ImportGenstub}" Content="Genstub folder (.c stubs, functions only)" />
+                  <Button Classes="accent" Content="Choose folder and import" Command="{Binding ImportCommand}" HorizontalAlignment="Right" />
+                </StackPanel>
+              </Flyout>
+            </Button.Flyout>
+          </Button>
+        </Grid>
+        <TextBlock DockPanel.Dock="Bottom" Classes="caption" Text="{Binding DbText}" TextWrapping="Wrap" Margin="4,8,0,0" />
+        <ListBox ItemsSource="{Binding Firmwares}" SelectedItem="{Binding Selected}" Background="Transparent">
+          <ListBox.ItemTemplate>
+            <DataTemplate x:DataType="vm:FirmwareRow">
+              <StackPanel Margin="0,2">
+                <TextBlock FontWeight="Medium" Text="{Binding Firmware}" />
+                <TextBlock Classes="caption" Text="{Binding Summary}" />
+              </StackPanel>
+            </DataTemplate>
+          </ListBox.ItemTemplate>
+        </ListBox>
+      </DockPanel>
+    </Border>
+
+    <Panel Grid.Column="1" Margin="16,14,16,8">
+      <TextBlock Classes="muted" Text="Loading the firmware database…" IsVisible="{Binding Busy}" />
+      <DockPanel IsVisible="{Binding HasFirmware}">
+        <StackPanel DockPanel.Dock="Top" Spacing="2" Margin="0,0,0,10">
+          <TextBlock Classes="title" Text="{Binding Title}" />
+          <TextBlock Classes="caption" Text="{Binding Details}" />
+        </StackPanel>
+
+        <Grid DockPanel.Dock="Top" ColumnDefinitions="Auto,110,Auto,*" ColumnSpacing="8" Margin="0,0,0,6">
+          <TextBlock Text="Compare with" VerticalAlignment="Center" />
+          <ComboBox Grid.Column="1" ItemsSource="{Binding Firmwares}" SelectedItem="{Binding CompareWith}" HorizontalAlignment="Stretch">
+            <ComboBox.ItemTemplate>
+              <DataTemplate x:DataType="vm:FirmwareRow"><TextBlock Text="{Binding Firmware}" /></DataTemplate>
+            </ComboBox.ItemTemplate>
+          </ComboBox>
+          <CheckBox Grid.Column="2" IsChecked="{Binding ChangedOnly}" Content="Changed modules only" />
+          <TextBox Grid.Column="3" Text="{Binding Search}" PlaceholderText="Search module, NID or function" />
+        </Grid>
+        <TextBlock DockPanel.Dock="Top" Classes="caption" Text="{Binding CompareSummary}" Margin="0,0,0,8" />
+
+        <Grid ColumnDefinitions="*,320" ColumnSpacing="12">
+          <TableView ItemsSource="{Binding Modules}" SelectedItem="{Binding SelectedModule}">
+            <TableView.Columns>
+              <TableViewColumn Header="Module" Binding="{Binding Module}" Width="*" x:DataType="vm:FirmwareModuleRow" />
+              <TableViewColumn Header="Exports" Binding="{Binding ExportsText}" Width="80" x:DataType="vm:FirmwareModuleRow" />
+              <TableViewColumn Header="Added" Width="70" x:DataType="vm:FirmwareModuleRow">
+                <TableViewColumn.CellTemplate>
+                  <DataTemplate x:DataType="vm:FirmwareModuleRow">
+                    <TextBlock Text="{Binding AddedText}" Foreground="{DynamicResource StatusOk}" />
+                  </DataTemplate>
+                </TableViewColumn.CellTemplate>
+              </TableViewColumn>
+              <TableViewColumn Header="Removed" Width="80" x:DataType="vm:FirmwareModuleRow">
+                <TableViewColumn.CellTemplate>
+                  <DataTemplate x:DataType="vm:FirmwareModuleRow">
+                    <TextBlock Text="{Binding RemovedText}" Foreground="{DynamicResource StatusWarn}" />
+                  </DataTemplate>
+                </TableViewColumn.CellTemplate>
+              </TableViewColumn>
+            </TableView.Columns>
+          </TableView>
+
+          <!-- inspector: what the compared firmware adds and removes in the selected module -->
+          <Border Grid.Column="1" Classes="card">
+            <DockPanel>
+              <TextBlock DockPanel.Dock="Top" Classes="caption" Text="{Binding ChangesTitle}" TextWrapping="Wrap" Margin="0,0,0,6" />
+              <ListBox ItemsSource="{Binding Changes}" Classes="log" Background="Transparent">
+                <ListBox.ItemTemplate>
+                  <DataTemplate x:DataType="vm:FirmwareNidRow">
+                    <Grid ColumnDefinitions="14,*">
+                      <TextBlock Text="{Binding ChangeText}" Foreground="{Binding Tone, Converter={x:Static app:ToneBrushConverter.Instance}}" />
+                      <StackPanel Grid.Column="1">
+                        <TextBlock Text="{Binding Name}" TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding Name}" />
+                        <TextBlock Classes="mono muted" Text="{Binding Nid}" FontSize="11" />
+                      </StackPanel>
+                    </Grid>
+                  </DataTemplate>
+                </ListBox.ItemTemplate>
+              </ListBox>
+            </DockPanel>
+          </Border>
+        </Grid>
+      </DockPanel>
+    </Panel>
+  </Grid>
+</UserControl>

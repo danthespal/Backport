@@ -1,0 +1,3 @@
+firmware_db 4.03 (lower bound for FW 4.10)
+firmware_db 4.00 (exact for FW 4)
+genstub stubs <repo>\.original\reference\PS5-3.20_Libs (lower bound)

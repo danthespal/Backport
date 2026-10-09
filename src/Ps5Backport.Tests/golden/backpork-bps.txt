@@ -1,0 +1,145 @@
+6xx/libSceAgc.bps:366584 366584 4186641254 3256776453 47
+  53504 write 2 48c7 0
+  53506 source-copy 5  320329
+  53511 write 1 c3 0
+  109206 write 4 31c0c390 0
+  109210 target-copy 12  109209
+  183176 write 1 82 0
+  183177 source-copy 7  366508
+  183184 target-copy 16  183176
+  183360 target-copy 8  183184
+  183448 target-copy 8  183360
+  183552 target-copy 24  183176
+  183674 write 1 09 0
+  183679 source-copy 12  318044
+  315950 write 1 01 0
+  315951 source-copy 9  309543
+  316430 write 2 0100 0
+  316432 target-copy 8  183552
+  316454 target-copy 18  316430
+  316478 target-copy 18  316454
+  316982 target-copy 18  316478
+  317246 target-copy 19  316478
+  317558 target-copy 18  317246
+  317582 target-copy 19  316430
+  317606 target-copy 19  316454
+  318236 source-copy 12  364176
+  365848 source-copy 16  181368
+  365864 target-copy 32  365848
+6xx/libSceAgcDriver.bps:174096 174096 4145658192 1074032195 43
+  98304 source-copy 8  166472
+  98320 source-copy 8  166472
+  98336 source-copy 8  166472
+  98352 source-copy 8  166472
+  98368 source-copy 8  166472
+  98384 source-copy 8  166472
+  98400 source-copy 8  166472
+  98416 target-copy 9  98336
+  98448 source-copy 8  166472
+  98456 target-copy 9  98304
+  98465 source-copy 24  114729
+  98489 source-copy 7  173672
+  98496 target-copy 16  98448
+  98512 target-copy 24  98448
+  98536 target-copy 48  98456
+  98912 source-copy 8  171663
+  99008 target-copy 16  98536
+  99058 write 1 09 0
+  99063 write 1 06 0
+  147456 target-copy 32  98536
+  163998 write 1 01 0
+  163999 source-copy 9  166471
+  168102 target-copy 18  163998
+  169062 write 1 01 0
+  169063 source-copy 17  171662
+6xx/libSceFiber.bps:69732 69732 2164629946 2852884971 41
+  49224 source-copy 4  32864
+  49280 target-copy 8  49224
+  49320 target-copy 8  49280
+  49328 target-copy 8  49320
+  49352 target-copy 9  49224
+  49368 target-copy 16  49320
+  49451 write 5 1038000006 0
+  66638 write 2 0100 0
+  66640 target-copy 8  49368
+  66710 target-copy 18  66638
+  66926 target-copy 18  66710
+  67118 target-copy 18  66926
+  67142 target-copy 18  67118
+  67238 target-copy 18  67142
+  67286 target-copy 18  67238
+  67310 target-copy 19  66926
+  68180 source-copy 4  69537
+  68204 source-copy 5  69537
+  68680 source-copy 12  67964
+  68692 source-copy 4  69728
+  68696 target-copy 32  68680
+  68744 target-copy 56  68680
+6xx/libSceNpAuth.bps:71452 71452 1955407139 3116515077 3
+  49627 write 5 1038000006 0
+6xx/libSceNpAuthAuthorizedAppDialog.bps:70252 70252 2080872611 4087969603 3
+  49603 write 5 1038000006 0
+6xx/libScePsml.bps:2327328 2327328 154019954 2734727156 4
+  1731195 write 2 1038 0
+  1731197 source-copy 14  2281266
+6xx/libSceSaveData.native.bps:331620 331620 1637140545 3239962528 9
+  298256 source-copy 7  322681
+  299091 write 2 1038 0
+  299093 source-copy 4  298718
+  315542 write 1 01 0
+  315543 source-copy 5  315343
+7xx/libSceAgc.bps:366584 366584 306644460 3873411325 41
+  109206 write 4 31c0c390 0
+  109210 target-copy 12  109209
+  183184 write 1 82 0
+  183185 source-copy 7  366508
+  183192 target-copy 8  183184
+  183360 target-copy 8  183192
+  183448 target-copy 9  183192
+  183552 target-copy 16  183184
+  183568 target-copy 8  183552
+  183674 write 3 591038 0
+  183677 source-copy 14  318066
+  315950 write 1 01 0
+  315951 source-copy 9  309543
+  316454 write 2 0100 0
+  316456 target-copy 8  183568
+  316478 target-copy 18  316454
+  316982 target-copy 18  316478
+  317246 target-copy 19  316478
+  317558 target-copy 18  317246
+  317582 target-copy 18  317558
+  317606 target-copy 19  316454
+  318236 source-copy 12  364176
+  365848 source-copy 16  181368
+  365864 target-copy 32  365848
+7xx/libSceAgcDriver.bps:174096 174096 3311780817 2743175234 37
+  98304 source-copy 8  166472
+  98320 source-copy 8  166472
+  98336 source-copy 8  166472
+  98352 source-copy 8  166472
+  98368 source-copy 8  166472
+  98384 source-copy 8  166472
+  98400 source-copy 8  166472
+  98416 target-copy 9  98336
+  98448 source-copy 8  166472
+  98456 target-copy 9  98304
+  98465 source-copy 24  114729
+  98489 source-copy 7  173672
+  98496 target-copy 16  98448
+  98512 target-copy 24  98448
+  98536 target-copy 48  98456
+  99008 target-copy 16  98536
+  99058 write 5 5910380000 0
+  99063 source-copy 7  170585
+  147456 target-copy 32  98536
+  163998 write 1 01 0
+  163999 source-copy 9  166471
+  168102 target-copy 18  163998
+7xx/libSceNpAuth.bps:71452 71452 1955407139 4060633758 3
+  49626 write 6 591038000007 0
+7xx/libSceNpAuthAuthorizedAppDialog.bps:70252 70252 2080872611 3830053168 3
+  49602 write 6 591038000007 0
+7xx/libSceSaveData.native.bps:331620 331620 1637140545 3329024657 4
+  299090 write 3 591038 0
+  299093 source-copy 10  316534

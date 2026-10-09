@@ -21,6 +21,8 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Ps5Backport.Core\Ps5Backport.Core.csproj" />
+    <ProjectReference Include="..\Ps5Backport.Cli\Ps5Backport.Cli.csproj" />
+    <ProjectReference Include="..\Ps5Backport.App\Ps5Backport.App.csproj" />
   </ItemGroup>
 
 </Project>

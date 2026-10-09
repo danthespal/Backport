@@ -4,7 +4,7 @@ using System.Text;
 
 namespace Ps5Backport.Core;
 
-/// <summary>NIDs: computation and symbol-name parsing (port of ps5bp/nid.py).</summary>
+/// <summary>NIDs: computation and symbol-name parsing.</summary>
 public static class Nid
 {
     static readonly byte[] Suffix = Convert.FromHexString("518D64A635DED8C1E6B039B1C3E55230");

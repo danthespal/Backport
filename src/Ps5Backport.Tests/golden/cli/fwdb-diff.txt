@@ -1,0 +1,7 @@
+exit 0
+libSceNew: +2
+   GGeRJk1XdWc  sceKernelGetProsperoCompiledSdkVersion
+   dkBx0YqFQ+Y  sceKernelGetToolMemoryRange
+libkernel: +1
+   tU5e3f9gSiU  sceKernelIsTrinityMode
+3 NIDs exported by 4.00 but not by 3.20

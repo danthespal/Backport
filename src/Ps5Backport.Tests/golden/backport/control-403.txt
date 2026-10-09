@@ -1,0 +1,74 @@
+backport_report.json b3572d6f1a70cf21521fab7cc40c2f8913f3f4dc92c5c6bfdf14ac377be6374b
+backport_report.txt ae08f05bcce47643479c4a3abe3084c7cfcda10b0f04746649f34f5d449cbdb4
+eboot.bin 749bd22afd0f144f169fce6747328c99e4b4f83270cb63367d1c337620e14e8c
+fakelib/libSceAgc.sprx e1c8f6dc384e0a5927f863fc6fd698e3da603ed41de512ae3529ad06dea2e191
+fakelib/libSceAgcDriver.sprx d83edb3a0b57c4a2476d902e16da051db82ef36b81b791d6e8d2d998f083e27b
+fakelib/libSceAmpr.sprx 362c84e31e3a06a42f50fe4d6ea124d15e73f77c901470f90823935d7f36ca76
+fakelib/libScePlayGo.sprx 35c437b7e9365e3183974ab5bfbf489ea1db12b7f711c829813ff14ce4d1790e
+fakelib/libScePsml.sprx 6632020e026d7cec0af89604de96e64f42cc4764af0a28de7ed20fa78f56a36d
+
+Backport of <game>
+  title PPSA34547 version 01.300.300 -> FW 4.03
+  output: <out>
+  reference: firmware_db 4.03 (exact for FW 4.03)
+  fakelibs: <repo>\fakelibs\4.03
+  refs = direct code references to an unresolved import (0: reachable only through data, e.g. a vtable, or not at all)
+  NOTE: 4 derived fix(es) applied, not yet console-tested: sceAudioOut2GetSpeakerInfo, scePsmlMfsrInit, sceSaveDataMount3, sceSaveDataPrepare
+
+MediaDecoders.Prospero.prx  [PS4-style fake SELF (make_fself.py)]  unchanged
+  SDK 0x04030031/0x09040001 (kept)
+  imports: data=2, provided=1, reference=40
+
+eboot.bin  [PS4-style fake SELF (make_fself.py)]  written
+  SDK 0x04030031/0x09040001 (kept)
+  imports: data=42, patched=4, provided=179, reference=601, stubbed=8
+  fixed    DImz2Ft9E2g  sceAudioOut2GetSpeakerInfo  (adapter (argument fix) via cave 0xd8; DERIVED, not console-tested; from CONTROL README + eboot analysis, AnyPS5 struct)
+  fixed    3WVD91e12ZQ  scePsmlMfsrInit  (PLT -> ret0 @ 0x339c; DERIVED, not console-tested; from Kingdom Come: Deliverance II PPSA21704 FW4.xx (test status unknown))
+  fixed    ZP4e7rlzOUk  sceSaveDataMount3  (adapter (argument fix) via cave 0x33c5; DERIVED, not console-tested; from GT7 1.71 FW4, CONTROL Resonant 1.300 FW4.03, AC Black Flag Resynced 01.006.038 FW4.xx/10.xx, Borderlands 4 PPSA01494 FW4.xx, EA SPORTS UFC 6 PPSA23566 (tested on PS5 Pro FW 9.60), Hades II PPSA36082 FW4.03 (console-tested), Hollow Knight: Silksong PPSA12544 FW4.xx (test status unknown))
+  fixed    sDCBrmc61XU  sceSaveDataPrepare  (adapter (argument fix) via cave 0xcca7; DERIVED, not console-tested; from CONTROL Resonant 1.300 FW4.03)
+  pattern  Wwise 7.1.4 -> 7.1 (channel switch)  x1
+  pattern  Wwise 7.1.4 -> 7.1 (packed default)  x1
+
+libRenoirCore.PS5.prx  [PS4-style fake SELF (make_fself.py)]  unchanged
+  SDK 0x04030031/0x09040001 (kept)
+  imports: data=10, provided=36, reference=72
+
+libcohtml.Prospero.prx  [PS4-style fake SELF (make_fself.py)]  unchanged
+  SDK 0x04030031/0x09040001 (kept)
+  imports: data=20, provided=85, reference=172, stubbed=2
+
+nakama-sdk.prx  [PS4-style fake SELF (make_fself.py)]  unchanged
+  SDK 0x04030031/0x09040001 (kept)
+  imports: data=15, provided=49, reference=97, stubbed=4
+
+sce_module/libc.prx  [PS4-style fake SELF (make_fself.py)]  unchanged
+  SDK 0x04030031/0x09040001 (kept)
+  Sony build J03701430 = between FW 11.60 and 12.00
+  imports: data=2, reference=108, stubbed=9
+
+sce_sys/about/right.sprx  [PS4-style fake SELF (make_fself.py)]  unchanged
+  SDK 0x01000023/0x07590001 (kept)
+  imports: data=1, reference=3
+
+fakelib/libSceAgc.sprx  [PS5-style SELF]  written
+  SDK 0x04000031/0x09040001 (kept)
+  Sony build J03718109 = FW 12.00
+  imports: data=2, provided=4, reference=82, stubbed=9
+
+fakelib/libSceAgcDriver.sprx  [PS5-style SELF]  written
+  SDK 0x04000031/0x09040001 (kept)
+  Sony build J03718109 = FW 12.00
+  imports: data=4, reference=48, stubbed=4
+
+fakelib/libSceAmpr.sprx  [PS4-style fake SELF (make_fself.py)]  written
+  SDK 0x02000009/0x08050001 (kept)
+  imports: data=1, reference=112
+
+fakelib/libScePlayGo.sprx  [PS4-style fake SELF (make_fself.py)]  written
+  SDK 0x02000009/0x08050001 (kept)
+  imports: data=1, reference=12
+
+fakelib/libScePsml.sprx  [PS5-style SELF]  written
+  SDK 0x04000031/0x09040001 (kept)
+  Sony build J03718109 = FW 12.00
+  imports: data=5, provided=22, reference=284, stubbed=29

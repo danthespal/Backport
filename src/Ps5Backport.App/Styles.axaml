@@ -1,0 +1,126 @@
+<Styles xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+  <Style Selector="TextBlock.title">
+    <Setter Property="FontSize" Value="22" />
+    <Setter Property="FontWeight" Value="Medium" />
+  </Style>
+  <Style Selector="TextBlock.section">
+    <Setter Property="FontSize" Value="14" />
+    <Setter Property="FontWeight" Value="Medium" />
+  </Style>
+  <Style Selector="TextBlock.muted">
+    <Setter Property="Foreground" Value="{DynamicResource StatusMuted}" />
+  </Style>
+  <Style Selector="TextBlock.caption">
+    <Setter Property="FontSize" Value="12" />
+    <Setter Property="Foreground" Value="{DynamicResource StatusMuted}" />
+  </Style>
+  <Style Selector="TextBlock.metric">
+    <Setter Property="FontSize" Value="24" />
+    <Setter Property="FontWeight" Value="Medium" />
+  </Style>
+  <Style Selector="TextBlock.icon">
+    <Setter Property="FontFamily" Value="{StaticResource IconFont}" />
+    <Setter Property="FontSize" Value="16" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+  </Style>
+  <Style Selector="TextBlock.mono">
+    <Setter Property="FontFamily" Value="{StaticResource MonoFont}" />
+    <Setter Property="FontSize" Value="12" />
+  </Style>
+  <Style Selector="TextBox.mono">
+    <Setter Property="FontFamily" Value="{StaticResource MonoFont}" />
+    <Setter Property="FontSize" Value="12" />
+  </Style>
+
+  <!-- quiet surfaces: hairline borders, no shadows -->
+  <Style Selector="Border.card">
+    <Setter Property="Background" Value="{DynamicResource CardBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource HairlineBrush}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="8" />
+    <Setter Property="Padding" Value="12" />
+  </Style>
+  <!-- an enabled optional patch: warning outline, so it can't be missed -->
+  <Style Selector="Border.card.optionOn">
+    <Setter Property="BorderBrush" Value="{DynamicResource StatusWarn}" />
+  </Style>
+  <!-- settings rows: one card per setting, Windows 11 Settings style -->
+  <Style Selector="Border.setting">
+    <Setter Property="Padding" Value="14,10" />
+    <Setter Property="MinHeight" Value="56" />
+  </Style>
+  <Style Selector="Border.tag">
+    <Setter Property="Background" Value="{DynamicResource HairlineBrush}" />
+    <Setter Property="CornerRadius" Value="4" />
+    <Setter Property="Padding" Value="6,0" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+  </Style>
+  <Style Selector="Border.tag TextBlock">
+    <Setter Property="FontSize" Value="11" />
+    <Setter Property="Foreground" Value="{DynamicResource StatusMuted}" />
+  </Style>
+  <Style Selector="Border.panel">
+    <Setter Property="Background" Value="{DynamicResource PanelBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource HairlineBrush}" />
+  </Style>
+
+  <!-- navigation rail -->
+  <Style Selector="RadioButton.rail">
+    <Setter Property="Width" Value="40" />
+    <Setter Property="Height" Value="40" />
+    <Setter Property="Margin" Value="0,2" />
+    <Setter Property="HorizontalAlignment" Value="Center" />
+    <Setter Property="Template">
+      <ControlTemplate>
+        <Border Name="bg" Background="Transparent" CornerRadius="6">
+          <ContentPresenter Content="{TemplateBinding Content}" HorizontalAlignment="Center" VerticalAlignment="Center" />
+        </Border>
+      </ControlTemplate>
+    </Setter>
+  </Style>
+  <Style Selector="RadioButton.rail:pointerover /template/ Border#bg">
+    <Setter Property="Background" Value="{DynamicResource HairlineBrush}" />
+  </Style>
+  <Style Selector="RadioButton.rail:checked /template/ Border#bg">
+    <Setter Property="Background" Value="{DynamicResource HairlineBrush}" />
+  </Style>
+  <Style Selector="RadioButton.rail:checked TextBlock.icon">
+    <Setter Property="Foreground" Value="{DynamicResource SystemAccentColor}" />
+  </Style>
+
+  <!-- compact tab headers for a workbench -->
+  <Style Selector="TabItem">
+    <Setter Property="FontSize" Value="14" />
+    <Setter Property="MinHeight" Value="36" />
+    <Setter Property="Padding" Value="10,0" />
+  </Style>
+
+  <!-- compact, quiet tables -->
+  <Style Selector="TableView">
+    <Setter Property="Background" Value="Transparent" />
+  </Style>
+  <Style Selector="TableViewCell">
+    <Setter Property="VerticalContentAlignment" Value="Center" />
+    <Setter Property="Padding" Value="10,0" />
+  </Style>
+  <Style Selector="TableViewRow">
+    <Setter Property="MinHeight" Value="30" />
+    <Setter Property="Padding" Value="0" />
+  </Style>
+
+  <!-- dense log lines -->
+  <Style Selector="ListBox.log ListBoxItem">
+    <Setter Property="Padding" Value="4,1" />
+    <Setter Property="MinHeight" Value="0" />
+  </Style>
+
+  <!-- log filter chips -->
+  <Style Selector="ToggleButton.chip">
+    <Setter Property="Padding" Value="8,2" />
+    <Setter Property="MinHeight" Value="24" />
+    <Setter Property="FontSize" Value="12" />
+    <Setter Property="Background" Value="Transparent" />
+  </Style>
+</Styles>

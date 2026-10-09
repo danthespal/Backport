@@ -1,0 +1,43 @@
+<Application xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Class="Ps5Backport.App.App"
+             RequestedThemeVariant="Default">
+  <!-- Default = follow the operating system's light/dark setting; the Fluent accent is the system accent -->
+
+  <Application.Resources>
+    <ResourceDictionary>
+      <ResourceDictionary.ThemeDictionaries>
+        <!-- color carries meaning only: status of an import / log level -->
+        <ResourceDictionary x:Key="Light">
+          <SolidColorBrush x:Key="StatusOk" Color="#3B6D11" />
+          <SolidColorBrush x:Key="StatusPatched" Color="#185FA5" />
+          <SolidColorBrush x:Key="StatusWarn" Color="#854F0B" />
+          <SolidColorBrush x:Key="StatusError" Color="#A32D2D" />
+          <SolidColorBrush x:Key="StatusMuted" Color="#5F5E5A" />
+          <SolidColorBrush x:Key="PanelBrush" Color="#F7F7F5" />
+          <SolidColorBrush x:Key="CardBrush" Color="#FFFFFF" />
+          <SolidColorBrush x:Key="HairlineBrush" Color="#1F000000" />
+          <SolidColorBrush x:Key="GapBrush" Color="#FAEEDA" />
+        </ResourceDictionary>
+        <ResourceDictionary x:Key="Dark">
+          <SolidColorBrush x:Key="StatusOk" Color="#97C459" />
+          <SolidColorBrush x:Key="StatusPatched" Color="#85B7EB" />
+          <SolidColorBrush x:Key="StatusWarn" Color="#EF9F27" />
+          <SolidColorBrush x:Key="StatusError" Color="#F09595" />
+          <SolidColorBrush x:Key="StatusMuted" Color="#B4B2A9" />
+          <SolidColorBrush x:Key="PanelBrush" Color="#1F1F1E" />
+          <SolidColorBrush x:Key="CardBrush" Color="#262625" />
+          <SolidColorBrush x:Key="HairlineBrush" Color="#26FFFFFF" />
+          <SolidColorBrush x:Key="GapBrush" Color="#633806" />
+        </ResourceDictionary>
+      </ResourceDictionary.ThemeDictionaries>
+      <FontFamily x:Key="MonoFont">Cascadia Mono, Consolas, Menlo, monospace</FontFamily>
+      <FontFamily x:Key="IconFont">Segoe Fluent Icons, Segoe MDL2 Assets</FontFamily>
+    </ResourceDictionary>
+  </Application.Resources>
+
+  <Application.Styles>
+    <FluentTheme />
+    <StyleInclude Source="avares://Ps5BackportStudio/Styles.axaml" />
+  </Application.Styles>
+</Application>

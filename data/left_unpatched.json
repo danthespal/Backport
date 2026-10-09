@@ -1,0 +1,513 @@
+{
+  "_about": "Imports that a console-tested backport shipped unpatched (still unresolved against 3.20 with the game's own modules as providers) and the game ran: each exists on the test firmware or is never called (lazy binding). Not a fix; the report notes it so triage can focus on imports no backport has dealt with. Caveat (REFERENCE_OVERVIEW Part 11): GT7 calls D-CzAxQL0XI unconditionally in its per-user setup, so GT7's test firmware exported it (newer than 3.20, maybe not 4.xx); Control was tested on 10.01. Evidence for the test firmware only.",
+  "left_unpatched": {
+    "oPhtjySuHa8": [
+      "GT7"
+    ],
+    "retc+-uRMhk": [
+      "GT7"
+    ],
+    "bIi4YUfSRys": [
+      "GT7"
+    ],
+    "gF8+lvc7GuQ": [
+      "GT7"
+    ],
+    "f3kPeoTZnIE": [
+      "GT7"
+    ],
+    "Ocf081WpBpA": [
+      "GT7"
+    ],
+    "wj1kOyNF4vM": [
+      "GT7"
+    ],
+    "VVvFh51o20s": [
+      "GT7"
+    ],
+    "SVEG+1D7qHA": [
+      "GT7"
+    ],
+    "C0rPwER-yxg": [
+      "GT7"
+    ],
+    "U-CnbmeyYaA": [
+      "GT7"
+    ],
+    "-C2nkoEYOnU": [
+      "GT7"
+    ],
+    "uv0Ae+jCeWY": [
+      "GT7"
+    ],
+    "QxBJF-G2v5k": [
+      "GT7"
+    ],
+    "hA9LshbSkzw": [
+      "GT7"
+    ],
+    "Al4qjNREVQQ": [
+      "GT7"
+    ],
+    "J4Vh3VVX0iU": [
+      "GT7"
+    ],
+    "6Jy73SRfG-o": [
+      "GT7"
+    ],
+    "TwqZnaIjWv4": [
+      "GT7"
+    ],
+    "Dog+g25QYjw": [
+      "GT7"
+    ],
+    "UVCMLmS-Eas": [
+      "GT7"
+    ],
+    "2jiIxUmcsGo": [
+      "GT7"
+    ],
+    "t4e879M-cSw": [
+      "GT7"
+    ],
+    "08JSg9p6bgQ": [
+      "GT7"
+    ],
+    "UOjiprYwVNw": [
+      "GT7"
+    ],
+    "X0HZNbSiqyg": [
+      "GT7"
+    ],
+    "8ntsRd07EQA": [
+      "GT7"
+    ],
+    "SoWHuVW0gpU": [
+      "GT7"
+    ],
+    "crFxyW3HdK0": [
+      "GT7"
+    ],
+    "D-CzAxQL0XI": [
+      "GT7"
+    ],
+    "dFym5b41JLU": [
+      "GT7"
+    ],
+    "XgVs4jRehcY": [
+      "GT7"
+    ],
+    "OQ-dzhlnM28": [
+      "GT7",
+      "GOWSOS"
+    ],
+    "tB59hFLH3SA": [
+      "GT7",
+      "GOWSOS"
+    ],
+    "qBS714-Jr3g": [
+      "GT7",
+      "GOWSOS"
+    ],
+    "cfwBSQyr5Ys": [
+      "GT7",
+      "CONTROL"
+    ],
+    "GGeRJk1XdWc": [
+      "GT7",
+      "CONTROL"
+    ],
+    "dkBx0YqFQ+Y": [
+      "GT7",
+      "CONTROL"
+    ],
+    "LzoM-wVLJDE": [
+      "GT7",
+      "CONTROL"
+    ],
+    "Ygv0S+Hi+hA": [
+      "GT7",
+      "CONTROL"
+    ],
+    "WxLcN76q19o": [
+      "BF6",
+      "FC27"
+    ],
+    "8weiQyIdI3A": [
+      "BF6",
+      "FC27"
+    ],
+    "32KQRUK13kI": [
+      "BEAST",
+      "FC27"
+    ],
+    "5f9xDKxYjbY": [
+      "DL"
+    ],
+    "XFQNeE+EwJU": [
+      "DL"
+    ],
+    "veRySWMcttw": [
+      "DL"
+    ],
+    "b+v7BB12y5I": [
+      "DL"
+    ],
+    "+0jo0J7h4CM": [
+      "DL"
+    ],
+    "enuMll33T24": [
+      "DL"
+    ],
+    "9OV-NYh2TAs": [
+      "DL"
+    ],
+    "dVCh5JiPsSY": [
+      "DL"
+    ],
+    "Fts2nXFk6F0": [
+      "DL"
+    ],
+    "vpkkVwCPaxE": [
+      "DL"
+    ],
+    "DXlC3IrK2Ts": [
+      "DL"
+    ],
+    "VTZ+4rVcoJM": [
+      "DL"
+    ],
+    "vzKNY2nY7Jk": [
+      "DL"
+    ],
+    "1fyEy3F+G+g": [
+      "DL"
+    ],
+    "8eqBiqB72AE": [
+      "DL"
+    ],
+    "Jv4JETvYzWg": [
+      "DL"
+    ],
+    "ZiJqTZVDuPM": [
+      "DL"
+    ],
+    "4rpx-P+kdJQ": [
+      "DL"
+    ],
+    "nXa0s7xnbsQ": [
+      "DL"
+    ],
+    "TJIV4zGjz8o": [
+      "DL"
+    ],
+    "Z4nTIsAp+QM": [
+      "DL"
+    ],
+    "FwKWIx0rgyY": [
+      "DL"
+    ],
+    "URZOfbC4fzU": [
+      "DL"
+    ],
+    "NG-lbm2BAKU": [
+      "DL"
+    ],
+    "nbRU58b2L1E": [
+      "DL"
+    ],
+    "gijCqBFE3p0": [
+      "DL"
+    ],
+    "bvfjdByaA6Q": [
+      "DL"
+    ],
+    "ZuRinzzVx1M": [
+      "DL"
+    ],
+    "mxFJwBFDCvg": [
+      "DL"
+    ],
+    "t84AiYnMwPg": [
+      "DL"
+    ],
+    "hMxydTJQ670": [
+      "DL"
+    ],
+    "KpTVnt-DHo8": [
+      "DL"
+    ],
+    "edOjjRsxL1o": [
+      "DL"
+    ],
+    "ZUn0ZQBDyVQ": [
+      "DL"
+    ],
+    "Uc5eSnk3dvE": [
+      "DL"
+    ],
+    "xg9A5nBRkB0": [
+      "DL"
+    ],
+    "1bf+c7ebx0A": [
+      "DL"
+    ],
+    "-t8eK4WxVIo": [
+      "DL"
+    ],
+    "9IygJEdu7Lg": [
+      "DL"
+    ],
+    "KJTzMXmYY+U": [
+      "DL"
+    ],
+    "+6Xo+7GdUGM": [
+      "DL"
+    ],
+    "8x++mBOUeso": [
+      "DL"
+    ],
+    "Y295ygEccqk": [
+      "DL"
+    ],
+    "UYPxv8MIzGo": [
+      "DL"
+    ],
+    "52AlYvq+dmk": [
+      "DL"
+    ],
+    "oTirsxQpqj0": [
+      "DL"
+    ],
+    "RQfqM1BZuoc": [
+      "DL"
+    ],
+    "yOUuI64kBuc": [
+      "DL"
+    ],
+    "IlMqEkBLuBE": [
+      "DL"
+    ],
+    "J4vXbYykW8M": [
+      "DL"
+    ],
+    "+rWjmNf5G5E": [
+      "DL"
+    ],
+    "hj40eDtISJY": [
+      "DL"
+    ],
+    "qwa0biONtPI": [
+      "DL"
+    ],
+    "ZdVlyQI3f-c": [
+      "DL"
+    ],
+    "75Hbvij1fk8": [
+      "DL"
+    ],
+    "pDUQVO32lZY": [
+      "DL"
+    ],
+    "E0CTYxeKBnw": [
+      "DL"
+    ],
+    "egm8uuznnW4": [
+      "DL"
+    ],
+    "iLnckwH2WBQ": [
+      "DL"
+    ],
+    "d3BbxfGmStE": [
+      "DL"
+    ],
+    "73XG6dPCOr0": [
+      "DL"
+    ],
+    "VKaRucCPRyU": [
+      "DL"
+    ],
+    "ANB19+6-3fg": [
+      "DL"
+    ],
+    "0YED2+p7aiI": [
+      "DL"
+    ],
+    "-3rmbd14uBI": [
+      "DL"
+    ],
+    "LvOINVROtwU": [
+      "DL"
+    ],
+    "BBoN-+1fjTA": [
+      "DL"
+    ],
+    "13KoEaVmuJ8": [
+      "DL"
+    ],
+    "tnym874g8jE": [
+      "DL"
+    ],
+    "-D8MD+5yuAw": [
+      "DL"
+    ],
+    "Dza-PctrwiU": [
+      "DL"
+    ],
+    "iXIAYgVGzKU": [
+      "DL"
+    ],
+    "czPHgWBiTS4": [
+      "DL"
+    ],
+    "OgbbbsOtwlE": [
+      "DL"
+    ],
+    "D4Lk1XQiiPQ": [
+      "DL"
+    ],
+    "QWRYQMQSpIc": [
+      "DL"
+    ],
+    "GOKrmbjnHY0": [
+      "DL"
+    ],
+    "rYWJ3CJ8+6w": [
+      "DL"
+    ],
+    "U-Mgu8Pn9y0": [
+      "DL"
+    ],
+    "zXdVl2D7dUk": [
+      "DL"
+    ],
+    "npMIfvNUuiQ": [
+      "DL"
+    ],
+    "TECRh7NmqIA": [
+      "DL"
+    ],
+    "4afM3Xt0+Ig": [
+      "DL"
+    ],
+    "JzqS+6C+2F4": [
+      "DL"
+    ],
+    "0juFlJ9R6ss": [
+      "DL"
+    ],
+    "NRX8fDa7344": [
+      "DL"
+    ],
+    "lje+7Q7rn5U": [
+      "DL"
+    ],
+    "9e1nWpOT4lg": [
+      "DL"
+    ],
+    "hZTfKpftpsU": [
+      "DL"
+    ],
+    "UGEyMKm8N3A": [
+      "DL"
+    ],
+    "l3-83fvIqvM": [
+      "DL"
+    ],
+    "WNK0UpGK8Ws": [
+      "DL"
+    ],
+    "f9jTmCiIUVA": [
+      "DL"
+    ],
+    "FZXAWifD-Zk": [
+      "DL"
+    ],
+    "G47L4jUy648": [
+      "DL"
+    ],
+    "4W6b6so-L-E": [
+      "DL"
+    ],
+    "kOeBKp8TgFk": [
+      "DL"
+    ],
+    "UK3vHMLAEU4": [
+      "DL"
+    ],
+    "PWBfEpSHJHo": [
+      "DL"
+    ],
+    "bTZjr816ME4": [
+      "DL"
+    ],
+    "Rr1p24Dyq+w": [
+      "DL"
+    ],
+    "GMSN1x4y+cs": [
+      "DL"
+    ],
+    "jWoi+KzyT8M": [
+      "DL"
+    ],
+    "c6K0pwo3+40": [
+      "DL"
+    ],
+    "5HZxpDKT1Xs": [
+      "DL"
+    ],
+    "T1sKGarkLag": [
+      "DL"
+    ],
+    "Y8ww+newDeU": [
+      "DL"
+    ],
+    "TIdDZeVUTJ4": [
+      "DL"
+    ],
+    "MRwiBFUbp1A": [
+      "DL"
+    ],
+    "8EuesH8mP8c": [
+      "DL"
+    ],
+    "pWE9pFFi68Q": [
+      "DL"
+    ],
+    "mGf123FoKQg": [
+      "DL"
+    ],
+    "tU5e3f9gSiU": [
+      "GOWSOS"
+    ],
+    "fCWdlnmB1Ks": [
+      "GOWSOS"
+    ],
+    "5tRaBjtdTzY": [
+      "GOWSOS"
+    ],
+    "T4ucGB8CsnM": [
+      "GOWSOS"
+    ],
+    "bEegosRhgM0": [
+      "GOWSOS"
+    ],
+    "IXmfUaze9So": [
+      "GOWSOS"
+    ],
+    "B2n8aDorSH4": [
+      "GOWSOS"
+    ],
+    "PZQhiiLXRFs": [
+      "GOWSOS"
+    ],
+    "q2y-wDIVWZA": [
+      "GOWSOS",
+      "KCD2"
+    ],
+    "Hc4CaR6JBL0": [
+      "GOWSOS",
+      "KCD2"
+    ]
+  }
+}

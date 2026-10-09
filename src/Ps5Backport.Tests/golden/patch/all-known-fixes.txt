@@ -1,0 +1,48 @@
+== eboot.elf
+sha256 ab621bbce167b3d19838f231d7f7fb3f4c3aea03c1f81e1478f4801c7f8ed229
+fix 3WVD91e12ZQ PLT -> ret0 @ 0x8c
+fix ZP4e7rlzOUk adapter (argument fix) via cave 0xd6
+fix sDCBrmc61XU adapter (argument fix) via cave 0x4b6
+fix DImz2Ft9E2g adapter (argument fix) via cave 0x3f8
+stub NH6xARDOVv8 90043504 opmode_normal 38674
+stub La9uyZv4Kvw 90049864 ret:0xff 1048
+stub 5tRaBjtdTzY 90044016 ret0 1082
+stub T4ucGB8CsnM 90044024 ret0 1082
+stub kP2L8t3j-aM 90044040 ret0 1082
+stub LibwuIonIBw 90044088 ret0 1082
+stub uv0Ae+jCeWY 90043816 ret0 1082
+extended 0
+== fakelib/libSceAmpr.elf
+sha256 c681b42e2d9ad844f8acba524bf835b79b5914c15daa3e6de7e720e4fffc545c
+extended 0
+== fakelib/libScePlayGo.elf
+sha256 19f11bc0568ae96c0dcb57a8de8a8218b73651094daeefe61516365cedf431b8
+extended 0
+== libSieRdNNabla.elf
+sha256 4fcc855696a9742fa3308087e01bd351df5d19fbad817e217b6d1ed7e817bbad
+extended 0
+== logiWheel.elf
+sha256 d287d229488eff3e1d5fe2032c2119a121dcda7ff0fcd2ffe205416500ff8af0
+extended 0
+== sce_module/libSceNpCppWebApi.elf
+sha256 117435497656eae2b569fdc75d1b99a03d86d17dd5662135308dd8adc5c3ef1f
+extended 0
+== sce_module/libScePfs.elf
+sha256 67353bc84543c8ef4278e8f475e0f6c7cfd994597a91870044b8222f5eb98b3c
+extended 0
+== sce_module/libc.elf
+sha256 d6e8a8f329df6df12a600cfffa5bf9eea6a71dba1806816dffa462e829fac31e
+fix qBS714-Jr3g redirect -> local export tsvEmnenz48 @ 0x113e0
+fix 4h6F1LLbTiw adapter -> IWIBBdTHit4 via cave 0x642
+fix B2n8aDorSH4 adapter -> 04AjkP0jO9U via cave 0x3b29
+fix PZQhiiLXRFs adapter -> 04AjkP0jO9U via cave 0x4546
+fix q2y-wDIVWZA adapter -> 04AjkP0jO9U via cave 0x45e0
+fix Hc4CaR6JBL0 adapter -> 04AjkP0jO9U via cave 0x6bbc6
+stub XgVs4jRehcY 1631472 ret0 311
+stub dFym5b41JLU 1631464 ret0 311
+stub OQ-dzhlnM28 1630856 ret0 311
+stub tB59hFLH3SA 1630824 ret0 311
+extended 0
+== sce_sys/about/right.elf
+sha256 7c0161a2bab19aa481acd17dec0702cda387e46ae69bcb16b31dc5a7365ae23f
+extended 0

@@ -1,0 +1,12 @@
+Engine.Render.Core2.PlatformPs5.retail.prx
+eboot.bin
+SP/BattlefieldGame.Main_Ps5_retail.elf
+SP/Engine.Render.Core2.PlatformPs5.retail.prx
+fakelib/libSceAmpr.sprx
+fakelib/libSceAppContent.sprx
+fakelib/libSceGameUpdate.sprx
+fakelib/libSceNpEntitlementAccess.sprx
+fakelib/libScePlayGo.sprx
+sce_module/libSceNpCppWebApi.prx
+sce_module/libc.prx
+sce_sys/about/right.sprx

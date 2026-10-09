@@ -1,0 +1,12 @@
+sha256 60c1d52e15ae8a28eb4015eb6e6aed5e39a03c8652d6123802719350be004a8c
+fix qBS714-Jr3g redirect -> local export tsvEmnenz48 @ 0x113e0
+fix 4h6F1LLbTiw adapter -> IWIBBdTHit4 via cave 0x1137f0
+fix B2n8aDorSH4 adapter -> 04AjkP0jO9U via cave 0x113830
+fix PZQhiiLXRFs adapter -> 04AjkP0jO9U via cave 0x113870
+fix q2y-wDIVWZA adapter -> 04AjkP0jO9U via cave 0x1138b0
+fix Hc4CaR6JBL0 adapter -> 04AjkP0jO9U via cave 0x1138f0
+stub XgVs4jRehcY 1631472 ret0 1128752
+stub dFym5b41JLU 1631464 ret0 1128752
+stub OQ-dzhlnM28 1630856 ret0 1128752
+stub tB59hFLH3SA 1630824 ret0 1128752
+extended 2066

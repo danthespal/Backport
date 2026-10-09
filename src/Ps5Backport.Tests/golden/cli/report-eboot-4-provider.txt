@@ -1,0 +1,103 @@
+exit 0
+reference: firmware_db 4.00 (exact for FW 4)
+
+== eboot.elf  module=application_gt7
+   build: C:/pdi/src/gt7/maintenance/build-ppr.d5d9be91b292e905250b2129cdbab98c/application/gt7/Product/application_gt7.elf
+   reference=927, provided=99, stubbed=0, patched=2, data=60, missing=81, unknown=0
+   libSceAgc:
+      missing  -KRzWekV120  -KRzWekV120  (GOT 0x55e1110)
+      missing  dbOlWdppb4o  dbOlWdppb4o  (GOT 0x55e11c8)
+      missing  BfBDZGbti7A  sceAgcGetIsTrinityMode  (GOT 0x55e1040)
+      missing  fPSCdQxgpSw  sceAgcWriteDataPatchSetAddressOrOffset  (GOT 0x55e1198)
+   libSceHmd2:
+      missing  uv0Ae+jCeWY  sceHmd2ReprojectionSetAllowPositionalReprojection  (GOT 0x55df5a8)
+      missing  QxBJF-G2v5k  sceHmd2ReprojectionSetParamWithBuffer  (GOT 0x55df650)
+   libScePfs:
+      missing  FpmVtvy8tYo  scePfsGetBlockTableReadCommand  (GOT 0x55e0370)
+      missing  qFujOxHUDSs  scePfsGetHeaderReadCommand  (GOT 0x55e0368)
+      missing  smQl0Bi1Ick  scePfsGetPreadBlockRange  (GOT 0x55e0360)
+      missing  -yzonNNSV8E  scePfsGetSingleBlockReadCommand  (GOT 0x55e0378)
+      missing  QiJFZRyM1dE  scePfsGetUncompressedSize  (GOT 0x55e0358)
+      missing  V7BQGxc2Ll0  scePfsGetWorkBufferSize  (GOT 0x55e0350)
+      missing  P6Yiba6u7cc  scePfsPreadDecompressBlock  (GOT 0x55e0380)
+      missing  YyWt34TCzw4  scePfsValidate  (GOT 0x55e0348)
+   libScePsml:
+      missing  DDVUyPyYHTA  DDVUyPyYHTA  (GOT 0x55e0f98)
+      missing  kLF7WtQ1-Dg  kLF7WtQ1-Dg  (GOT 0x55e0f80)
+      missing  eWoKNeB6V-k  scePsmlMfsrCreateSharedResources  (GOT 0x55e0f68)
+      missing  VGjrQa-WqdU  scePsmlMfsrGetContextBufferRequirement1100  (GOT 0x55e0f78)
+      missing  AHalTX9wFZY  scePsmlMfsrGetDispatchMfsrPacketSizeInDwords  (GOT 0x55e0f90)
+      missing  +2KpvixvL6E  scePsmlMfsrGetSharedResourcesInitRequirement  (GOT 0x55e0f60)
+      missing  3WVD91e12ZQ  scePsmlMfsrInit  (GOT 0x55e0f58)
+      missing  JaLBe0P3jSU  scePsmlMfsrReleaseContext  (GOT 0x55e0f88)
+      missing  jEevBXmagOQ  scePsmlMfsrReleaseSharedResources  (GOT 0x55e0f70)
+   libScePsml_mfsr2:
+      missing  0GAw7SmkwII  0GAw7SmkwII  (GOT 0x55e0fb8)
+      missing  1ic5q-kdOsc  1ic5q-kdOsc  (GOT 0x55e0fa8)
+      missing  5z2gBlqxJ+0  5z2gBlqxJ+0  (GOT 0x55e0fc0)
+      missing  Kyy1baXgaVU  Kyy1baXgaVU  (GOT 0x55e0fd0)
+      missing  ZLL31lzzxr4  ZLL31lzzxr4  (GOT 0x55e0fd8)
+      missing  gMduXCLYrNg  gMduXCLYrNg  (GOT 0x55e0fb0)
+      missing  lrJwpLjKXRc  lrJwpLjKXRc  (GOT 0x55e0fe0)
+      missing  m9JLPc3wOQw  m9JLPc3wOQw  (GOT 0x55e0fc8)
+      missing  o+NM86gEwFE  o+NM86gEwFE  (GOT 0x55e0fa0)
+   libScePsml_quality8K:
+      missing  lcZD9tJraAw  lcZD9tJraAw  (GOT 0x55df458)
+   libScePsml_specularAA:
+      missing  xNZM9Y5lf-M  xNZM9Y5lf-M  (GOT 0x55df450)
+   libSceVideoOut:
+      missing  5tRaBjtdTzY  sceVideoOutVrrPegToFixedRate  (GOT 0x55df670)
+      missing  T4ucGB8CsnM  sceVideoOutVrrUnpegFromFixedRate  (GOT 0x55df678)
+   libSceVideoOutVrrStatus:
+      missing  LibwuIonIBw  LibwuIonIBw  (GOT 0x55df6b8)
+      missing  kP2L8t3j-aM  kP2L8t3j-aM  (GOT 0x55df688)
+   libSieRdNNabla:
+      missing  8ZV5l+3315s  8ZV5l+3315s  (GOT 0x55e0618)
+      missing  T+Gk2anXvsA  T+Gk2anXvsA  (GOT 0x55e0608)
+      missing  i+ltdeCAzkY  i+ltdeCAzkY  (GOT 0x55e0610)
+      missing  mQDF1Bc+OQo  mQDF1Bc+OQo  (GOT 0x55e05f8)
+      missing  zrExj5mmNbQ  zrExj5mmNbQ  (GOT 0x55e0600)
+   libc:
+      patched  4bp9gcNLwMI  _ZNSt8__sce_v211_Mtx_unlockEPP13pthread_mutex  (GOT 0x55df0a8)
+      patched  5qXct3c1skg  _ZNSt8__sce_v29_Mtx_lockEPP13pthread_mutex  (GOT 0x55df0a0)
+   libkernel:
+      missing  La9uyZv4Kvw  La9uyZv4Kvw  (GOT 0x55e0d48)
+      missing  NH6xARDOVv8  sceKernelGetOperationMode  (GOT 0x55df470)
+   logiWheel:
+      missing  -8HzgEWqpx4  -8HzgEWqpx4  (GOT 0x55e0c70)
+      missing  0gsOoL2NyqQ  0gsOoL2NyqQ  (GOT 0x55e0c40)
+      missing  3ZAkQIezKqg  3ZAkQIezKqg  (GOT 0x55e0d10)
+      missing  3q3F3xSC8Sk  3q3F3xSC8Sk  (GOT 0x55e0ca8)
+      missing  7IA8m97gygo  7IA8m97gygo  (GOT 0x55e0d40)
+      missing  8AzrWncbQtQ  8AzrWncbQtQ  (GOT 0x55e0d18)
+      missing  922lItYK0O4  922lItYK0O4  (GOT 0x55e0c48)
+      missing  9Z5vieQVSEA  9Z5vieQVSEA  (GOT 0x55e0cc0)
+      missing  A+bU8deE0EI  A+bU8deE0EI  (GOT 0x55e0d20)
+      missing  As-2vK57c7g  As-2vK57c7g  (GOT 0x55e0c50)
+      missing  BTJwYCybCG4  BTJwYCybCG4  (GOT 0x55e0cf0)
+      missing  BqGVfUOYULk  BqGVfUOYULk  (GOT 0x55e0c88)
+      missing  MVp20rQL2GU  MVp20rQL2GU  (GOT 0x55e0cc8)
+      missing  MjWOyyyHMbw  MjWOyyyHMbw  (GOT 0x55e0d28)
+      missing  O4a2FWo7PPI  O4a2FWo7PPI  (GOT 0x55e0cd8)
+      missing  OO6XBeuXhsg  OO6XBeuXhsg  (GOT 0x55e0c30)
+      missing  P1A-ihJvaMw  P1A-ihJvaMw  (GOT 0x55e0d00)
+      missing  X0LQqFJiCYg  X0LQqFJiCYg  (GOT 0x55e0c80)
+      missing  ZVMIYKO63V8  ZVMIYKO63V8  (GOT 0x55e0ce8)
+      missing  as2wTdFf5VI  as2wTdFf5VI  (GOT 0x55e0c78)
+      missing  ea-7NjKkS6U  ea-7NjKkS6U  (GOT 0x55e0cd0)
+      missing  fm17QaFZODM  fm17QaFZODM  (GOT 0x55e0ca0)
+      missing  kQdhu8E033A  kQdhu8E033A  (GOT 0x55e0cf8)
+      missing  mPcvqcI2O50  mPcvqcI2O50  (GOT 0x55e0c38)
+      missing  nJRwkXFUHaM  nJRwkXFUHaM  (GOT 0x55e0c90)
+      missing  nuk4jkTBs3Q  nuk4jkTBs3Q  (GOT 0x55e0d30)
+      missing  odwy88XPM1g  odwy88XPM1g  (GOT 0x55e0c58)
+      missing  pkk2E4Izy-Q  pkk2E4Izy-Q  (GOT 0x55e0c60)
+      missing  qYIH6rkr8-Q  qYIH6rkr8-Q  (GOT 0x55e0c28)
+      missing  rntLWxmEfjo  rntLWxmEfjo  (GOT 0x55e0cb8)
+      missing  rqu39g1mv38  rqu39g1mv38  (GOT 0x55e0d08)
+      missing  tJqlKdJXwOs  tJqlKdJXwOs  (GOT 0x55e0c68)
+      missing  uc5WO3rYStU  uc5WO3rYStU  (GOT 0x55e0ce0)
+      missing  wfBG243gSkc  wfBG243gSkc  (GOT 0x55e0d38)
+      missing  zDa9386TdSk  zDa9386TdSk  (GOT 0x55e0c98)
+      missing  zNuHjZxgd+M  zNuHjZxgd+M  (GOT 0x55e0cb0)
+

@@ -2,12 +2,13 @@ using System.Globalization;
 
 namespace Ps5Backport.Core;
 
-/// <summary>Firmware versions and their SDK values (port of the firmware half of ps5bp/sdk.py).</summary>
+/// <summary>Firmware versions and their SDK values.</summary>
 public static class Firmware
 {
     /// <summary>
     /// Target pairs from PS5-BACKPORK-KITCHEN core/VersionProfiles.vb: firmware major -> (PS5 SDK, PS4 SDK).
     /// GT7 confirms two of them: FW 10 is the original game's values, FW 4 is the backport's.
+    /// FW 11 is not in Kitchen: Ghost of Yotei's original modules, PS4 half as in the FW 11.00 system libraries.
     /// </summary>
     public static readonly IReadOnlyDictionary<int, (uint Ps5, uint Ps4)> SdkPairs = new Dictionary<int, (uint, uint)>
     {
@@ -21,6 +22,7 @@ public static class Firmware
         [8] = (0x08000041, 0x11090001),
         [9] = (0x09000040, 0x11590001),
         [10] = (0x10000040, 0x12090001),
+        [11] = (0x11000040, 0x12590001),
     };
 
     /// <summary>'4', '4.03' -> (4, 3).</summary>

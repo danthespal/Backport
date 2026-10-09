@@ -1,0 +1,10 @@
+== 4 patch=False: PPSA34547 01.300.300
+warning: param.json requiredSystemSoftwareVersion=0x0403000000000000, sdkVersion=0x0403000000000000 is above the target FW 4; left unchanged (--patch-param lowers it; tested backports have done both)
+== 4 patch=True: PPSA34547 01.300.300
+warning: param.json requiredSystemSoftwareVersion, sdkVersion lowered to 0x0400000000000000 (written to sce_sys/param.json)
+patched sha256 d374cf1b32f4055eb2e180247f011fd4e840d289c9595114ceea27d732ada789
+== 4.03 patch=False: PPSA34547 01.300.300
+== 4.03 patch=True: PPSA34547 01.300.300
+== 10 patch=False: PPSA34547 01.300.300
+== 10 patch=True: PPSA34547 01.300.300
+ampr: 

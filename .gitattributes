@@ -1,0 +1,4 @@
+# Generated data and recorded test results are LF byte for byte (tests compare them exactly)
+firmware_db/*.json text eol=lf
+data/*.json text eol=lf
+src/Ps5Backport.Tests/golden/** text eol=lf

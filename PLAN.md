@@ -1,6 +1,8 @@
 # Backport project: phase plan
 
-Goal: a **generic** PS5 backport tool (`ps5bp`). Its knowledge is per **system-library function** (`ps5bp/fixes.py`), never per game. GT7 (FW 4) and CONTROL Resonant (FW 4.03) are the ground-truth samples. Background and findings are in [REFERENCE_OVERVIEW.md](REFERENCE_OVERVIEW.md).
+Goal: a **generic** PS5 backport tool (PS5 Backport Studio: engine `Ps5Backport.Core`, command line `ps5backport`). Its knowledge is per **system-library function** (`data/fixes.json`), never per game. GT7 (FW 4) and CONTROL Resonant (FW 4.03) are the ground-truth samples. Background and findings are in [REFERENCE_OVERVIEW.md](REFERENCE_OVERVIEW.md).
+
+**2026-10-10: one engine.** The Python engine `ps5bp` (and its `tests/` and `tools/`) was retired; PS5 Backport Studio's C# engine (`Ps5Backport.Core`, command line `ps5backport`) is the only one. `python -m ps5bp X` is now `ps5backport X` (same commands); `tools/import_firmware_dumps.py`, `gen_sony_builds.py` and `gen_candidates.py` are `ps5backport fwdb import-firmwares`, `data sony-builds` and `data candidates`. Its parity results live on as golden files in `src/Ps5Backport.Tests/golden/` (re-record with `PS5BP_RECORD=1` after an intended change). Older entries below mention `ps5bp` as it was then. Python is still fine for throwaway scripts outside the software.
 
 Status legend: ☐ todo · ◐ in progress · ☑ done
 
@@ -38,19 +40,21 @@ Progress (2026-10-08): 0.1–0.3 done. `fixes.Fix.proven` marks the 4 derived fi
 ---
 
 ## Phase 1: Console test bench
-Prove `ps5bp` output on real hardware and promote derived fixes to proven.
+Prove `ps5backport` output on real hardware and promote derived fixes to proven.
 
 | # | Task | Done when |
 |---|---|---|
 | ☑ 1.1 | Decide the test console set-up. The user's PS5 is on **FW 13.60**: Relapse (7.00–13.60, tethered; press reports) gives kernel R/W. Check kstuff-lite and ShadowMountPlus support for 13.60. **Do not update to 14.00.** | Written set-up guide |
-| ☐ 1.2 | **Smoke test on 13.60**: backport GT7 with `ps5bp` (FW 4 target) and run it on 13.60. Every library exists there, so this tests that our *patching* (signing, caves, adapters, argument fixes) loads and runs, not 4.xx compatibility. | Game boots, saves, has sound |
+| ☐ 1.2 | **Smoke test on 13.60**: backport GT7 with `ps5backport` (FW 4 target) and run it on 13.60. Every library exists there, so this tests that our *patching* (signing, caves, adapters, argument fixes) loads and runs, not 4.xx compatibility. | Game boots, saves, has sound |
 | ☑ 1.3 | Log collection: ShadowMountPlus `debug.log`, klog over the network, crash dialogs (`PRX_NOT_RESOLVED_FUNCTION` …). | Checklist in this file |
-| ◐ 1.4 | Test matrix per derived fix (save/load for argument fixes, audio for GetSpeakerInfo, threading for SyncOnAddress). On success, add the test to the fix's `sources` (derived → proven). | `fixes.py` updated |
+| ◐ 1.4 | Test matrix per derived fix (save/load for argument fixes, audio for GetSpeakerInfo, threading for SyncOnAddress). On success, add the test to the fix's `sources` (derived → proven). | `data/fixes.json` updated |
 | ☐ 1.5 | Find testers on real low-firmware consoles (4.xx/6.xx/7.xx), e.g. the ShadowMountPlus/BackPork community. | At least one low-FW test report |
 
-**Exit:** one `ps5bp`-made backport confirmed running; derived fixes either proven or fixed.
+**Exit:** one Backport Studio backport confirmed running; derived fixes either proven or fixed.
 
 Progress (2026-10-08): set-up guide, log checklist and test matrix in [CONSOLE_BENCH.md](CONSOLE_BENCH.md): Relapse → elfldr 9021 → kstuff-lite 1.11 → ShadowMountPlus 1.7beta3+ (no standalone BackPork). Overlay goes to `/data/homebrew/backports/<TITLE_ID>/`. Waiting on the user for 1.2.
+
+Update (2026-10-09): testing goes through a **group of testers** the user shares backport files with; they run them on their consoles and report back (covers 1.5; results feed 1.4). The app gets no console integration (APP_PLAN Phase 8 dropped). What testers do and report: [TESTER_CHECKLIST.md](TESTER_CHECKLIST.md).
 
 ---
 
@@ -60,10 +64,10 @@ Replace "3.20 lower bound" guesses with real per-firmware data.
 | # | Task | Done when |
 |---|---|---|
 | ☑ 2.1 | Per-firmware export database format (ps4libdoc-style JSON: firmware → module → library → NIDs), with loaders in `ps5bp.imports`. | Format + loader + test |
-| ◐ 2.2 | Import `PS5-3.20_Libs` into it, and the 13.60 set once dumped (2.3). | 3.20 (and 13.60) in the DB |
-| ☐ 2.3 | Dump 13.60 `/system/common/lib` export lists: PS5-SELF-Decrypter needs 13.60 kernel offsets (string heuristics in its README). Export lists are NIDs, not Sony code. | 13.60 export list |
+| ☑ 2.2 | Import `PS5-3.20_Libs` into it, and the 13.60 set once dumped (2.3). | 3.20 (and 13.60) in the DB — done with real dumps (2.3); 13.60 dump is encrypted |
+| ☑ 2.3 | (2026-10-09: 43 exact lists, 1.00–12.70, from the user's dumps via `tools/import_firmware_dumps.py`; 4.30/7.00/13.60 encrypted. REFERENCE_OVERVIEW Part 13.) Dump 13.60 `/system/common/lib` export lists: PS5-SELF-Decrypter needs 13.60 kernel offsets (string heuristics in its README). Export lists are NIDs, not Sony code. | 13.60 export list |
 | ☑ 2.4 | Three-way classification: on the target FW (present) / only on newer FW (missing → needs a fix) / nowhere (shipped module or unknown). Use the exact target list when available. | Report uses exact data |
-| ◐ 2.5 | "Introduced in FW" knowledge per function (e.g. `sceKernelIsTrinityMode` from 7.61, per CONTROL README), recorded in the DB. | Field + entries |
+| ☑ 2.5 | (from the dumps: first firmware exporting each NID) "Introduced in FW" knowledge per function (e.g. `sceKernelIsTrinityMode` from 7.61, per CONTROL README), recorded in the DB. | Field + entries |
 
 **Exit:** the report says *missing on FW X* from data, not from the 3.20 proxy.
 
@@ -85,7 +89,7 @@ Every target firmware needs a working fakelib set.
 |---|---|---|
 | ☑ 3.1 | BPS patch support in `ps5bp` (BackPork ships BPS patches: 10.01 libraries → 6xx/7xx). | `ps5bp fakelib patch-bps` + test against BackPork's patch files |
 | ☑ 3.2 | Fakelib dependency check: each fakelib's own imports must be satisfied on the target (DB from Phase 2 + other fakelibs); run fixes on fakelibs like any module. | Report section per fakelib |
-| ☐ 3.3 | Store sets for 6.xx and 7.xx (from 10.01 libraries + BackPork patches) and document their provenance in manifests. | `fakelibs/6`, `fakelibs/7` |
+| ◐ 3.3 | (2026-10-09: `fakelibs/7` built from BackPork 7xx + the 10.01 dump; FW 6 blocked: the 6xx Agc/AgcDriver patch sources match no dump) Store sets for 6.xx and 7.xx (from 10.01 libraries + BackPork patches) and document their provenance in manifests. | `fakelibs/6`, `fakelibs/7` |
 | ☑ 3.4 | `ampr_emu`/PlayGo versions: record in the manifest which build is used (CONTROL: the 6 Sep build broke it, 24 Aug works). | Manifest field |
 
 **Exit:** `backport --firmware 6|7|4` finds a verified set.
@@ -111,7 +115,7 @@ Progress (2026-10-08):
 Progress (2026-10-08):
 - 4.1: the report shows `refs=N` (direct code references, `imports.code_references`) and `left unpatched by:` (`fixes.LEFT_UNPATCHED`, 40 NIDs recomputed from the GT7/Control samples) for every unresolved import. Ghidra: PSVR2 is gated by `sceHmd2Initialize` (exists on 3.20); TTS2 by its own missing `Initialize` (the AnyPS5 error stub disables it); `D-CzAxQL0XI` is called unconditionally at startup, so GT7's test firmware exported it (likely above 4.xx). Remaining: whether a missing `DT_NEEDED` module blocks loading, and a stub decision for `D-CzAxQL0XI` once a 4.xx export list shows it missing (REFERENCE_OVERVIEW Part 11).
 - 4.5: ruled out. `mount_mode = RDONLY` changes GT7's own save logic in one function; the `_Mtx` guards appear in no Control module, though Control also runs from a dump.
-- 4.3: `patch.extend_text` grows the code segment into the unused bytes before the next 16 KB page (GT7 libc 0x812, eboot 0x18d4, Control eboot 0x2084, nakama 0x1c62; page-exact modules like Psml have none). Used only with `backport --extend-text` when no padding is left; the report notes it. Signs and unwraps byte-exactly. **Needs a console test** before it becomes a default.
+- 4.3: `patch.extend_text` grows the code segment into the unused bytes before the next 16 KB page (GT7 libc 0x812, eboot 0x18d4, Control eboot 0x2084, nakama 0x1c62; page-exact modules like Psml have none). Automatic since 2026-10-09 when padding runs out (`backport --no-extend-text` disables; REFERENCE_OVERVIEW Part 24); the report notes it. The gap is filled with 64-byte blocks (`ret` + 63 `int3`) so it holds many fixes, not just the first (fixed 2026-10-08). Signs and unwraps byte-exactly. **Needs a console test** before it becomes a default.
 - 4.4: decision note below; waiting on the user.
 - 45 tests pass (`tests/test_phase4.py`).
 
@@ -132,13 +136,13 @@ Recommendation: **keep cave patches as the default**; with 4.3 they cover every 
 The per-game workflow. Each game feeds generic rules back into the tool; nothing game-specific stays in the tool.
 
 1. **Intake:** decrypted dump (fake-signed or plaintext ELFs), `param.json` (title, SDK, required FW), target firmware.
-2. **Report:** `python -m ps5bp backport GAME OUT --firmware X` and read the unknown imports and warnings.
+2. **Report:** `ps5backport backport GAME OUT --firmware X` (or Analyze in the app) and read the unknown imports and warnings.
 3. **Triage each unknown import:** is it reachable at runtime (Ghidra xrefs)? What does AnyPS5 say it returns? Is it in a newer firmware only?
-4. **Generalise:** add the decision to `fixes.py` per *library function*, with the game as its source; candidate → proven after a console test.
+4. **Generalise:** add the decision to `data/fixes.json` per *library function*, with the game as its source; candidate → proven after a console test.
 5. **Build + test on console** (Phase 1 bench); collect logs.
 6. **Record:** a short section in REFERENCE_OVERVIEW.md (as for GT7/CONTROL) and a regression test.
 
-**Exit per game:** runs on the target firmware; all its new knowledge lives in `fixes.py` and the tests.
+**Exit per game:** runs on the target firmware; all its new knowledge lives in `data/*.json` and the tests.
 
 ---
 

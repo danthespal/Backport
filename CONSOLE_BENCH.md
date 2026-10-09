@@ -21,7 +21,7 @@ Avoid (community 13.60 guide): kstuff 1.6.7, ShadowMountPlus 1.7beta1, OnionHEN 
 
 ### Where our output goes
 - Game: a decrypted dump (folder) in a ShadowMountPlus scan path, e.g. `/data/homebrew/<GAME>`.
-- Backport overlay: `ps5bp backport` output → **`<scan_path>/backports/<TITLE_ID>/`**. With the default scan path that is `/data/homebrew/backports/<TITLE_ID>/`. Applied right before the game process starts. Regular files are redirected, missing directories are NSFS overlays, **max 256 redirects per sandbox**.
+- Backport overlay: `ps5backport backport` output → **`<scan_path>/backports/<TITLE_ID>/`**. With the default scan path that is `/data/homebrew/backports/<TITLE_ID>/`. Applied right before the game process starts. Regular files are redirected, missing directories are NSFS overlays, **max 256 redirects per sandbox**.
 - `fakelib/` inside the overlay is used like a game's own `fakelib/`.
 - Delete a stale `ampr_emu.index` / `ampr_emu.index.tmp` from the game folder (the report warns; the overlay can't delete files).
 - ShadowMountPlus can auto-update `libSceAmpr.sprx` (`auto_update_ampr`, off by default). Keep it off while testing, so the ampr_emu build stays the one in our manifest.
@@ -30,7 +30,7 @@ Avoid (community 13.60 guide): kstuff 1.6.7, ShadowMountPlus 1.7beta1, OnionHEN 
 ShadowMountPlus pauses kstuff after a tracked game launches (`kstuff_game_auto_toggle=1`; 15 s direct, 25 s image) and resumes it on exit. A game that loads a fake-signed module **after** that delay (sysmodule load, late prx) can then fail. If a backport crashes only later in play, retry with `kstuff_no_pause=<TITLE_ID>` in the ShadowMountPlus config.
 
 ## 1.2 Smoke test (first run)
-1. `python -m ps5bp backport GT7_DUMP OUT --firmware 4` (fakelibs from the store).
+1. `ps5backport backport GT7_DUMP OUT --firmware 4` (fakelibs from the store).
 2. Copy `OUT/*` to `/data/homebrew/backports/<TITLE_ID>/` (keep `backport_report.txt` beside it for reference).
 3. Launch. Check: boots to menu, **saves** (GT7's pre-existing read-only mount patch may stop that; see REFERENCE_OVERVIEW Part 3), sound, online-free play for 10 minutes.
 4. Record the result and logs in REFERENCE_OVERVIEW (Phase 1 results).
@@ -39,13 +39,13 @@ ShadowMountPlus pauses kstuff after a tracked game launches (`kstuff_game_auto_t
 | Source | Where | What to look for |
 |---|---|---|
 | ShadowMountPlus log | `/data/shadowmount/debug.log` (previous run: `debug.log.1`); also the web UI log viewer and the local API `/api/v1/debug-log` (port 10101, loopback only) | which backport/fakelib paths were redirected, mount errors, kstuff pause/resume times |
-| ShadowMountPlus toasts | `/data/shadowmount/notify.txt` | last notifications |
+| ~~ShadowMountPlus toasts~~ | ~~`/data/shadowmount/notify.txt`~~ | never written: the path is defined but unused (REFERENCE_OVERVIEW Part 14) |
 | Kernel log | the Relapse host's `klosrv` option (enable it with `ftpsrv`), read over the network | module load failures, unresolved symbol messages, crash dumps |
 | Files | the Relapse host's `ftpsrv` option (FTP) | pull logs, push overlays |
 | Crash dialog | on screen | write down the error code (e.g. `CE-105773-3` = a known ShadowMountPlus relaunch bug with folder games, issue #128; workaround: reboot or remount) |
 | ampr_emu | `/app0/ampr_emu.log` (Control's ampr_emu build writes it) | AMPR emulation errors, index rebuilds |
 
-For each test, record: game, version, target firmware, `ps5bp` commit, fakelib set and its manifest build dates, the derived fixes listed in the report NOTE, and the result.
+For each test, record: game, version, target firmware, Backport Studio commit, fakelib set and its manifest build dates, the derived fixes listed in the report NOTE, and the result.
 
 ## 1.4 Test matrix for derived fixes
 | Fix | How to exercise it | Pass |

@@ -1,0 +1,7 @@
+exit 0
+== 4.03  (<repo>\fakelibs\4.03)
+   libSceAgc.sprx                     PS5-style SELF SDK 0x04000031/0x09040001  Sony J03718109 = FW 12.00  CONTROL Resonant 1.300 FW4.03 backport (README: Agc/AgcDriver/Psml = 4xx kit, Ampr = ampr_emu 24 Aug build; tested on FW 10.01)
+   libSceAgcDriver.sprx               PS5-style SELF SDK 0x04000031/0x09040001  Sony J03718109 = FW 12.00  CONTROL Resonant 1.300 FW4.03 backport (README: Agc/AgcDriver/Psml = 4xx kit, Ampr = ampr_emu 24 Aug build; tested on FW 10.01)
+   libSceAmpr.sprx                    PS4-style fake SDK 0x02000009/0x08050001  built Aug 24 2026  CONTROL Resonant 1.300 FW4.03 backport (README: Agc/AgcDriver/Psml = 4xx kit, Ampr = ampr_emu 24 Aug build; tested on FW 10.01)
+   libScePlayGo.sprx                  PS4-style fake SDK 0x02000009/0x08050001  CONTROL Resonant 1.300 FW4.03 backport (README: Agc/AgcDriver/Psml = 4xx kit, Ampr = ampr_emu 24 Aug build; tested on FW 10.01)
+   libScePsml.sprx                    PS5-style SELF SDK 0x04000031/0x09040001  Sony J03718109 = FW 12.00  CONTROL Resonant 1.300 FW4.03 backport (README: Agc/AgcDriver/Psml = 4xx kit, Ampr = ampr_emu 24 Aug build; tested on FW 10.01)

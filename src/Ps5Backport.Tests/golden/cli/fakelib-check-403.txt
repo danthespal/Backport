@@ -1,0 +1,25 @@
+exit 0
+fakelibs: <repo>\fakelibs\4.03
+reference: firmware_db 4.03 (exact for FW 4.03)
+
+== libSceAgc.sprx  module=libSceAgc
+   build: W:/Build/J03718109/sys/build/integration/orbis-build_0005c/package/target/phase2/usermode/src/graphics/gen2/agc/prx/libSceAgc.prx
+   reference=82, provided=4, stubbed=9, patched=0, data=2, missing=0, unknown=0
+
+== libSceAgcDriver.sprx  module=libSceAgcDriver
+   build: W:/Build/J03718109/sys/build/integration/orbis-build_0005c/package/target/phase2/usermode/src/graphics/gen2/agc_driver/libSceAgcDriver.prx
+   reference=48, provided=0, stubbed=4, patched=0, data=4, missing=0, unknown=0
+
+== libSceAmpr.sprx  module=libSceAmpr
+   build: C:/dev/ps5/ampr_emu/out/Prospero_ReleaseHooks/libSceAmpr.prx
+   reference=112, provided=0, stubbed=0, patched=0, data=1, missing=0, unknown=0
+
+== libScePlayGo.sprx  module=libScePlayGo
+   build: C:/dev/ps5/playgo/./out/libScePlayGo.prx
+   reference=12, provided=0, stubbed=0, patched=0, data=1, missing=0, unknown=0
+
+== libScePsml.sprx  module=libScePsml
+   build: W:/Build/J03718109/sys/internal/usermode/src/psml/Prospero_Game_PRX_psml_prx/libScePsml.prx
+   reference=284, provided=22, stubbed=29, patched=0, data=5, missing=0, unknown=0
+
+0 unresolved import(s); a missing function only fails when called (lazy PLT binding)

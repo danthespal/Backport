@@ -1,0 +1,16 @@
+== 4 patch=False: PPSA01317 01.710.000
+warning: param.json requiredSystemSoftwareVersion=0x1360000000000000, sdkVersion=0x1300000000000000 is above the target FW 4; left unchanged (--patch-param lowers it; tested backports have done both)
+== 4 patch=True: PPSA01317 01.710.000
+warning: param.json requiredSystemSoftwareVersion, sdkVersion lowered to 0x0400000000000000 (written to sce_sys/param.json)
+patched sha256 e1def73a74ff848df0b428ad12fd6989071e3bf14562f19b52bc7ab63ed70920
+== 4.03 patch=False: PPSA01317 01.710.000
+warning: param.json requiredSystemSoftwareVersion=0x1360000000000000, sdkVersion=0x1300000000000000 is above the target FW 4.03; left unchanged (--patch-param lowers it; tested backports have done both)
+== 4.03 patch=True: PPSA01317 01.710.000
+warning: param.json requiredSystemSoftwareVersion, sdkVersion lowered to 0x0403000000000000 (written to sce_sys/param.json)
+patched sha256 ec3817ddb54904fd82c04240c10177113590e8156e8ef67facd94acb70ced95c
+== 10 patch=False: PPSA01317 01.710.000
+warning: param.json requiredSystemSoftwareVersion=0x1360000000000000, sdkVersion=0x1300000000000000 is above the target FW 10; left unchanged (--patch-param lowers it; tested backports have done both)
+== 10 patch=True: PPSA01317 01.710.000
+warning: param.json requiredSystemSoftwareVersion, sdkVersion lowered to 0x1000000000000000 (written to sce_sys/param.json)
+patched sha256 b82d7f3448f75d5461524c585cf0bcd0711d07f8a55964f0b407d5d9c7573bd2
+ampr: 
