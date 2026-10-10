@@ -78,6 +78,7 @@ public static class Samples
     }
 }
 
+[Trait("Lane", "Private")]
 public class Gt7Tests
 {
     [Fact]
@@ -299,6 +300,7 @@ public class Gt7Tests
 }
 
 /// <summary>CONTROL Resonant 1.300 FW 4.03 backport: its README documents every change.</summary>
+[Trait("Lane", "Private")]
 public class ControlTests
 {
     static readonly Dictionary<string, string[]> ReadmeStubs = new()
@@ -370,6 +372,7 @@ public class ControlTests
     }
 }
 
+[Trait("Lane", "Private")]
 public class PatchEngineTests
 {
     [Fact]
@@ -378,7 +381,7 @@ public class PatchEngineTests
         var elf = SceElf.Load(Samples.Work("NOT_BACKPORT_elf", "eboot.elf"));
         var reference = Imports.LoadReference(Repo.Need("firmware_db"), "4");
         var statuses = Imports.Classify(elf, reference.Nids, exact: reference.Exact).Where(s => s.Nid is "2jiIxUmcsGo" or "bIi4YUfSRys" or "f3kPeoTZnIE");
-        var refs = Imports.CodeReferences(elf, statuses);
+        var refs = Imports.CodeReferences(elf, statuses, cancel: TestContext.Current.CancellationToken);
         Assert.Equal(0, refs["2jiIxUmcsGo"]);   // sceTextToSpeech2Cancel: never referenced
         Assert.Equal(3, refs["bIi4YUfSRys"]);   // sceHmd2GetDeviceInformation
         Assert.Equal(1, refs["f3kPeoTZnIE"]);   // sceHmd2Open
@@ -461,18 +464,18 @@ public class PatchEngineTests
         var k = Samples.K;
         var strap = k.Options["gpu_scratch"].Patterns[0];   // s_trap 1 -> s_nop
         byte[] data = [0, .. strap.Find, 0, 0, 0, .. strap.Find];
-        Assert.Equal(1, FixApplier.ReplaceAll(data, strap, 0, data.Length, 4));   // only offset 8
+        Assert.Equal(1, FixApplier.ReplaceAll(data, strap, TestContext.Current.CancellationToken, 0, data.Length, 4));   // only offset 8
         Assert.Equal(strap.Find, data[1..5]);
         Assert.Equal(strap.Replace, data[8..12]);
 
         var elf = SceElf.Load(Samples.Work("NOT_BACKPORT_elf", "eboot.elf"));
         var t = elf.TextSegment();
         byte[] code = elf.Data[(int)t.Offset..(int)(t.Offset + t.Filesz)];
-        Assert.Equal(202, FixApplier.ApplyPattern(elf, strap));                  // GT7's SDK BVH shaders
+        Assert.Equal(202, FixApplier.ApplyPattern(elf, strap, cancel: TestContext.Current.CancellationToken));                  // GT7's SDK BVH shaders
         Assert.Equal(code, elf.Data[(int)t.Offset..(int)(t.Offset + t.Filesz)]);
-        Assert.Equal(0, FixApplier.ApplyPattern(elf, strap));
+        Assert.Equal(0, FixApplier.ApplyPattern(elf, strap, cancel: TestContext.Current.CancellationToken));
         // the default patterns (Wwise, EA) leave GT7 alone
-        Assert.All(k.Patterns, p => Assert.Equal(0, FixApplier.ApplyPattern(SceElf.Load(Samples.Work("NOT_BACKPORT_elf", "eboot.elf")), p)));
+        Assert.All(k.Patterns, p => Assert.Equal(0, FixApplier.ApplyPattern(SceElf.Load(Samples.Work("NOT_BACKPORT_elf", "eboot.elf")), p, cancel: TestContext.Current.CancellationToken)));
     }
 
     /// <summary>CONTROL's backport already changed the Wwise speaker-setup site; the channel-switch site is still 7.1.4.</summary>
@@ -483,13 +486,14 @@ public class PatchEngineTests
         var elf = SceElf.Load(Samples.Work("CONTROL_elf", "eboot.elf"));
         var (setup, change, packed) = (k.Patterns[0], k.Patterns[1], k.Patterns[2]);
         Assert.True(setup.Code && change.Code && packed.Code);
-        Assert.Equal(0, FixApplier.ApplyPattern(elf, setup));
-        Assert.Equal(1, FixApplier.ApplyPattern(elf, change));
-        Assert.Equal(0, FixApplier.ApplyPattern(elf, change));
-        Assert.Equal(1, FixApplier.ApplyPattern(elf, packed));
+        Assert.Equal(0, FixApplier.ApplyPattern(elf, setup, cancel: TestContext.Current.CancellationToken));
+        Assert.Equal(1, FixApplier.ApplyPattern(elf, change, cancel: TestContext.Current.CancellationToken));
+        Assert.Equal(0, FixApplier.ApplyPattern(elf, change, cancel: TestContext.Current.CancellationToken));
+        Assert.Equal(1, FixApplier.ApplyPattern(elf, packed, cancel: TestContext.Current.CancellationToken));
     }
 }
 
+[Trait("Lane", "Private")]
 public class WholeGameTests
 {
     /// <summary>AC Black Flag Resynced at FW 4.50 with both options reproduces AC's own files and leaves nothing unresolved.</summary>
@@ -614,6 +618,7 @@ public class WholeGameTests
     }
 }
 
+[Trait("Lane", "Private")]
 public class BackPorkPatchTests
 {
     static string BackPork(params string[] rel) => Repo.Need([".original", "reference", "BackPork", "patches", .. rel]);

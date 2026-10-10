@@ -2,7 +2,10 @@ using System.Globalization;
 using Ps5Backport.Core;
 
 // ps5backport: the command line of PS5 Backport Studio.
-return Cli.Run(args, Console.Out, Console.Error);
+using var diagnostics = new DiagnosticLog(DiagnosticLog.DefaultDirectory("cli"));
+int exitCode = Cli.Run(args, Console.Out, Console.Error, diagnostics);
+if (diagnostics.Failure is { } diagnosticFailure) Console.Error.WriteLine($"warning: local diagnostics unavailable: {diagnosticFailure}");
+return exitCode;
 
 public static class Cli
 {
@@ -84,18 +87,18 @@ public static class Cli
 
     static string Py(string? s) => s ?? "None";
 
-    public static int Run(string[] argv, TextWriter output, TextWriter error)
+    public static int Run(string[] argv, TextWriter output, TextWriter error, DiagnosticLog? diagnostics = null)
     {
-        var a = new Args(argv);
-        if (a.Positional.Count == 0)
-        {
-            error.Write(Usage);
-            return 2;
-        }
-        string command = a.Positional[0];
-        var p = a.Positional.Skip(1).ToList();
         try
         {
+            var a = new Args(argv);
+            if (a.Positional.Count == 0)
+            {
+                error.Write(Usage);
+                return 2;
+            }
+            string command = a.Positional[0];
+            var p = a.Positional.Skip(1).ToList();
             switch (command)
             {
                 case "info" when p.Count > 0: Info(p, output); return 0;
@@ -114,7 +117,7 @@ public static class Cli
                     return 0;
                 case "report" when p.Count > 0: return Report(a, p, output);
                 case "stub" when p.Count == 2: return Stub(a, p, output);
-                case "backport" when p.Count == 2: return Backport(a, p, output);
+                case "backport" when p.Count == 2: return Backport(a, p, output, diagnostics);
                 case "fwdb" when p.Count > 0: return FwdbCommand(a, p, output);
                 case "bps" when p.Count > 0: return BpsCommand(a, p, output);
                 case "fakelib" when p.Count > 0: return FakelibCommand(a, p, output);
@@ -125,8 +128,11 @@ public static class Cli
             }
         }
         catch (Exception e) when (e is ArgumentException or FormatException or InvalidDataException or IOException
-                                    or PatchException or KeyNotFoundException or UnauthorizedAccessException)
+                                    or PatchException or KeyNotFoundException or UnauthorizedAccessException or OverflowException
+                                    or System.Text.Json.JsonException)
         {
+            diagnostics?.Write(new("cli", "failed", "command", Message: e.Message, ErrorCategory: DiagnosticLog.Category(e),
+                ExceptionType: e.GetType().FullName, ExceptionContext: e.ToString()));
             error.WriteLine($"error: {e.Message}");
             return 1;
         }
@@ -212,7 +218,7 @@ public static class Cli
         return 0;
     }
 
-    static int Backport(Args a, List<string> p, TextWriter o)
+    static int Backport(Args a, List<string> p, TextWriter o, DiagnosticLog? diagnostics)
     {
         string fw = a.Get("--firmware") ?? throw new ArgumentException("backport needs --firmware");
         var options = new BackportOptions
@@ -231,11 +237,14 @@ public static class Cli
             Options = a.All("--option"),
             Names = Names(a),
         };
-        var result = Pipeline.Backport(p[0], p[1], options, Knowledge.Default);
+        var result = Pipeline.Backport(p[0], p[1], options, Knowledge.Default, diagnostics: diagnostics);
         o.WriteLine(Pipeline.FormatReport(result));
         int written = result.Modules.Count(m => m.Written), errors = result.Modules.Count(m => m.Error.Length > 0);
         o.WriteLine();
-        o.WriteLine($"{written} files written, {errors} errors; report: {Path.Combine(p[1], Pipeline.ReportTxt)}");
+        if (result.Published)
+            o.WriteLine($"{written} files written, {errors} errors; report: {Path.Combine(p[1], Pipeline.ReportTxt)}");
+        else
+            o.WriteLine($"Output not published: {errors} module errors; diagnostics: {result.DiagnosticDirectory}");
         return errors > 0 ? 1 : 0;
     }
 
@@ -268,6 +277,8 @@ public static class Cli
             if (p.Count < 2 || a.Get("--firmware") is not { } fw || a.Get("--source") is not { } source)
                 throw new ArgumentException($"fwdb {action} needs a folder, --firmware and --source");
             var exports = action == "import-genstub" ? FirmwareDb.ImportGenstub(p[1], fw, source) : FirmwareDb.ImportDump(p[1], fw, source);
+            if (exports.Modules.Count == 0)
+                throw new InvalidDataException("no modules found; existing firmware database left unchanged");
             Directory.CreateDirectory(db);
             string path = Path.Combine(db, $"{exports.Firmware}.json");
             FirmwareDb.Save(exports, path);

@@ -279,15 +279,34 @@ public static class FixApplier
     /// <summary>Replace <see cref="FixPattern.Find"/> in data[start..end) at offsets that are a multiple of
     /// <paramref name="step"/> from <paramref name="start"/>. Returns the number of replacements.</summary>
     public static int ReplaceAll(byte[] data, FixPattern pattern, long start = 0, long end = -1, int step = 1)
+        => ReplaceAll(data, pattern, default, start, end, step);
+
+    /// <summary>Checks cancellation between bounded scan windows; match order and alignment are unchanged.</summary>
+    public static int ReplaceAll(byte[] data, FixPattern pattern, CancellationToken cancel, long start = 0, long end = -1, int step = 1)
     {
+        cancel.ThrowIfCancellationRequested();
         end = end < 0 ? data.Length : end;
+        if (pattern.Find.Length == 0 || pattern.Replace.Length != pattern.Find.Length)
+            throw new ArgumentException("patterns must find a nonempty sequence and replace it with the same number of bytes");
+        if (start < 0 || end < start || end > data.Length || step <= 0)
+            throw new ArgumentOutOfRangeException(nameof(start), "invalid pattern range or step");
         int count = 0;
         long i = start;
+        long checkpoint = start;
         while (i <= end - pattern.Find.Length)
         {
-            int at = data.AsSpan((int)i, (int)(end - i)).IndexOf(pattern.Find);
+            if (i >= checkpoint)
+            {
+                cancel.ThrowIfCancellationRequested();
+                checkpoint = i + 65536;
+            }
+            long candidates = Math.Min(1024 * 1024, end - pattern.Find.Length - i + 1);
+            int at = data.AsSpan((int)i, checked((int)(candidates + pattern.Find.Length - 1))).IndexOf(pattern.Find);
             if (at < 0)
-                break;
+            {
+                i += candidates;
+                continue;
+            }
             i += at;
             if ((i - start) % step == 0)
             {
@@ -301,11 +320,14 @@ public static class FixApplier
 
     /// <summary>Pattern in a module: only 4-aligned hits inside non-executable loaded segments (shader binaries
     /// live in data; code is left alone).</summary>
-    public static int ApplyPattern(SceElf elf, FixPattern pattern) => pattern.Code
+    public static int ApplyPattern(SceElf elf, FixPattern pattern) => ApplyPattern(elf, pattern, default);
+
+    /// <summary>Segment pattern replacement with cooperative scan cancellation.</summary>
+    public static int ApplyPattern(SceElf elf, FixPattern pattern, CancellationToken cancel) => pattern.Code
         ? elf.Phdrs.Where(p => p.Type == SceElf.PtLoad && p.Filesz > 0 && (p.Flags & SceElf.PfX) != 0)
-                   .Sum(p => ReplaceAll(elf.Data, pattern, p.Offset, p.Offset + p.Filesz))
+                   .Sum(p => ReplaceAll(elf.Data, pattern, cancel, p.Offset, p.Offset + p.Filesz))
         : elf.Phdrs.Where(p => p.Type == SceElf.PtLoad && p.Filesz > 0 && (p.Flags & SceElf.PfX) == 0)
-                   .Sum(p => ReplaceAll(elf.Data, pattern, p.Offset, p.Offset + p.Filesz, 4));
+                   .Sum(p => ReplaceAll(elf.Data, pattern, cancel, p.Offset, p.Offset + p.Filesz, 4));
 
     /// <summary>NID -> stub for every stub fix (the rules StubImports uses for known fixes).</summary>
     public static Dictionary<string, string> StubRules(Knowledge knowledge) =>

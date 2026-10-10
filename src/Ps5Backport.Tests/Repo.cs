@@ -3,7 +3,7 @@ using System.Text;
 
 namespace Ps5Backport.Tests;
 
-/// <summary>The repository and its sample files. Tests skip (not fail) when a sample file is missing.</summary>
+/// <summary>Tracked test data is mandatory; optional private fixtures skip unless the private lane is required.</summary>
 public static class Repo
 {
     /// <summary>Repository root: the first parent folder that contains Ps5Backport.slnx.</summary>
@@ -17,13 +17,23 @@ public static class Repo
         throw new InvalidOperationException("repository root (folder with Ps5Backport.slnx) not found");
     }
 
-    /// <summary>Absolute path under the repo root; skips the test when it doesn't exist.</summary>
+    /// <summary>Absolute path under the repo root; missing tracked data fails, optional private data may skip.</summary>
     public static string Need(params string[] relative)
     {
         string path = Path.Combine([Root, .. relative]);
         if (!File.Exists(path) && !Directory.Exists(path))
-            Assert.Skip($"sample file missing: {Path.Combine(relative)}");
+            Missing(Path.Combine(relative), relative[0].Replace('\\', '/').Split('/')[0] is ".original" or "work" or "fakelibs");
         return path;
+    }
+
+    public static bool RequirePrivate => Environment.GetEnvironmentVariable("PS5BP_REQUIRE_PRIVATE") == "1";
+
+    public static void Missing(string relative, bool privateFixture)
+    {
+        string message = $"required {(privateFixture ? "private fixture" : "tracked test data")} missing: {relative}";
+        if (!privateFixture || RequirePrivate)
+            Assert.Fail(message);
+        Assert.Skip(message);
     }
 }
 

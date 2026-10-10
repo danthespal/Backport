@@ -73,7 +73,17 @@ public static class FakelibStore
     public static JsonObject LoadManifest(string folder)
     {
         string path = Path.Combine(folder, ManifestName);
-        return File.Exists(path) ? JsonNode.Parse(File.ReadAllText(path))!.AsObject() : [];
+        if (!File.Exists(path))
+            return [];
+        if (JsonNode.Parse(File.ReadAllText(path)) is not JsonObject manifest || manifest.Any(e => e.Value is not JsonObject))
+            throw new InvalidDataException($"{path}: manifest must be an object of file entries");
+        foreach (string name in manifest.Select(e => e.Key))
+        {
+            _ = Paths.ResolveRelativeFile(folder, name);
+            if (name != Path.GetFileName(name) || !IsModule(name))
+                throw new InvalidDataException($"{path}: expected a module filename, got '{name}'");
+        }
+        return manifest;
     }
 
     static void SaveManifest(string folder, JsonObject manifest)
@@ -99,32 +109,57 @@ public static class FakelibStore
     /// </summary>
     public static (string Folder, List<(string Name, JsonObject Entry)> Added) Add(
         string store, string firmware, IEnumerable<string> files, string source = "", string variant = "")
+        => AddBatch(store, firmware, files, source, variant);
+
+    internal static (string Folder, List<(string Name, JsonObject Entry)> Added) AddBatch(
+        string store, string firmware, IEnumerable<string> files, string source, string variant, Action<string>? checkpoint = null)
     {
-        string folder = Path.Combine(store, FolderName(firmware));
+        string setFolder = Path.Combine(store, FolderName(firmware));
+        string folder = setFolder;
         if (variant.Length > 0)
             folder = VariantFolder(folder, variant);
-        Directory.CreateDirectory(folder);
+        var inputs = files.ToArray();
+        var names = new HashSet<string>(OperatingSystem.IsWindows() ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal);
+        foreach (string path in inputs)
+        {
+            Paths.RequireNoLinks(path);
+            string name = Path.GetFileName(path);
+            _ = Paths.ResolveRelativeFile(folder, name);
+            if (!IsModule(name) || !names.Add(name))
+                throw new ArgumentException($"{name}: require distinct .sprx or .prx filenames");
+        }
+        using var storeWriter = DirectoryTransaction.Acquire(store);
+        using var transaction = new DirectoryTransaction(setFolder, checkpoint);
+        transaction.CopyExisting();
+        string stagedFolder = variant.Length == 0 ? transaction.Stage : VariantFolder(transaction.Stage, variant);
+        Directory.CreateDirectory(stagedFolder);
         var manifest = LoadManifest(folder);
         var added = new List<(string, JsonObject)>();
-        foreach (string path in files)
+        foreach (string path in inputs)
         {
             string name = Path.GetFileName(path);
-            if (!IsModule(name))
-                throw new ArgumentException($"{name}: fakelibs must be .sprx or .prx");
-            var entry = Describe(path);
-            string dest = Path.Combine(folder, name);
-            if (!string.Equals(Path.GetFullPath(path), Path.GetFullPath(dest), StringComparison.OrdinalIgnoreCase))
+            string dest = Path.Combine(stagedFolder, name);
+            using (var guard = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read))
             {
                 File.Copy(path, dest, overwrite: true);
                 File.SetLastWriteTimeUtc(dest, File.GetLastWriteTimeUtc(path));   // like shutil.copy2
             }
+            File.SetAttributes(dest, File.GetAttributes(dest) & ~FileAttributes.ReadOnly);
+            var entry = Describe(dest); // metadata belongs to the exact staged bytes, not a separately reread input
             entry["sha256"] = Sha256(dest);
             entry["size"] = new FileInfo(dest).Length;
             entry["source"] = source;
             manifest[name] = entry;
             added.Add((name, entry));
+            checkpoint?.Invoke("file-added");
         }
-        SaveManifest(folder, manifest);
+        SaveManifest(stagedFolder, manifest);
+        var problems = Verify(stagedFolder);
+        if (problems.Count > 0)
+            throw new InvalidDataException("staged library set failed verification: " + string.Join("; ", problems.Select(p => $"{p.Name}: {p.Problem}")));
+        if (variant.Length > 0)
+            Publication.Seal(stagedFolder, transaction.Id, checkpoint);
+        transaction.Commit();
         return (folder, added);
     }
 
@@ -174,7 +209,7 @@ public static class FakelibStore
         var result = new List<(string, SceElf, List<ImportStatus>)>();
         for (int i = 0; i < modules.Count; i++)
         {
-            var provided = exports.Where((_, j) => j != i).SelectMany(e => e).Except(exports[i]).ToHashSet(StringComparer.Ordinal);
+            var provided = exports.Where((_, j) => j != i).SelectMany(e => e).ToHashSet(StringComparer.Ordinal);
             result.Add((modules[i].Name, modules[i].Elf, Imports.Classify(modules[i].Elf, reference.Nids, provided, reference.Exact)));
         }
         return result;
@@ -187,7 +222,8 @@ public static class FakelibStore
         if (!Directory.Exists(store))
             return result;
         foreach (string dir in Directory.EnumerateDirectories(store))
-            result[Path.GetFileName(dir)] = LoadManifest(dir);
+            if (!Path.GetFileName(dir).StartsWith(Publication.Prefix, StringComparison.OrdinalIgnoreCase))
+                result[Path.GetFileName(dir)] = LoadManifest(dir);
         return result;
     }
 }

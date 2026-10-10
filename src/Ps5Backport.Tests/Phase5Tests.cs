@@ -8,6 +8,7 @@ namespace Ps5Backport.Tests;
 /// golden record (every file's SHA-256 and the full text report), first recorded when the output was
 /// byte-identical to ps5bp's.
 /// </summary>
+[Trait("Lane", "Private")]
 public class BackportParityTests
 {
     static string Temp(string tag) =>
@@ -50,7 +51,8 @@ public class BackportParityTests
                 Options = c.Options ?? [], Names = new NameDb(aerolib),
             }, new Knowledge(Repo.Need("data")), cancel: TestContext.Current.CancellationToken);
             Assert.NotEmpty(result.Modules);
-            Golden.Match(Path.Combine("backport", name + ".txt"), OutputRecord(output, (game, "<game>"), (output, "<out>")));
+            string artifacts = result.Published ? output : result.DiagnosticDirectory;
+            Golden.Match(Path.Combine("backport", name + ".txt"), OutputRecord(artifacts, (game, "<game>"), (output, "<out>")));
         }
         finally { Directory.Delete(root, true); }
     }
@@ -60,7 +62,8 @@ public class BackportParityTests
     {
         var sb = new System.Text.StringBuilder();
         foreach (string rel in Directory.EnumerateFiles(output, "*", SearchOption.AllDirectories)
-                                        .Select(f => Path.GetRelativePath(output, f)).Order(StringComparer.Ordinal))
+                                        .Select(f => Path.GetRelativePath(output, f))
+                                        .Where(f => f != Publication.ManifestName && f != Publication.EvidenceName).Order(StringComparer.Ordinal))
         {
             byte[] data = File.ReadAllBytes(Path.Combine(output, rel));
             if (rel.StartsWith("backport_report", StringComparison.Ordinal))
@@ -107,6 +110,7 @@ public class BackportParityTests
     }
 }
 
+[Trait("Lane", "Private")]
 public class CliParityTests
 {
     static (int Exit, string Out) Cs(params string[] args)
@@ -198,6 +202,7 @@ public class CliParityTests
 }
 
 /// <summary>Phase 6 support in Core: game metadata for the header, and dry runs for Analyze.</summary>
+[Trait("Lane", "Private")]
 public class GuiSupportTests
 {
     [Theory]
@@ -245,13 +250,14 @@ public class GuiSupportTests
 }
 
 /// <summary>Battlefield 6 launches a second executable (SP/&lt;name&gt;_Ps5_retail.elf); it must be found like a module.</summary>
+[Trait("Lane", "Private")]
 public class ExtraExecutableTests
 {
     [Fact]
     public void ElfExecutable_IsFound()
     {
         string game = Repo.Need(".original", "backports", "PPSA19534", "default");
-        var actual = GameScan.FindModules(game);
+        var actual = GameScan.FindModules(game, cancel: TestContext.Current.CancellationToken);
         Assert.Contains(Path.Combine("SP", "BattlefieldGame.Main_Ps5_retail.elf"), actual);
         Assert.Contains("eboot.bin", actual);
         Golden.Match(Path.Combine("modules", "PPSA19534_default.txt"), string.Concat(actual.Select(m => m.Replace('\\', '/') + "\n")));
@@ -259,6 +265,7 @@ public class ExtraExecutableTests
 }
 
 /// <summary>A decrypted dump (plain ELF modules): the output is always a fake SELF.</summary>
+[Trait("Lane", "Private")]
 public class DecryptedInputTests
 {
     [Fact]
@@ -283,6 +290,7 @@ public class DecryptedInputTests
 }
 
 /// <summary>The game's own fakelib/ is checked against data/known_builds.json too (EA SPORTS FC 27 ships the Sep 6 ampr_emu).</summary>
+[Trait("Lane", "Private")]
 public class GameFakelibBuildTests
 {
     [Fact]
@@ -307,6 +315,7 @@ public class GameFakelibBuildTests
 
 /// <summary>A fakelib set's app0/ files (k9.psp, the PSSR model fakelibs/4's FW 13.60 libScePsml reads from /app0/k9.psp
 /// on a PS5 Pro) are added only when the game uses that fakelib.</summary>
+[Trait("Lane", "Private")]
 public class App0FileTests
 {
     [Fact]
@@ -331,6 +340,7 @@ public class App0FileTests
 }
 
 /// <summary>sce_sys/about/right.sprx is not needed to start a game: an unreadable one is left out with a warning, not a module error.</summary>
+[Trait("Lane", "Private")]
 public class RightsModuleTests
 {
     [Fact]

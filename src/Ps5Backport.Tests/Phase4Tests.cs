@@ -11,6 +11,7 @@ namespace Ps5Backport.Tests;
 ///   extend  the same on GT7's libc with all padding used up and the code-space fallback allowed
 ///   define  stubs with define_symbol on a fakelib, incl. a RELA (data) import and a ret:&lt;value&gt; rule
 /// </summary>
+[Trait("Lane", "Private")]
 public class PatchTests
 {
     static readonly string NotBackport = Path.Combine("work", "NOT_BACKPORT_elf");

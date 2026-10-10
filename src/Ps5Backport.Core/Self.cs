@@ -62,7 +62,11 @@ public static class Self
     /// </summary>
     public static int EncryptedSegments(ReadOnlySpan<byte> self)
     {
+        if (self.Length < 0x20 || !IsSelf(Kind(self)))
+            throw new InvalidDataException("invalid or truncated SELF header");
         int count = BinaryPrimitives.ReadUInt16LittleEndian(self[0x18..]);
+        if (count > (self.Length - 0x20) / 0x20)
+            throw new InvalidDataException("SELF entry table extends past end of file");
         int encrypted = 0;
         for (int i = 0; i < count; i++)
             if ((BinaryPrimitives.ReadUInt64LittleEndian(self[(0x20 + i * 0x20)..]) & SegmentEncrypted) != 0)
@@ -85,17 +89,26 @@ public static class Self
     /// <summary>File offset of the 32-byte ELF digest in a make_fself SELF's ex-info.</summary>
     public static int DigestOffset(ReadOnlySpan<byte> self)
     {
+        _ = EncryptedSegments(self);
         int count = BinaryPrimitives.ReadUInt16LittleEndian(self[0x18..]);
         int ehdr = 0x20 + count * 0x20;
+        if (self.Length - ehdr < 0x40)
+            throw new InvalidDataException("embedded ELF header is truncated");
         int phnum = BinaryPrimitives.ReadUInt16LittleEndian(self[(ehdr + 0x38)..]);
         int exInfo = (ehdr + 0x40 + phnum * 0x38 + 15) & ~15;
+        if (exInfo > self.Length - 0x40)
+            throw new InvalidDataException("SELF digest extends past end of file");
         return exInfo + 0x20;
     }
 
     // --- unwrap --------------------------------------------------------------
     /// <summary>SELF -> ELF, keeping the original ELF header area (make_fself_batch unpack_fself_file).</summary>
-    public static byte[] Unwrap(byte[] self)
+    public static byte[] Unwrap(byte[] self) => Unwrap(self, Array.MaxLength);
+
+    /// <summary>Unwraps with a caller-supplied allocation limit, checked before allocating the ELF output.</summary>
+    public static byte[] Unwrap(byte[] self, int maximumOutputBytes)
     {
+        ArgumentOutOfRangeException.ThrowIfNegative(maximumOutputBytes);
         var s = self.AsSpan();
         long actual = self.Length;
         if (actual < 0x20)
@@ -132,7 +145,10 @@ public static class Self
             long at = elfOffset + (long)ehdr.Phoff + i * (long)ehdr.Phentsize;
             if (at > actual || ehdr.Phentsize > actual - at)
                 throw new InvalidDataException($"embedded ELF program header #{i} is truncated");
-            phdrs[i] = (U32(s, (int)at), (long)U64(s, (int)at + 8), (long)U64(s, (int)at + 0x20));
+            ulong offset = U64(s, (int)at + 8), filesz = U64(s, (int)at + 0x20);
+            if (offset > (ulong)Array.MaxLength || filesz > (ulong)Array.MaxLength - offset)
+                throw new InvalidDataException($"embedded ELF segment #{i} exceeds the supported output size");
+            phdrs[i] = (U32(s, (int)at), (long)offset, (long)filesz);
         }
 
         long headerSize = ehdr.HeaderAreaSize;
@@ -142,6 +158,8 @@ public static class Self
         foreach (var p in phdrs)
             if (p.Filesz != 0)
                 outputSize = Math.Max(outputSize, p.Offset + p.Filesz);
+        if (outputSize > maximumOutputBytes)
+            throw new InvalidDataException("SELF output exceeds the configured byte limit");
         var output = new byte[checked((int)outputSize)];
         var headerArea = s.Slice(elfOffset, (int)headerSize);
         headerArea.CopyTo(output);
@@ -237,13 +255,20 @@ public static class Self
 
         // segments as make_fself reads them (reads past EOF come back short)
         var phdrs = new (uint Type, long Offset, long Filesz)[ehdr.Phnum];
-        var segments = new byte[ehdr.Phnum][];
-        byte[]? versionData = null;
+        var segments = new ReadOnlyMemory<byte>[ehdr.Phnum];
+        ReadOnlyMemory<byte> versionData = default;
         for (int i = 0; i < ehdr.Phnum; i++)
         {
             int at = checked((int)(ehdr.Phoff + (ulong)(i * ehdr.Phentsize)));
-            phdrs[i] = (U32(e, at), (long)U64(e, at + 8), (long)U64(e, at + 0x20));
-            segments[i] = phdrs[i].Filesz > 0 ? Clip(e, phdrs[i].Offset, phdrs[i].Filesz).ToArray() : [];
+            ulong offsetValue = U64(e, at + 8), sizeValue = U64(e, at + 0x20);
+            if (offsetValue > long.MaxValue || sizeValue > (ulong)Array.MaxLength)
+                throw new InvalidDataException($"ELF segment #{i} has an unsupported offset or size");
+            phdrs[i] = (U32(e, at), (long)offsetValue, (long)sizeValue);
+            if (phdrs[i].Filesz > 0)
+            {
+                var clipped = Clip(e, phdrs[i].Offset, phdrs[i].Filesz);
+                segments[i] = elf.AsMemory(checked((int)Math.Min(phdrs[i].Offset, elf.Length)), clipped.Length);
+            }
             if (phdrs[i].Type == SceElf.PtSceVersion)
                 versionData = segments[i];
         }
@@ -258,7 +283,7 @@ public static class Self
             throw new InvalidDataException("too many segments for a SELF header");
 
         // entries: a digest (meta) entry and a data entry per signed segment
-        var entries = new (ulong Props, long Offset, long Size, byte[] Data)[numEntries];
+        var entries = new (ulong Props, long Offset, long Size, ReadOnlyMemory<byte> Data)[numEntries];
         long offset = headerSize + metaSize;
         for (int k = 0; k < signedSegments.Length; k++)
         {
@@ -274,7 +299,7 @@ public static class Self
         }
         long fileSize = offset;
 
-        var output = new byte[checked((int)fileSize + (versionData?.Length ?? 0))];
+        var output = new byte[checked((int)fileSize + versionData.Length)];
         var o = output.AsSpan();
         // common + extended header
         Ps4Magic.CopyTo(o);
@@ -317,8 +342,8 @@ public static class Self
         BinaryPrimitives.WriteUInt32LittleEndian(o[(footer + 0x30)..], 0x10000);
 
         foreach (var entry in entries)
-            entry.Data.CopyTo(o[(int)entry.Offset..]);
-        versionData?.CopyTo(o[(int)fileSize..]);
+            entry.Data.Span.CopyTo(o[(int)entry.Offset..]);
+        versionData.Span.CopyTo(o[(int)fileSize..]);
         return output;
     }
 
@@ -331,9 +356,18 @@ public static class Self
     public static void WriteAtomic(string path, byte[] data)
     {
         string full = Path.GetFullPath(path);
-        string tmp = full + ".tmp";
-        File.WriteAllBytes(tmp, data);
-        File.Move(tmp, full, overwrite: true);
+        string tmp = full + "." + Guid.NewGuid().ToString("N") + ".tmp";
+        try
+        {
+            using (var stream = new FileStream(tmp, FileMode.CreateNew, FileAccess.Write, FileShare.None))
+                stream.Write(data);
+            File.Move(tmp, full, overwrite: true);
+        }
+        finally
+        {
+            if (File.Exists(tmp))
+                File.Delete(tmp);
+        }
     }
 
     // --- helpers ---------------------------------------------------------------
@@ -355,7 +389,11 @@ public static class Self
                 throw new InvalidDataException("unsupported ELF header entry size");
             if (U16(h, 0x10) is not (0x2 or 0xFE00 or 0xFE10 or 0xFE18))
                 throw new InvalidDataException("unsupported ELF type");
-            return new ElfHeader(U64(h, 0x20), U16(h, 0x34), U16(h, 0x36), U16(h, 0x38));
+            ulong phoff = U64(h, 0x20);
+            int phnum = U16(h, 0x38), ehsize = U16(h, 0x34);
+            if (ehsize < 0x40 || ehsize > h.Length || phoff > (ulong)h.Length || (ulong)phnum * 0x38 > (ulong)h.Length - phoff)
+                throw new InvalidDataException("ELF header area is truncated or invalid");
+            return new ElfHeader(phoff, ehsize, U16(h, 0x36), phnum);
         }
     }
 

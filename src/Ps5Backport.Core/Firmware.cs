@@ -32,10 +32,11 @@ public static class Firmware
         int dot = text.IndexOf('.');
         string major = dot < 0 ? text : text[..dot];
         string minor = dot < 0 ? "" : text[(dot + 1)..];
-        if (!IsDigits(major) || (minor.Length > 0 && !IsDigits(minor)))
+        if (!IsDigits(major) || (minor.Length > 0 && !IsDigits(minor))
+            || !int.TryParse(major, CultureInfo.InvariantCulture, out int majorValue) || majorValue > 99
+            || !int.TryParse(minor.Length == 0 ? "0" : minor, CultureInfo.InvariantCulture, out int minorValue) || minorValue > 99)
             throw new FormatException($"invalid firmware version '{value}' (use e.g. 4 or 4.03)");
-        return (int.Parse(major, CultureInfo.InvariantCulture),
-                minor.Length > 0 ? int.Parse(minor, CultureInfo.InvariantCulture) : 0);
+        return (majorValue, minorValue);
     }
 
     /// <summary>Canonical name: '4' -> '4.00', '4.3' -> '4.03'.</summary>

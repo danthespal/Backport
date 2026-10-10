@@ -143,6 +143,7 @@ public class AppSettingsTests
 }
 
 /// <summary>Phase 7.1 / 7.3: the Fakelib store page.</summary>
+[Trait("Lane", "Private")]
 public class StorePageTests
 {
     static string TempStore() => Path.Combine(Path.GetTempPath(), "ps5backport-store-" + Guid.NewGuid().ToString("N"));
@@ -292,6 +293,7 @@ public class FirmwareDbPageTests
 }
 
 /// <summary>Phase 7.4 / 7.5: the Tools page.</summary>
+[Trait("Lane", "Private")]
 public class ToolsPageTests
 {
     [Fact]
@@ -350,6 +352,7 @@ public class ToolsPageTests
 }
 
 /// <summary>Phase 6.1: dropping a game on the Backport page.</summary>
+[Trait("Lane", "Private")]
 public class DropGameTests
 {
     [Fact]
@@ -398,6 +401,7 @@ public class DatabaseFolderChangeTests
 }
 
 /// <summary>Bug fix: Analyze and Cook stayed disabled after a game was opened (the buttons were never told to re-check).</summary>
+[Trait("Lane", "Private")]
 public class RunButtonsTests
 {
     [Fact]
@@ -417,6 +421,7 @@ public class RunButtonsTests
 }
 
 /// <summary>Optional patches on the Overview tab: listed from data/fixes.json, passed to the run, reset per game.</summary>
+[Trait("Lane", "Private")]
 public class OptionalPatchTests
 {
     [Fact]
@@ -457,6 +462,7 @@ public class OptionalPatchTests
 }
 
 /// <summary>A game importing the PS VR2 libraries gets the header badge and the warning; loading another game clears it.</summary>
+[Trait("Lane", "Private")]
 public class Psvr2BadgeTests
 {
     [Fact]

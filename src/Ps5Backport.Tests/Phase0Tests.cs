@@ -14,6 +14,7 @@ public class NidTests
     public void Compute_KnownValues(string name, string nid) => Assert.Equal(nid, Nid.Compute(name));
 
     [Fact]
+    [Trait("Lane", "Private")]
     public void Compute_MatchesGolden_ForAerolibNames()
     {
         string aerolib = Repo.Need(".original", "reference", "sce_symbols_new", "aerolib.csv");
@@ -42,6 +43,7 @@ public class NidTests
     public void SplitSymbol_NonNid(string symbol) => Assert.Null(Nid.SplitSymbol(symbol));
 
     [Fact]
+    [Trait("Lane", "Private")]
     public void NameDb_MatchesGolden()
     {
         string aerolib = Repo.Need(".original", "reference", "sce_symbols_new", "aerolib.csv");

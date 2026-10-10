@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <OutputType>Exe</OutputType>
+    <IsPackable>false</IsPackable>
+    <UseMicrosoftTestingPlatformRunner>true</UseMicrosoftTestingPlatformRunner>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="xunit.v3" Version="4.0.1" />
+    <PackageReference Include="FsCheck.Xunit.v3" Version="3.4.0" />
+    <Using Include="Xunit" />
+    <ProjectReference Include="../../src/Ps5Backport.Core/Ps5Backport.Core.csproj" />
+    <Compile Include="../../src/Ps5Backport.Tests/GeneratedParserTests.cs" Link="GeneratedParserTests.cs" />
+    <Compile Include="../../src/Ps5Backport.Tests/SyntheticBinary.cs" Link="SyntheticBinary.cs" />
+  </ItemGroup>
+</Project>

@@ -73,10 +73,14 @@ public static class FirmwareDb
 
     /// <summary>(database, exact) for a target firmware: the exact one, else the highest older one.</summary>
     public static (FirmwareExports? Db, bool Exact) Select(string dbDir, string target)
+        => Select(LoadAll(dbDir), target);
+
+    /// <summary>Selects from the already-loaded run metadata, preserving firmware ordering.</summary>
+    internal static (FirmwareExports? Db, bool Exact) Select(IReadOnlyList<FirmwareExports> databases, string target)
     {
         var key = Key(target);
         FirmwareExports? best = null;
-        foreach (var db in LoadAll(dbDir))
+        foreach (var db in databases)
         {
             var k = Key(db.Firmware);
             if (k == key)
@@ -112,7 +116,7 @@ public static class FirmwareDb
     public static FirmwareExports ImportDump(string dumpDir, string firmware, string source)
     {
         var modules = new Dictionary<string, HashSet<string>>();
-        foreach (string file in Directory.EnumerateFiles(dumpDir, "*", SearchOption.AllDirectories).Order(StringComparer.Ordinal))
+        foreach (string file in GameScan.WalkFiles(dumpDir).Order(StringComparer.Ordinal))
         {
             if (!ModuleExtensions.Any(e => file.EndsWith(e, StringComparison.OrdinalIgnoreCase)) || Managed.Any(e => file.EndsWith(e, StringComparison.OrdinalIgnoreCase)))
                 continue;

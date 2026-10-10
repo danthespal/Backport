@@ -6,6 +6,8 @@ using Avalonia.Input;
 using Avalonia.Input.Platform;
 using Avalonia.Platform.Storage;
 using Ps5Backport.App.ViewModels;
+using Ps5Backport.Core;
+using System.Diagnostics;
 
 namespace Ps5Backport.App.Views;
 
@@ -37,6 +39,37 @@ public partial class MainWindow : Window
         {
             if (ActualTransparencyLevel == WindowTransparencyLevel.None)
                 this[!BackgroundProperty] = this.GetResourceObservable("SystemControlBackgroundAltHighBrush").ToBinding();
+        };
+    }
+
+    /// <summary>Installs the desktop close policy. This window owns the supplied sink until workers and settings finish.</summary>
+    public void ConfigureShutdown(MainViewModel vm, AppSettings settings, string settingsPath, DiagnosticLog? diagnostics = null)
+    {
+        bool closing = false, readyToClose = false;
+        Opened += (_, _) => diagnostics?.Write(new("desktop", "opened", "window",
+            Message: FormattableString.Invariant($"Size={Width}x{Height}; scale={RenderScaling}; screens={Screens.All.Count}")));
+        Closed += (_, _) => { vm.Dispose(); diagnostics?.Dispose(); };
+        Closing += async (_, closingEvent) =>
+        {
+            if (!readyToClose)
+            {
+                closingEvent.Cancel = true;
+                if (closing) return;
+                closing = true;
+                var timer = Stopwatch.StartNew();
+                diagnostics?.Write(new("desktop", "closing", "shutdown"));
+                try { await vm.CancelAndWaitAsync(); }
+                catch (Exception e) { vm.Log.Error("A worker failed while closing", exception: e); }
+                diagnostics?.Write(new("desktop", "workers_finished", "shutdown", DurationMilliseconds: timer.Elapsed.TotalMilliseconds));
+                readyToClose = true;
+                Avalonia.Threading.Dispatcher.UIThread.Post(Close);
+                return;
+            }
+            vm.CaptureSettings();
+            CaptureSettings(settings);
+            try { settings.Save(settingsPath); }
+            catch (Exception e) when (e is IOException or UnauthorizedAccessException) { vm.Log.Error("Could not save settings while closing", exception: e); }
+            diagnostics?.Write(new("desktop", "closed", "shutdown"));
         };
     }
 

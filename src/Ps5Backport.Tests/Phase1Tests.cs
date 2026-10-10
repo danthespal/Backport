@@ -21,6 +21,9 @@ public sealed class SampleSet
     public SampleSet()
     {
         string original = Path.Combine(Repo.Root, ".original");
+        if (Repo.RequirePrivate)
+            foreach (string root in SampleRoots)
+                Repo.Need(".original", root);
         Samples = SampleRoots
             .Select(r => Path.Combine(original, r))
             .Where(Directory.Exists)
@@ -41,8 +44,10 @@ public sealed class SampleSet
 
     public void Need()
     {
+        foreach (string root in SampleRoots)
+            Repo.Need(".original", root);
         if (Samples.Count == 0)
-            Assert.Skip("no sample games in .original/");
+            Repo.Missing("sample modules in .original/", privateFixture: true);
     }
 
     /// <summary>The ELF model as text: type, module, build path, program headers, import libraries, imports, exports, text segment.</summary>
@@ -63,6 +68,7 @@ public sealed class SampleSet
     }
 }
 
+[Trait("Lane", "Private")]
 public class SelfAndElfTests(SampleSet set) : IClassFixture<SampleSet>
 {
     /// <summary>Per module: kind, encrypted segments, SHA-256 of the unwrapped ELF, of the re-signed SELF and of the ELF model.</summary>
@@ -123,6 +129,7 @@ public class BpsTests
     static string BackPork => Repo.Need(".original", "reference", "BackPork", "patches");
 
     [Fact]
+    [Trait("Lane", "Private")]
     public void Edits_MatchGolden_ForBackPorkPatches()
     {
         string root = BackPork;
@@ -235,6 +242,7 @@ public class BpsTests
 /// (Borderlands 4), opaque bytes (God of War Sons of Sparta), and Kena's re-signed dump (zeroed, cut off,
 /// build-path string). Unwraps are checked against golden hashes recorded from ps5bp.
 /// </summary>
+[Trait("Lane", "Private")]
 public class SceVersionTests
 {
     static string Backports(params string[] rel) => Repo.Need([".original", "backports", .. rel]);

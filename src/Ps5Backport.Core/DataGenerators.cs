@@ -70,6 +70,8 @@ public static class DataGenerators
         var missing = names.Except(decrypted).Order(StringComparer.Ordinal).ToList();
         if (missing.Count > 0)
             return (null, $"incomplete: {missing.Count} module(s) only encrypted, e.g. [{string.Join(", ", missing.Take(3).Select(m => $"'{m}'"))}]");
+        if (modules.Count == 0)
+            return (null, "no decrypted system modules found; no export list written");
         string source = $"own dump: Firmware {firmware} " + string.Join("; ", used).Replace(Path.DirectorySeparatorChar, '/');
         return (new FirmwareExports(firmware, source, true, modules), "");
     }
@@ -94,10 +96,15 @@ public static class DataGenerators
     /// <summary>Top-down directory walk in file-system order (Python's os.walk).</summary>
     static IEnumerable<string> Walk(string dir)
     {
-        yield return dir;
-        foreach (string sub in Directory.EnumerateDirectories(dir))
-            foreach (string d in Walk(sub))
-                yield return d;
+        var pending = new Stack<string>();
+        pending.Push(dir);
+        while (pending.TryPop(out string? current))
+        {
+            yield return current;
+            foreach (string sub in Directory.EnumerateDirectories(current).Reverse())
+                if ((File.GetAttributes(sub) & FileAttributes.ReparsePoint) == 0)
+                    pending.Push(sub);
+        }
     }
 
     // --- data/sony_builds.json ---------------------------------------------------------------

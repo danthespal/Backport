@@ -67,6 +67,10 @@ public sealed class NameDb
 
     public int Count => _names.Count;
 
+    /// <summary>Hash of the loaded name mapping, independent of its filename and input line order.</summary>
+    public string Fingerprint => Convert.ToHexStringLower(System.Security.Cryptography.SHA256.HashData(
+        Encoding.UTF8.GetBytes(System.Text.Json.JsonSerializer.Serialize(_names.OrderBy(p => p.Key, StringComparer.Ordinal)))));
+
     /// <summary>The function name, or the NID itself when unknown.</summary>
     public string Name(string nid) => _names.GetValueOrDefault(nid, nid);
 }

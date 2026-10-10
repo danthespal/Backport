@@ -35,6 +35,7 @@ public sealed record FirmwareNidRow(string Nid, string Name, string Change)
 public sealed partial class FirmwareDbViewModel(MainViewModel main) : ObservableObject
 {
     List<FirmwareModuleRow> _allModules = [];
+    int _refreshVersion;
 
     public ObservableCollection<FirmwareRow> Firmwares { get; } = [];
     public ObservableCollection<FirmwareModuleRow> Modules { get; } = [];
@@ -63,13 +64,19 @@ public sealed partial class FirmwareDbViewModel(MainViewModel main) : Observable
     [ObservableProperty] public partial bool ImportGenstub { get; set; }
 
     /// <summary>Loads every export list (off the UI thread: 43 lists are about 16 MB of JSON).</summary>
-    public async Task Refresh()
+    public Task Refresh() => main.IsClosing ? Task.CompletedTask : main.OwnPageWork(RefreshCore());
+
+    async Task RefreshCore()
     {
         string? keep = Selected?.Firmware;
+        string? directory = main.FirmwareDbDir;
+        int version = ++_refreshVersion;
         Busy = true;
         try
         {
-            var dbs = await Task.Run(() => FirmwareDb.LoadAll(main.FirmwareDbDir));
+            var dbs = await Task.Run(() => FirmwareDb.LoadAll(directory));
+            if (version != _refreshVersion || directory != main.FirmwareDbDir)
+                return;
             Firmwares.Clear();
             foreach (var db in dbs)
                 Firmwares.Add(new FirmwareRow(db));
@@ -78,15 +85,19 @@ public sealed partial class FirmwareDbViewModel(MainViewModel main) : Observable
         }
         catch (Exception e) when (e is IOException or System.Text.Json.JsonException or FormatException)
         {
-            main.Log.Error($"Firmware database couldn't be read: {e.Message}");
+            main.Log.Error($"Firmware database couldn't be read: {e.Message}", exception: e);
         }
-        finally { Busy = false; }
+        finally { if (version == _refreshVersion) Busy = false; }
     }
 
     partial void OnSelectedChanged(FirmwareRow? value)
     {
         if (value is null)
+        {
+            CompareWith = null;
+            Compare();
             return;
+        }
         ImportFirmware = value.Firmware;
         // compare with the next newer firmware by default (the previous one for the newest)
         int i = Firmwares.IndexOf(value);
@@ -121,6 +132,7 @@ public sealed partial class FirmwareDbViewModel(MainViewModel main) : Observable
         _allModules = [];
         if (Selected is not { } a)
         {
+            CompareSummary = "";
             ApplyFilter();
             return;
         }
@@ -151,7 +163,7 @@ public sealed partial class FirmwareDbViewModel(MainViewModel main) : Observable
             // module name, or a NID / function name the module exports or changes
             var nids = Selected?.Db.Modules ?? new Dictionary<string, HashSet<string>>();
             rows = rows.Where(m => m.Module.Contains(q, StringComparison.OrdinalIgnoreCase)
-                                   || (nids.GetValueOrDefault(m.Module)?.Contains(q) ?? false)
+                                   || (nids.GetValueOrDefault(m.Module)?.Any(n => n == q || main.FunctionName(n).Contains(q, StringComparison.OrdinalIgnoreCase)) ?? false)
                                    || m.Added.Concat(m.Removed).Any(n => n == q || main.FunctionName(n).Contains(q, StringComparison.OrdinalIgnoreCase)));
         }
         Modules.Clear();
@@ -162,7 +174,9 @@ public sealed partial class FirmwareDbViewModel(MainViewModel main) : Observable
 
     /// <summary>Imports a decrypted /system/common/lib dump (or a genstub folder) as firmware_db/&lt;fw&gt;.json.</summary>
     [RelayCommand]
-    async Task Import()
+    Task Import() => main.IsClosing ? Task.CompletedTask : main.OwnPageWork(ImportCore());
+
+    async Task ImportCore()
     {
         if (main.FirmwareDbDir is not { } db)
         {
@@ -204,7 +218,7 @@ public sealed partial class FirmwareDbViewModel(MainViewModel main) : Observable
         }
         catch (Exception e) when (e is IOException or InvalidDataException or UnauthorizedAccessException)
         {
-            main.Log.Error($"Import failed: {e.Message}");
+            main.Log.Error($"Import failed: {e.Message}", exception: e);
             return;
         }
         finally { Busy = false; }

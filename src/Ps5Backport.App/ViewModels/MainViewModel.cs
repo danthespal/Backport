@@ -11,16 +11,38 @@ namespace Ps5Backport.App.ViewModels;
 /// The Backport workbench: game header, target firmware and options, Analyze (dry run) and Cook
 /// (writes the overlay), the Overview / Modules / Imports / Report tabs, the inspector and the log.
 /// </summary>
-public partial class MainViewModel : ObservableObject
+public partial class MainViewModel : ObservableObject, IDisposable
 {
     Knowledge? _knowledge;
     NameDb? _names;
     CancellationTokenSource? _cancel;
+    BackportOperation? _operation;
+    AnalysisReceipt? _analysis;
+    Task _activeWork = Task.CompletedTask;
+    readonly HashSet<Task> _pageWork = [];
+    bool _closing;
+    readonly DiagnosticLog? _diagnostics;
+    bool _diagnosticFailureReported;
+    readonly BatchCollection<ImportRow> _imports = new();
+    internal bool IsClosing => _closing;
+
+    /// <summary>Retains page workers so shutdown can await operations that already own files.</summary>
+    internal async Task OwnPageWork(Task work)
+    {
+        lock (_pageWork) _pageWork.Add(work);
+        try { await work; }
+        finally { lock (_pageWork) _pageWork.Remove(work); }
+    }
     List<ImportRow> _allImports = [];
 
     /// <param name="settings">Remembered firmware, options, games and path overrides (defaults when null).</param>
-    public MainViewModel(AppSettings? settings = null)
+    public MainViewModel(AppSettings? settings = null) : this(settings, null) { }
+
+    /// <summary>The caller owns the optional local diagnostic sink and disposes it after all workers finish.</summary>
+    public MainViewModel(AppSettings? settings, DiagnosticLog? diagnostics)
     {
+        _diagnostics = diagnostics;
+        Log = new LogViewModel(diagnostics);
         Settings = settings ?? new AppSettings();
         Store = new StoreViewModel(this);
         Database = new FirmwareDbViewModel(this);
@@ -40,6 +62,7 @@ public partial class MainViewModel : ObservableObject
         foreach (var option in Knowledge.Options.Values)
             PatchOptions.Add(new OptionRow(option));
         Log.Info($"PS5 Backport Studio ready. Firmware DB: {FirmwareDbDir ?? "not found"}; fakelib store: {StoreDir ?? "not found"}");
+        ReportDiagnosticFailure();
     }
 
     public AppSettings Settings { get; }
@@ -90,7 +113,16 @@ public partial class MainViewModel : ObservableObject
             LoadGame(last);
     }
 
-    public LogViewModel Log { get; } = new();
+    public LogViewModel Log { get; }
+
+    void ReportDiagnosticFailure()
+    {
+        if (!_diagnosticFailureReported && _diagnostics?.Failure is { } failure)
+        {
+            _diagnosticFailureReported = true;
+            Log.Warning($"Local diagnostics unavailable: {failure}");
+        }
+    }
 
     /// <summary>Set by the window: shows a folder picker and returns the chosen path.</summary>
     public Func<string, Task<string?>>? PickFolder { get; set; }
@@ -104,6 +136,27 @@ public partial class MainViewModel : ObservableObject
     public partial GameInfo? Game { get; set; }
 
     [ObservableProperty] public partial Bitmap? Cover { get; set; }
+
+    partial void OnCoverChanged(Bitmap? oldValue, Bitmap? newValue) => oldValue?.Dispose();
+
+    /// <summary>Releases the cover and cancels any work when the window closes.</summary>
+    public void Dispose()
+    {
+        _closing = true;
+        Cancel();
+        Cover = null;
+    }
+
+    /// <summary>Close policy: stop new work, request cancellation, then wait for staging/commit cleanup.</summary>
+    public async Task CancelAndWaitAsync()
+    {
+        _closing = true;
+        Cancel();
+        await _activeWork;
+        Task[] pages;
+        lock (_pageWork) pages = _pageWork.ToArray();
+        await Task.WhenAll(pages);
+    }
 
     public bool HasGame => Game is not null;
     public string GameTitle => Game?.TitleName ?? "Open or drop a game folder";
@@ -137,7 +190,8 @@ public partial class MainViewModel : ObservableObject
     internal void AddStoreFirmwares()
     {
         if (StoreDir is { } store && Directory.Exists(store))
-            foreach (string folder in FakelibStore.List(store).Keys.Where(k => !Firmwares.Contains(k)))
+            foreach (string folder in Directory.EnumerateDirectories(store).Select(System.IO.Path.GetFileName).OfType<string>()
+                                               .Order(StringComparer.Ordinal).Where(k => !Firmwares.Contains(k)))
                 Firmwares.Add(folder);
     }
 
@@ -169,12 +223,13 @@ public partial class MainViewModel : ObservableObject
 
     // --- run state ---------------------------------------------------------------------------
     [ObservableProperty]
-    [NotifyCanExecuteChangedFor(nameof(AnalyzeCommand), nameof(CookCommand), nameof(BuildAmprIndexCommand))]
+    [NotifyCanExecuteChangedFor(nameof(AnalyzeCommand), nameof(CookCommand), nameof(BuildAmprIndexCommand), nameof(OpenGameCommand))]
     public partial bool Busy { get; set; }
 
     [ObservableProperty] public partial string StatusText { get; set; } = "Open a game folder to start";
     [ObservableProperty] public partial string AmprIndexText { get; set; } = "Build after cooking if the release should include an AMPR index.";
     [ObservableProperty] public partial double Progress { get; set; }
+    [ObservableProperty] public partial OperationState OperationState { get; set; } = OperationState.Pending;
     [ObservableProperty] public partial int SelectedTab { get; set; }
 
     // --- results -----------------------------------------------------------------------------
@@ -190,7 +245,7 @@ public partial class MainViewModel : ObservableObject
           ". A VR-only game cannot run below the firmware that supports the headset; a game with an optional VR mode usually runs without it."
         : "";
     public ObservableCollection<ModuleRow> Modules { get; } = [];
-    public ObservableCollection<ImportRow> Imports { get; } = [];
+    public ObservableCollection<ImportRow> Imports => _imports;
     public ObservableCollection<string> Warnings { get; } = [];
     public bool HasWarnings => Warnings.Count > 0;
     [ObservableProperty] public partial string ReportText { get; set; } = "";
@@ -221,7 +276,9 @@ public partial class MainViewModel : ObservableObject
     }
 
     // --- commands -----------------------------------------------------------------------------
-    [RelayCommand]
+    bool CanOpenGame() => !Busy && !_closing;
+
+    [RelayCommand(CanExecute = nameof(CanOpenGame))]
     async Task OpenGame()
     {
         if (PickFolder is null || await PickFolder("Select a decrypted game folder (contains eboot.bin)") is not { } folder)
@@ -243,11 +300,19 @@ public partial class MainViewModel : ObservableObject
 
     public void LoadGame(string folder)
     {
+        if (Busy || _closing)
+        {
+            Log.Warning("Wait for the current run to finish (or cancel it) before opening another game");
+            return;
+        }
         try
         {
             var info = GameScan.ReadInfo(folder);
             Game = info;
-            Cover = info.IconPath is { } icon ? new Bitmap(icon) : null;
+            _analysis = null;
+            Cover = null;
+            try { Cover = info.IconPath is { } icon ? new Bitmap(icon) : null; }
+            catch (Exception e) { Log.Warning($"Could not load the cover image: {e.Message}"); }
             OutputFolder = DefaultOutput(info);
             foreach (var option in PatchOptions)
                 option.IsEnabled = false;
@@ -262,11 +327,11 @@ public partial class MainViewModel : ObservableObject
         }
         catch (Exception e)
         {
-            Log.Error($"Could not open {folder}: {e.Message}");
+            Log.Error($"Could not open {folder}: {e.Message}", exception: e);
         }
     }
 
-    bool CanRun() => !Busy && Game is not null;
+    bool CanRun() => !Busy && !_closing && Game is not null;
 
     [RelayCommand(CanExecute = nameof(CanRun))]
     Task Analyze() => Run(dryRun: true);
@@ -275,7 +340,11 @@ public partial class MainViewModel : ObservableObject
     Task Cook() => Run(dryRun: false);
 
     [RelayCommand]
-    void Cancel() => _cancel?.Cancel();
+    void Cancel()
+    {
+        _operation?.Cancel();
+        _cancel?.Cancel();
+    }
 
     [RelayCommand]
     void OpenOutput()
@@ -286,30 +355,56 @@ public partial class MainViewModel : ObservableObject
             Log.Warning($"Output folder doesn't exist yet: {OutputFolder}");
     }
 
-    bool CanBuildAmprIndex() => !Busy && Game is not null && Directory.Exists(OutputFolder);
+    bool CanBuildAmprIndex() => !Busy && !_closing && Game is not null && Directory.Exists(OutputFolder);
 
     /// <summary>Builds the AMPRIDX3 file map for the game plus its cooked overlay.</summary>
     [RelayCommand(CanExecute = nameof(CanBuildAmprIndex))]
-    async Task BuildAmprIndex()
+    Task BuildAmprIndex() => CanBuildAmprIndex() ? _activeWork = BuildAmprIndexCore() : Task.CompletedTask;
+
+    async Task BuildAmprIndexCore()
     {
-        if (Game is not { } game)
+        if (!CanBuildAmprIndex() || Game is not { } game)
             return;
         Busy = true;
+        OperationState = OperationState.Running;
+        Progress = 0;
+        _cancel = new CancellationTokenSource();
         StatusText = "Building AMPR index…";
+        string output = OutputFolder;
+        string runId = Guid.NewGuid().ToString("N");
+        var timer = Stopwatch.StartNew();
+        Log.RunId = runId;
+        _diagnostics?.Write(new("ampr-index", "started", "index", runId));
         try
         {
-            AmprIndexResult index = await Task.Run(() => AmprIndex.Build(game.Root, OutputFolder));
+            var token = _cancel.Token;
+            AmprIndexResult index = await Task.Run(() => AmprIndex.Build(game.Root, output, token), token);
+            OperationState = OperationState.Completed;
+            Progress = 100;
             AmprIndexText = $"AMPR index ready: {index.Entries:N0} files ({index.OverlayEntries:N0} from the overlay). Include ampr_emu.index in the release.";
             StatusText = "AMPR index built";
             Log.Info($"Built {index.Path}: {index.Entries:N0} /app0 entries, {index.OverlayEntries:N0} overlay entries");
         }
-        catch (Exception e) when (e is IOException or InvalidDataException or UnauthorizedAccessException)
+        catch (OperationCanceledException)
         {
+            OperationState = OperationState.Cancelled;
+            StatusText = "Cancelled";
+            Log.Warning("AMPR index cancelled");
+        }
+        catch (Exception e)
+        {
+            OperationState = OperationState.Failed;
             StatusText = "AMPR index failed";
-            Log.Error($"Could not build AMPR index: {e.Message}");
+            Log.Error($"Could not build AMPR index: {e.Message}", exception: e);
         }
         finally
         {
+            _cancel.Dispose();
+            _cancel = null;
+            _diagnostics?.Write(new("ampr-index", OperationState.ToString().ToLowerInvariant(), "index", runId,
+                DurationMilliseconds: timer.Elapsed.TotalMilliseconds));
+            Log.RunId = null;
+            ReportDiagnosticFailure();
             Busy = false;
         }
     }
@@ -336,8 +431,11 @@ public partial class MainViewModel : ObservableObject
         SelectedTab = 1;
     }
 
-    async Task Run(bool dryRun)
+    Task Run(bool dryRun) => Busy || _closing ? Task.CompletedTask : _activeWork = RunCore(dryRun);
+
+    async Task RunCore(bool dryRun)
     {
+        if (Busy || _closing) return;
         if (Game is not { } game || TryName(SelectedFirmware) is null)
         {
             Log.Error($"Pick a valid target firmware (e.g. 4 or 4.03), not '{SelectedFirmware}'");
@@ -345,54 +443,75 @@ public partial class MainViewModel : ObservableObject
         }
         Busy = true;
         Progress = 0;
-        _cancel = new CancellationTokenSource();
+        OperationState = OperationState.Running;
         string verb = dryRun ? "Analyzing" : "Cooking";
         StatusText = $"{verb}…";
-        Log.Info($"{verb} {game.TitleName} for FW {Firmware.Name(SelectedFirmware)}{(dryRun ? " (dry run, nothing is written)" : $" -> {OutputFolder}")}");
-        var progress = new Progress<BackportProgress>(p =>
-        {
-            Progress = p.Count == 0 ? 0 : 100.0 * p.Index / p.Count;
-            if (p.Module.Length > 0)
-                StatusText = $"{verb}: {p.Stage} {p.Module}";
-        });
-        var options = new BackportOptions
-        {
-            Firmware = SelectedFirmware,
-            ReferenceDir = FirmwareDbDir ?? Paths.FindUp(System.IO.Path.Combine(".original", "reference", "PS5-3.20_Libs")) ?? "firmware_db",
-            FakelibStore = StoreDir,
-            KnownFixes = KnownFixes, CandidateFixes = CandidateFixes, StubUnknown = StubUnknown,
-            DefineSymbol = DefineSymbol, ExtendText = ExtendText, PatchParam = PatchParam,
-            AmprDebugLogging = AmprDebugLogging,
-            Options = PatchOptions.Where(o => o.IsEnabled).Select(o => o.Key).ToList(),
-            Names = Names, DryRun = dryRun,
-        };
         try
         {
+            Log.Info($"{verb} {game.TitleName} for FW {Firmware.Name(SelectedFirmware)}{(dryRun ? " (dry run, nothing is written)" : $" -> {OutputFolder}")}");
+            var options = new BackportOptions
+            {
+                Firmware = SelectedFirmware,
+                ReferenceDir = FirmwareDbDir ?? Paths.FindUp(System.IO.Path.Combine(".original", "reference", "PS5-3.20_Libs")) ?? "firmware_db",
+                FakelibStore = StoreDir,
+                KnownFixes = KnownFixes, CandidateFixes = CandidateFixes, StubUnknown = StubUnknown,
+                DefineSymbol = DefineSymbol, ExtendText = ExtendText, PatchParam = PatchParam,
+                AmprDebugLogging = AmprDebugLogging,
+                Options = PatchOptions.Where(o => o.IsEnabled).Select(o => o.Key).ToList(),
+                Names = Names, DryRun = dryRun,
+            };
             var knowledge = Knowledge;
             string output = dryRun ? System.IO.Path.Combine(System.IO.Path.GetTempPath(), "ps5backport-analyze") : OutputFolder;
-            var token = _cancel.Token;
-            var result = await Task.Run(() => Pipeline.Backport(game.Root, output, options, knowledge, progress, token), token);
+            using var operation = new BackportOperation(game.Root, output, options, knowledge, dryRun ? null : _analysis, _diagnostics);
+            Log.RunId = operation.RunId;
+            _operation = operation;
+            if (dryRun) _analysis = null;
+            var progress = new Progress<BackportProgress>(p =>
+            {
+                if (_closing || !ReferenceEquals(_operation, operation) || operation.State != OperationState.Running
+                    || OperationState != OperationState.Running) return;
+                Progress = p.Count == 0 ? 0 : Math.Min(99, 100.0 * p.Index / p.Count);
+                if (p.Module.Length > 0) StatusText = $"{verb}: {p.Stage} {p.Module}";
+            });
+            var result = await operation.ExecuteAsync(progress);
+            OperationState = result.State;
+            Progress = result.State == OperationState.Completed ? 100 : 0;
+            if (dryRun) _analysis = result.Analysis;
             Show(result, knowledge);
             int written = result.Modules.Count(m => m.Written);
-            StatusText = dryRun ? $"Analyzed: {FixedCount} fixes planned, {UnresolvedCount} unresolved" : $"Cooked: {written} files written";
-            if (!dryRun)
+            StatusText = dryRun ? result.State == OperationState.Completed
+                ? $"Analyzed: {FixedCount} fixes planned, {UnresolvedCount} unresolved" : "Incomplete: analysis contains module errors"
+                : result.Published ? $"Cooked: {written} files written" : "Incomplete: output not published";
+            if (!dryRun && result.Published)
                 AmprIndexText = "Overlay cooked. Build the AMPR index before packaging the release.";
-            Log.Info(dryRun ? $"Analysis done: {ModuleCount} modules, {FixedCount} fixes, {UnresolvedCount} unresolved imports"
-                            : $"Done: {written} files and the reports written to {OutputFolder}");
+            if (result.State == OperationState.Failed)
+                Log.Error(dryRun ? "Analysis contains module errors; resolve them before cooking"
+                    : $"Output left unchanged; incomplete-run reports: {result.DiagnosticDirectory}");
+            else
+                Log.Info(dryRun ? $"Analysis done: {ModuleCount} modules, {FixedCount} fixes, {UnresolvedCount} unresolved imports"
+                                : $"Done: {written} files and the reports written to {output}");
+            if (result.PreviousOutputBackup.Length > 0)
+                Log.Info($"Previous output retained at {result.PreviousOutputBackup}");
         }
         catch (OperationCanceledException)
         {
+            OperationState = OperationState.Cancelled;
+            Progress = 0;
             StatusText = "Cancelled";
             Log.Warning("Cancelled");
         }
         catch (Exception e)
         {
+            OperationState = OperationState.Failed;
+            Progress = 0;
             StatusText = "Failed";
-            Log.Error(e.Message);
+            Log.Error(e.Message, exception: e);
         }
         finally
         {
-            Progress = 100;
+            _operation = null;
+            Log.RunId = null;
+            ReportDiagnosticFailure();
             Busy = false;
         }
     }
@@ -471,9 +590,9 @@ public partial class MainViewModel : ObservableObject
         if (ImportSearch.Trim() is { Length: > 0 } q)
             rows = rows.Where(r => r.Name.Contains(q, StringComparison.OrdinalIgnoreCase) || r.Nid.Contains(q, StringComparison.Ordinal)
                                    || r.Library.Contains(q, StringComparison.OrdinalIgnoreCase));
-        Imports.Clear();
-        foreach (var row in rows)
-            Imports.Add(row);
+        var selection = SelectedImport;
+        _imports.ReplaceWith(rows);
+        SelectedImport = selection is not null && Imports.Contains(selection) ? selection : null;
         ImportCountText = $"{Imports.Count} of {_allImports.Count} imports" + (SelectedModule is null ? "" : $" in {SelectedModule.Path}");
     }
 

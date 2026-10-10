@@ -14,20 +14,20 @@
     <!-- navigation rail -->
     <Border Grid.Column="0" Classes="panel" BorderThickness="0,0,1,0">
       <DockPanel Margin="0,10">
-        <RadioButton DockPanel.Dock="Bottom" Classes="rail" GroupName="rail" ToolTip.Tip="Settings" IsChecked="{Binding Page, Converter={x:Static app:PageIsConverter.Instance}, ConverterParameter={x:Static vm:AppPage.Settings}}">
+        <RadioButton AutomationProperties.Name="Settings" DockPanel.Dock="Bottom" Classes="rail" GroupName="rail" ToolTip.Tip="Settings" IsChecked="{Binding Page, Converter={x:Static app:PageIsConverter.Instance}, ConverterParameter={x:Static vm:AppPage.Settings}}">
           <TextBlock Classes="icon" Text="&#xE713;" />
         </RadioButton>
         <StackPanel>
-          <RadioButton Classes="rail" GroupName="rail" ToolTip.Tip="Backport" IsChecked="{Binding Page, Converter={x:Static app:PageIsConverter.Instance}, ConverterParameter={x:Static vm:AppPage.Backport}}">
+          <RadioButton AutomationProperties.Name="Backport" Classes="rail" GroupName="rail" ToolTip.Tip="Backport" IsChecked="{Binding Page, Converter={x:Static app:PageIsConverter.Instance}, ConverterParameter={x:Static vm:AppPage.Backport}}">
             <TextBlock Classes="icon" Text="&#xE90F;" />
           </RadioButton>
-          <RadioButton Classes="rail" GroupName="rail" ToolTip.Tip="Fakelib store" IsChecked="{Binding Page, Converter={x:Static app:PageIsConverter.Instance}, ConverterParameter={x:Static vm:AppPage.Store}}">
+          <RadioButton AutomationProperties.Name="Fakelib store" Classes="rail" GroupName="rail" ToolTip.Tip="Fakelib store" IsChecked="{Binding Page, Converter={x:Static app:PageIsConverter.Instance}, ConverterParameter={x:Static vm:AppPage.Store}}">
             <TextBlock Classes="icon" Text="&#xE7B8;" />
           </RadioButton>
-          <RadioButton Classes="rail" GroupName="rail" ToolTip.Tip="Firmware database" IsChecked="{Binding Page, Converter={x:Static app:PageIsConverter.Instance}, ConverterParameter={x:Static vm:AppPage.FirmwareDb}}">
+          <RadioButton AutomationProperties.Name="Firmware database" Classes="rail" GroupName="rail" ToolTip.Tip="Firmware database" IsChecked="{Binding Page, Converter={x:Static app:PageIsConverter.Instance}, ConverterParameter={x:Static vm:AppPage.FirmwareDb}}">
             <TextBlock Classes="icon" Text="&#xE8A5;" />
           </RadioButton>
-          <RadioButton Classes="rail" GroupName="rail" ToolTip.Tip="Tools: SELF files, NID lookup" IsChecked="{Binding Page, Converter={x:Static app:PageIsConverter.Instance}, ConverterParameter={x:Static vm:AppPage.Tools}}">
+          <RadioButton AutomationProperties.Name="Tools" Classes="rail" GroupName="rail" ToolTip.Tip="Tools: SELF files, NID lookup" IsChecked="{Binding Page, Converter={x:Static app:PageIsConverter.Instance}, ConverterParameter={x:Static vm:AppPage.Tools}}">
             <TextBlock Classes="icon" Text="&#xEC7A;" />
           </RadioButton>
         </StackPanel>
@@ -88,8 +88,8 @@
                   </Flyout>
                 </DropDownButton.Flyout>
               </DropDownButton>
-              <Button Grid.Row="1" Content="Analyze" Command="{Binding AnalyzeCommand}" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" />
-              <Button Grid.Row="1" Grid.Column="1" Classes="accent" Content="Cook backport" Command="{Binding CookCommand}"
+              <Button Name="AnalyzeButton" Grid.Row="1" Content="Analyze" Command="{Binding AnalyzeCommand}" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" />
+              <Button Name="CookButton" Grid.Row="1" Grid.Column="1" Classes="accent" Content="Cook backport" Command="{Binding CookCommand}"
                       HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" />
             </Grid>
           </StackPanel>
@@ -216,12 +216,12 @@
           <Grid ColumnDefinitions="*,300" ColumnSpacing="12" Margin="0,8,0,0">
             <DockPanel>
               <Grid DockPanel.Dock="Top" ColumnDefinitions="*,150,Auto,Auto" ColumnSpacing="8" Margin="0,0,0,8">
-                <TextBox PlaceholderText="Search name, NID or library" Text="{Binding ImportSearch}" />
+                <TextBox Name="ImportSearchBox" AutomationProperties.Name="Search imports" PlaceholderText="Search name, NID or library" Text="{Binding ImportSearch}" />
                 <ComboBox Grid.Column="1" ItemsSource="{Binding ImportFilters}" SelectedItem="{Binding ImportFilter}" HorizontalAlignment="Stretch" />
                 <Button Grid.Column="2" Content="All modules" Command="{Binding ClearModuleFilterCommand}" />
                 <TextBlock Grid.Column="3" Classes="caption" VerticalAlignment="Center" Text="{Binding ImportCountText}" />
               </Grid>
-              <TableView ItemsSource="{Binding Imports}" SelectedItem="{Binding SelectedImport}">
+              <TableView Name="ImportsTable" AutomationProperties.Name="Imports" ItemsSource="{Binding Imports}" SelectedItem="{Binding SelectedImport}">
                 <TableView.Columns>
                   <TableViewColumn Header="Status" Width="90" x:DataType="vm:ImportRow">
                     <TableViewColumn.CellTemplate>
@@ -405,7 +405,7 @@
       <Border Grid.Row="3" Classes="panel" BorderThickness="0">
         <DockPanel>
           <Grid DockPanel.Dock="Top" ColumnDefinitions="Auto,Auto,Auto,Auto,*,Auto,Auto,Auto" ColumnSpacing="6" Margin="12,6">
-            <TextBlock Classes="section" Text="Development log" VerticalAlignment="Center" Margin="0,0,8,0" />
+            <TextBlock Classes="section" Text="Development log" ToolTip.Tip="Latest 2,000 entries; counts apply to retained history. Local diagnostic files keep recent activity after closing." VerticalAlignment="Center" Margin="0,0,8,0" />
             <ToggleButton Grid.Column="1" Classes="chip" Content="{Binding Log.ErrorsLabel}" IsChecked="{Binding Log.ShowErrors}"
                           Foreground="{DynamicResource StatusError}" />
             <ToggleButton Grid.Column="2" Classes="chip" Content="{Binding Log.WarningsLabel}" IsChecked="{Binding Log.ShowWarnings}"
@@ -415,9 +415,9 @@
               <TextBlock Classes="caption" Text="{Binding StatusText}" VerticalAlignment="Center" />
               <ProgressBar Width="120" Height="4" Value="{Binding Progress}" IsVisible="{Binding Busy}" VerticalAlignment="Center" />
             </StackPanel>
-            <Button Grid.Column="5" Content="Cancel" Command="{Binding CancelCommand}" IsVisible="{Binding Busy}" Classes="chip" />
+            <Button Name="CancelButton" Grid.Column="5" Content="Cancel" Command="{Binding CancelCommand}" IsVisible="{Binding Busy}" Classes="chip" />
             <Button Grid.Column="6" Content="Copy" Command="{Binding CopyLogCommand}" Classes="chip" />
-            <Button Grid.Column="7" Content="Clear" Command="{Binding ClearLogCommand}" Classes="chip" />
+            <Button Grid.Column="7" Content="Clear" ToolTip.Tip="Clear the displayed history; local diagnostic files remain." Command="{Binding ClearLogCommand}" Classes="chip" />
           </Grid>
           <ListBox Name="LogList" Classes="log" ItemsSource="{Binding Log.Visible}" Background="Transparent" Padding="6,0">
             <ListBox.ItemTemplate>

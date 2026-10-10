@@ -66,15 +66,22 @@ public sealed class SceElf
         Data = data;
         if (data.Length < 0x40 || !data.AsSpan(0, 4).SequenceEqual(Magic))
             throw new InvalidDataException("not an ELF file (unwrap SELF files first)");
+        if (data[4] != 2 || data[5] != 1 || U16(0x12) != 0x3E || U32(0x14) != 1 || U16(0x36) != 0x38)
+            throw new InvalidDataException("unsupported ELF class, encoding, machine, version or program header size");
         Type = U16(0x10);
-        long phoff = (long)U64(0x20);
+        ulong phoffValue = U64(0x20);
         int phnum = U16(0x38);
+        if (phoffValue > (ulong)data.Length || (ulong)phnum * 0x38 > (ulong)data.Length - phoffValue)
+            throw new InvalidDataException("ELF program header table extends past end of file");
+        long phoff = (long)phoffValue;
         var phdrs = new List<Phdr>(phnum);
         for (int i = 0; i < phnum; i++)
         {
             long at = phoff + i * 0x38L;
-            phdrs.Add(new Phdr(i, U32(at), U32(at + 4), (long)U64(at + 8), U64(at + 0x10),
-                               (long)U64(at + 0x20), (long)U64(at + 0x28)));
+            ulong offset = U64(at + 8), filesz = U64(at + 0x20), memsz = U64(at + 0x28);
+            if (offset > (ulong)data.Length || filesz > (ulong)data.Length - offset || memsz > long.MaxValue)
+                throw new InvalidDataException($"ELF segment #{i} points outside the file or has an invalid size");
+            phdrs.Add(new Phdr(i, U32(at), U32(at + 4), (long)offset, U64(at + 0x10), (long)filesz, (long)memsz));
         }
         Phdrs = phdrs;
 
@@ -82,6 +89,8 @@ public sealed class SceElf
         var dyn = phdrs.FirstOrDefault(p => p.Type == PtDynamic);
         if (dyn is not null)
         {
+            if (dyn.Filesz % 16 != 0)
+                throw new InvalidDataException("ELF dynamic table has a truncated entry");
             for (long i = 0; i < dyn.Filesz; i += 16)
             {
                 ulong tag = U64(dyn.Offset + i);
@@ -111,7 +120,7 @@ public sealed class SceElf
     public long Off(ulong vaddr)
     {
         foreach (var p in Phdrs)
-            if (p.Type == PtLoad && p.Vaddr <= vaddr && vaddr < p.Vaddr + (ulong)p.Filesz)
+            if (p.Type == PtLoad && p.Vaddr <= vaddr && vaddr - p.Vaddr < (ulong)p.Filesz)
                 return p.Offset + (long)(vaddr - p.Vaddr);
         throw new InvalidDataException($"vaddr 0x{vaddr:x} is not backed by any PT_LOAD");
     }
@@ -128,6 +137,8 @@ public sealed class SceElf
     /// <summary>NUL-terminated string; non-ASCII bytes become U+FFFD (as Python's 'replace').</summary>
     public string CStr(long offset)
     {
+        if (offset < 0 || offset >= Data.Length)
+            throw new InvalidDataException($"string offset 0x{offset:x} is outside the ELF");
         int start = checked((int)offset);
         int end = Array.IndexOf(Data, (byte)0, start);
         if (end < 0)
@@ -144,7 +155,12 @@ public sealed class SceElf
         BinaryPrimitives.WriteUInt64LittleEndian(Data.AsSpan(checked((int)Off(vaddr))), value);
 
     // --- dynamic information -------------------------------------------------
-    string DynStr(ulong value) => CStr(Off(Dyn[DtStrtab]) + (long)(value & 0xFFFFFFFF));
+    string DynStr(ulong value)
+    {
+        if (!Dyn.TryGetValue(DtStrtab, out ulong strings))
+            throw new InvalidDataException("ELF dynamic string table is missing");
+        return CStr(Off(strings) + (long)(value & 0xFFFFFFFF));
+    }
 
     public string? ModuleName => DynList.Where(d => d.Tag == DtSceModuleName).Select(d => DynStr(d.Value)).FirstOrDefault();
 
@@ -167,7 +183,10 @@ public sealed class SceElf
         if (!Dyn.ContainsKey(DtSymtab) || !Dyn.ContainsKey(DtStrtab))   // e.g. a module without a dynamic symbol table
             return [];
         long baseOff = Off(Dyn[DtSymtab]), strings = Off(Dyn[DtStrtab]);
-        int count = (int)(Dyn.GetValueOrDefault(DtSceSymtabSz) / 24);
+        ulong size = Dyn.GetValueOrDefault(DtSceSymtabSz);
+        if (size % 24 != 0 || size > (ulong)(Data.Length - baseOff))
+            throw new InvalidDataException("ELF symbol table is truncated");
+        int count = (int)(size / 24);
         var symbols = new List<Symbol>(count);
         for (int i = 0; i < count; i++)
         {
@@ -185,6 +204,8 @@ public sealed class SceElf
             return relocs;
         long baseOff = Off(va);
         ulong size = Dyn.GetValueOrDefault(sizeTag);
+        if (size % 24 != 0 || size > (ulong)(Data.Length - baseOff))
+            throw new InvalidDataException("ELF relocation table is truncated");
         for (ulong i = 0; i < size / 24; i++)
         {
             long at = baseOff + (long)i * 24;
@@ -206,6 +227,8 @@ public sealed class SceElf
             {
                 if (r.SymIndex == 0)
                     continue;
+                if (r.SymIndex < 0 || r.SymIndex >= symbols.Count)
+                    throw new InvalidDataException($"ELF relocation has invalid symbol index {r.SymIndex}");
                 var symbol = symbols[r.SymIndex];
                 if (Core.Nid.SplitSymbol(symbol.Name) is not var (nid, library, _))
                     continue;

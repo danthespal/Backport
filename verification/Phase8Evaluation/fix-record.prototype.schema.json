@@ -1,0 +1,19 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:ps5backport:experiment:fix-record:1",
+  "description": "Experimental single-record authoring check, not the complete knowledge format or a runtime contract.",
+  "type": "object",
+  "required": ["kind", "sources"],
+  "additionalProperties": false,
+  "properties": {
+    "kind": {"enum": ["stub", "swap", "adapter", "redirect", "plt_stub", "none"]},
+    "sources": {"type": "array", "items": {"type": "string"}},
+    "name": {"type": "string"}, "area": {"type": "string"},
+    "stub": {"type": "string"}, "new_nid": {"type": "string"},
+    "export_nid": {"type": "string"}, "below": {"type": "string"},
+    "insns": {"type": "array", "items": {"type": "string"}},
+    "when": {"enum": ["missing", "always"]},
+    "post_call": {"type": "boolean"}, "proven": {"type": "boolean"},
+    "note": {"type": "string"}, "rationale": {"type": "string"}
+  }
+}

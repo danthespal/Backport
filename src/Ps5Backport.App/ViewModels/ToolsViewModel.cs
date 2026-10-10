@@ -46,8 +46,12 @@ public sealed partial class ToolsViewModel(MainViewModel main) : ObservableObjec
     }
 
     /// <summary>Adds files (from the picker or a drop) and reads their kind, module, SDK and import/export counts.</summary>
-    public async Task Add(IEnumerable<string> paths)
+    public Task Add(IEnumerable<string> paths) => main.IsClosing ? Task.CompletedTask : main.OwnPageWork(AddCore(paths));
+
+    async Task AddCore(IEnumerable<string> paths)
     {
+        if (Busy)
+            return;
         var fresh = paths.Where(File.Exists).Distinct(StringComparer.OrdinalIgnoreCase)
             .Where(p => Files.All(f => !string.Equals(f.Path, p, StringComparison.OrdinalIgnoreCase))).ToList();
         if (fresh.Count == 0)
@@ -90,6 +94,8 @@ public sealed partial class ToolsViewModel(MainViewModel main) : ObservableObjec
     [RelayCommand]
     void ClearFiles()
     {
+        if (Busy)
+            return;
         Files.Clear();
         OnPropertyChanged(nameof(HasFiles));
     }
@@ -114,8 +120,13 @@ public sealed partial class ToolsViewModel(MainViewModel main) : ObservableObjec
                            Self.SignFile);
 
     /// <summary>Converts the matching files; never overwrites an existing file.</summary>
-    async Task ConvertFiles(Func<SelfFileRow, bool> applies, string verb, Func<SelfFileRow, string> outputName, Action<string, string> run)
+    Task ConvertFiles(Func<SelfFileRow, bool> applies, string verb, Func<SelfFileRow, string> outputName, Action<string, string> run) =>
+        main.IsClosing ? Task.CompletedTask : main.OwnPageWork(ConvertFilesCore(applies, verb, outputName, run));
+
+    async Task ConvertFilesCore(Func<SelfFileRow, bool> applies, string verb, Func<SelfFileRow, string> outputName, Action<string, string> run)
     {
+        if (Busy)
+            return;
         var todo = Files.Where(applies).ToList();
         if (todo.Count == 0)
         {
@@ -123,12 +134,14 @@ public sealed partial class ToolsViewModel(MainViewModel main) : ObservableObjec
             return;
         }
         Busy = true;
+        string outputFolder = OutputFolder;
         var written = new List<string>();
         try
         {
             foreach (var file in todo)
             {
-                string folder = OutputFolder.Length > 0 ? OutputFolder : System.IO.Path.GetDirectoryName(file.Path)!;
+                if (main.IsClosing) break;
+                string folder = outputFolder.Length > 0 ? outputFolder : System.IO.Path.GetDirectoryName(file.Path)!;
                 string output = System.IO.Path.Combine(folder, outputName(file));
                 if (File.Exists(output))
                 {
@@ -143,7 +156,7 @@ public sealed partial class ToolsViewModel(MainViewModel main) : ObservableObjec
                 }
                 catch (Exception e) when (e is IOException or InvalidDataException or ArgumentException or UnauthorizedAccessException)
                 {
-                    main.Log.Error($"Couldn't {verb} {file.Path}: {e.Message}");
+                    main.Log.Error($"Couldn't {verb} {file.Path}: {e.Message}", exception: e);
                 }
             }
         }

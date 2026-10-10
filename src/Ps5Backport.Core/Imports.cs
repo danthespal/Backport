@@ -39,10 +39,14 @@ public static class Imports
     /// JSON) or a folder of genstub .c stubs (always a lower bound).
     /// </summary>
     public static Reference LoadReference(string path, string target)
+        => LoadReference(path, target, FirmwareDb.LoadAll(path));
+
+    /// <summary>Uses run-owned metadata rather than parsing the same databases a second time.</summary>
+    internal static Reference LoadReference(string path, string target, IReadOnlyList<FirmwareExports> databases)
     {
-        if (Directory.Exists(path) && Directory.EnumerateFiles(path, "*.json").Any())
+        if (databases.Count > 0)
         {
-            var (db, exact) = FirmwareDb.Select(path, target);
+            var (db, exact) = FirmwareDb.Select(databases, target);
             if (db is null)
                 throw new ArgumentException($"firmware_db {path} has no firmware at or below {target}");
             return new Reference(db.Nids, $"firmware_db {db.Firmware} ({(exact ? "exact" : "lower bound")} for FW {target})", exact);
@@ -117,12 +121,17 @@ public static class Imports
     /// <summary>
     /// {NID: number of instructions in executable segments that call, jump to or load the import's
     /// PLT entry or GOT slot}: call/jmp rel32, call/jmp [rip+disp32], mov/lea reg, [rip+disp32].
-    /// A byte-pattern scan (no disassembly): it can over-count on chance matches but never misses a
-    /// direct reference. 0 means only reachable through data (vtables, pointer tables), which a scan
-    /// can't see; &gt;0 says nothing about whether the caller itself runs.
+    /// A byte-pattern scan (no disassembly): chance matches, prefixes and unsupported encodings can
+    /// produce false positives or missed references. Zero does not prove an import is unused; data
+    /// pointers and indirect control flow are not resolved. Positive counts do not prove reachability.
     /// </summary>
     public static Dictionary<string, int> CodeReferences(SceElf elf, IEnumerable<ImportStatus> statuses)
+        => CodeReferences(elf, statuses, default);
+
+    /// <summary>The same heuristic reference scan, checking cancellation every 64 KiB of code.</summary>
+    public static Dictionary<string, int> CodeReferences(SceElf elf, IEnumerable<ImportStatus> statuses, CancellationToken cancel)
     {
+        cancel.ThrowIfCancellationRequested();
         var targets = new Dictionary<ulong, string>();
         var pltEntries = new HashSet<ulong>();
         var counts = new Dictionary<string, int>(StringComparer.Ordinal);
@@ -144,6 +153,7 @@ public static class Imports
             var seg = elf.Data.AsSpan(checked((int)p.Offset), checked((int)p.Filesz));
             for (int i = 0; i < seg.Length; i++)
             {
+                if ((i & 65535) == 0) cancel.ThrowIfCancellationRequested();
                 byte b = seg[i];
                 int opcodeLength;
                 if (b is 0xE8 or 0xE9)

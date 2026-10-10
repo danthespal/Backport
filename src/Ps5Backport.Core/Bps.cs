@@ -30,12 +30,21 @@ public static class Bps
         long value = 0, shift = 1;
         while (true)
         {
+            if (pos >= data.Length)
+                throw new InvalidDataException("BPS varint truncated");
             byte x = data[pos++];
-            value += (x & 0x7F) * shift;
-            if ((x & 0x80) != 0)
-                return value;
-            shift <<= 7;
-            value += shift;
+            try
+            {
+                value = checked(value + (x & 0x7F) * shift);
+                if ((x & 0x80) != 0)
+                    return value;
+                shift = checked(shift * 128);
+                value = checked(value + shift);
+            }
+            catch (OverflowException e)
+            {
+                throw new InvalidDataException("BPS varint is too large", e);
+            }
         }
     }
 
@@ -57,22 +66,32 @@ public static class Bps
         uint patchCrc = BitConverter.ToUInt32(data, d.Length - 4);
         if (Crc32.Compute(d[..^4]) != patchCrc)
             throw new InvalidDataException("BPS patch checksum mismatch (corrupt file)");
+        d = d[..^12]; // fields and actions must never consume the checksum trailer
         int pos = 4;
         long sourceSize = Varint(d, ref pos);
         long targetSize = Varint(d, ref pos);
-        int metaSize = (int)Varint(d, ref pos);
+        long metadataSize = Varint(d, ref pos);
+        if (metadataSize > d.Length - pos)
+            throw new InvalidDataException("BPS metadata truncated");
+        int metaSize = (int)metadataSize;
         byte[] metadata = d.Slice(pos, metaSize).ToArray();
         pos += metaSize;
         var actions = new List<Action>();
-        int end = d.Length - 12;
+        int end = d.Length;
+        long written = 0;
         while (pos < end)
         {
             long v = Varint(d, ref pos);
             var command = (Command)(v & 3);
             long length = (v >> 2) + 1;
+            if (length > targetSize - written)
+                throw new InvalidDataException("BPS actions exceed the target size");
+            written += length;
             switch (command)
             {
                 case Command.TargetRead:
+                    if (length > end - pos)
+                        throw new InvalidDataException("BPS literal truncated");
                     actions.Add(new Action(command, length, d.Slice(pos, (int)length).ToArray(), 0));
                     pos += (int)length;
                     break;
@@ -84,6 +103,8 @@ public static class Bps
                     break;
             }
         }
+        if (written != targetSize)
+            throw new InvalidDataException("BPS actions do not fill the target size");
         return new Patch(sourceSize, targetSize, metadata, actions, sourceCrc, targetCrc);
     }
 
@@ -119,43 +140,65 @@ public static class Bps
     }
 
     /// <summary>Patched bytes. Checks the source and result CRC32 so a wrong input library is refused.</summary>
-    public static byte[] Apply(Patch patch, byte[] source)
+    public static byte[] Apply(Patch patch, byte[] source) => Apply(patch, source, Array.MaxLength);
+
+    /// <summary>Applies a patch with an output allocation limit checked before allocating its target.</summary>
+    public static byte[] Apply(Patch patch, byte[] source, int maximumOutputBytes)
     {
+        ArgumentOutOfRangeException.ThrowIfNegative(maximumOutputBytes);
         uint crc = Crc32.Compute(source);
         if (source.Length != patch.SourceSize || crc != patch.SourceCrc)
             throw new InvalidDataException(
                 $"source does not match the patch (needs {patch.SourceSize} bytes, CRC32 {patch.SourceCrc:x8}; " +
                 $"got {source.Length} bytes, CRC32 {crc:x8})");
+        if (patch.TargetSize < 0 || patch.TargetSize > Array.MaxLength || patch.TargetSize > maximumOutputBytes)
+            throw new InvalidDataException("BPS target size cannot fit in a byte array");
         var output = new byte[patch.TargetSize];
         long n = 0, src = 0, tgt = 0;
         foreach (var a in patch.Actions)
         {
-            if (n + a.Length > output.Length)
+            if (a.Length <= 0 || a.Length > output.Length - n)
                 throw new InvalidDataException("patch actions run past the target size (corrupt patch)");
             switch (a.Command)
             {
                 case Command.SourceRead:
+                    if (n > source.Length || a.Length > source.Length - n)
+                        throw new InvalidDataException("BPS source read is outside the source");
                     Array.Copy(source, n, output, n, a.Length);
                     break;
                 case Command.TargetRead:
-                    a.Payload!.CopyTo(output, n);
+                    if (a.Payload is null || a.Payload.LongLength != a.Length)
+                        throw new InvalidDataException("BPS literal length does not match the action");
+                    a.Payload.CopyTo(output, n);
                     break;
                 case Command.SourceCopy:
-                    src += a.Delta;
+                    src = MoveCursor(src, a.Delta);
+                    if (src < 0 || src > source.Length || a.Length > source.Length - src)
+                        throw new InvalidDataException("BPS source copy is outside the source");
                     Array.Copy(source, src, output, n, a.Length);
                     src += a.Length;
                     break;
                 case Command.TargetCopy:
-                    tgt += a.Delta;
+                    tgt = MoveCursor(tgt, a.Delta);
+                    if (tgt < 0 || tgt >= n)
+                        throw new InvalidDataException("BPS target copy must start in already written output");
                     for (long i = 0; i < a.Length; i++)      // byte by byte: the copy may overlap its own output
                         output[n + i] = output[tgt++];
                     break;
+                default:
+                    throw new InvalidDataException("invalid BPS action command");
             }
             n += a.Length;
         }
         if (n != patch.TargetSize || Crc32.Compute(output) != patch.TargetCrc)
             throw new InvalidDataException("patched output does not match the patch target CRC32");
         return output;
+    }
+
+    static long MoveCursor(long cursor, long delta)
+    {
+        try { return checked(cursor + delta); }
+        catch (OverflowException e) { throw new InvalidDataException("BPS copy cursor overflow", e); }
     }
 }
 

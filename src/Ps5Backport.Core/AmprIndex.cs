@@ -14,6 +14,7 @@ public static class AmprIndex
     {
         "ampr_emu.index", "ampr_emu.index.tmp", "ampr_emu.index.bak", "ampr_commands.bin",
         "ampr_emu.log", "apr_emu.log", "backport_report.txt", "backport_report.json",
+        Publication.ManifestName, Publication.EvidenceName,
     };
 
     /// <summary>
@@ -21,30 +22,61 @@ public static class AmprIndex
     /// with files of the overlay taking precedence, exactly as the mounted /app0 tree will appear to AMPR.
     /// Generated indexes, logs and private backport reports are excluded.
     /// </summary>
-    public static AmprIndexResult Build(string sourceRoot, string overlayRoot)
+    public static AmprIndexResult Build(string sourceRoot, string overlayRoot) => Build(sourceRoot, overlayRoot, default);
+
+    /// <summary>Builds transactionally, checking cancellation during traversal and before publication.</summary>
+    public static AmprIndexResult Build(string sourceRoot, string overlayRoot, CancellationToken cancel)
     {
+        cancel.ThrowIfCancellationRequested();
         sourceRoot = System.IO.Path.GetFullPath(sourceRoot);
         overlayRoot = System.IO.Path.GetFullPath(overlayRoot);
+        Paths.ValidateOverlay(sourceRoot, overlayRoot);
         if (!Directory.Exists(sourceRoot))
             throw new DirectoryNotFoundException($"Game folder not found: {sourceRoot}");
+        Paths.RequireSeparateTrees(sourceRoot, overlayRoot);
+        Paths.RequireNoLinks(sourceRoot, tree: true);
+        Publication.Recover(overlayRoot);
         if (!Directory.Exists(overlayRoot))
             throw new DirectoryNotFoundException($"Backport overlay not found: {overlayRoot}. Cook the backport first.");
+        using var transaction = new DirectoryTransaction(overlayRoot);
+        if (File.Exists(System.IO.Path.Combine(overlayRoot, Publication.ManifestName)))
+            Publication.Verify(overlayRoot);
+        RunEvidence.VerifySource(overlayRoot, sourceRoot);
+        transaction.CopyExisting(cancel);
 
         var entries = new Dictionary<string, Entry>(StringComparer.Ordinal);
-        AddTree(sourceRoot, overlay: false, entries);
-        AddTree(overlayRoot, overlay: true, entries);
+        AddTree(sourceRoot, overlay: false, entries, cancel);
+        string sourceLayout = LayoutHash(entries);
+        AddTree(transaction.Stage, overlay: true, entries, cancel);
         if (entries.Count == 0)
             throw new InvalidDataException("The game and overlay contain no files to index");
 
         List<Entry> rows = entries.Values.OrderBy(e => e.Key, ByteArrayComparer.Instance).ToList();
         string output = System.IO.Path.Combine(overlayRoot, "ampr_emu.index");
-        Write(rows, output);
+        Write(rows, System.IO.Path.Combine(transaction.Stage, "ampr_emu.index"));
+        var check = new Dictionary<string, Entry>(StringComparer.Ordinal);
+        AddTree(sourceRoot, overlay: false, check, cancel);
+        if (sourceLayout != LayoutHash(check))
+            throw new IOException("source file layout changed while building the AMPR index");
+        string evidencePath = System.IO.Path.Combine(transaction.Stage, Publication.EvidenceName);
+        var evidence = File.Exists(evidencePath) ? System.Text.Json.Nodes.JsonNode.Parse(File.ReadAllBytes(evidencePath))!.AsObject()
+            : new System.Text.Json.Nodes.JsonObject { ["Version"] = 1, ["Operation"] = "ampr-index" };
+        evidence["AmprIndex"] = new System.Text.Json.Nodes.JsonObject
+        {
+            ["SourceLayoutSha256"] = sourceLayout, ["Entries"] = rows.Count, ["OverlayEntries"] = rows.Count(e => e.Overlay),
+        };
+        Publication.WriteDurable(evidencePath, evidence);
+        transaction.Commit(cancel);
         return new AmprIndexResult(output, rows.Count, rows.Count(e => e.Overlay));
     }
 
-    static void AddTree(string root, bool overlay, Dictionary<string, Entry> entries)
+    static string LayoutHash(Dictionary<string, Entry> entries) => Convert.ToHexStringLower(System.Security.Cryptography.SHA256.HashData(
+        System.Text.Json.JsonSerializer.SerializeToUtf8Bytes(entries.Values.OrderBy(e => e.Path, StringComparer.Ordinal)
+            .Select(e => new { e.Path, e.Size, e.Mtime }))));
+
+    static void AddTree(string root, bool overlay, Dictionary<string, Entry> entries, CancellationToken cancel)
     {
-        foreach (string file in Directory.EnumerateFiles(root, "*", SearchOption.AllDirectories))
+        foreach (string file in GameScan.WalkFiles(root, cancel))
         {
             string relative = System.IO.Path.GetRelativePath(root, file).Replace('\\', '/');
             if (relative.IndexOf('/') < 0 && ExcludedRootFiles.Contains(relative))
@@ -71,8 +103,8 @@ public static class AmprIndex
     static void Write(List<Entry> rows, string output)
     {
         uint slots = HashSlotCount(rows.Count);
-        var blob = new MemoryStream();
-        var records = new MemoryStream();
+        using var blob = new MemoryStream();
+        using var records = new MemoryStream();
         using (var recordWriter = new BinaryWriter(records, Encoding.UTF8, leaveOpen: true))
         {
             foreach (Entry row in rows)

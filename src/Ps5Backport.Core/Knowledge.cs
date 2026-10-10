@@ -59,6 +59,9 @@ public sealed record KnownBuild(string Module, string BuildDate, string State, s
 /// </summary>
 public sealed class Knowledge
 {
+    readonly Dictionary<string, string> _documentHashes = new(StringComparer.Ordinal);
+    /// <summary>Hashes of the exact documents parsed by this instance, used to bind run evidence to loaded rules.</summary>
+    public IReadOnlyDictionary<string, string> DocumentHashes => _documentHashes;
     public string DataDir { get; }
     /// <summary>Source key ("GT7") -> full source name.</summary>
     public IReadOnlyDictionary<string, string> SourceNames { get; }
@@ -81,80 +84,121 @@ public sealed class Knowledge
     /// <summary>Sony build id (J&lt;number&gt;) -> firmware it shipped with (data/sony_builds.json, builds + evidence).</summary>
     public IReadOnlyDictionary<string, string> SonyBuilds { get; }
 
+    /// <summary>Deep private copy: callers cannot change a running operation through collection/byte-array aliases.</summary>
+    internal Knowledge Snapshot() => new(this);
+
+    Knowledge(Knowledge original)
+    {
+        static Fix CopyFix(Fix f) => f with { Sources = f.Sources.ToArray(), Insns = f.Insns.Select(i => i with { Bytes = i.Bytes.ToArray() }).ToArray() };
+        static FixPattern CopyPattern(FixPattern p) => p with { Find = p.Find.ToArray(), Replace = p.Replace.ToArray(), Files = p.Files.ToArray(), Sources = p.Sources?.ToArray() };
+        DataDir = Path.GetFullPath(original.DataDir);
+        foreach (var pair in original.DocumentHashes) _documentHashes.Add(pair.Key, pair.Value);
+        SourceNames = new Dictionary<string, string>(original.SourceNames);
+        UmtxOp = original.UmtxOp;
+        FixList = original.FixList.Select(CopyFix).ToArray();
+        Fixes = original.Fixes.ToDictionary(p => p.Key, p => CopyFix(p.Value), StringComparer.Ordinal);
+        Options = original.Options.ToDictionary(p => p.Key, p => p.Value with
+        {
+            Sources = p.Value.Sources.ToArray(),
+            Fixes = p.Value.Fixes.ToDictionary(f => f.Key, f => CopyFix(f.Value), StringComparer.Ordinal),
+            Patterns = p.Value.Patterns.Select(CopyPattern).ToArray(),
+        }, StringComparer.Ordinal);
+        Patterns = original.Patterns.Select(CopyPattern).ToArray();
+        Stubs = original.Stubs.ToDictionary(p => p.Key, p => p.Value with { Bytes = p.Value.Bytes.ToArray() }, StringComparer.Ordinal);
+        Candidates = new Dictionary<string, Candidate>(original.Candidates);
+        LeftUnpatched = original.LeftUnpatched.ToDictionary(p => p.Key, p => (IReadOnlyList<string>)p.Value.ToArray(), StringComparer.Ordinal);
+        Introduced = new Dictionary<string, (string Firmware, string Source)>(original.Introduced);
+        KnownBuilds = original.KnownBuilds.ToArray();
+        SonyBuilds = new Dictionary<string, string>(original.SonyBuilds);
+    }
+
     public Knowledge(string? dataDir = null)
     {
         DataDir = dataDir ?? Paths.DataDir;
-
-        using var fixes = Open("fixes");
-        var root = fixes.RootElement;
-        var sources = root.GetProperty("sources").EnumerateObject().ToDictionary(p => p.Name, p => p.Value.GetString()!);
-        SourceNames = sources;
-        UmtxOp = root.GetProperty("umtx_op").GetString()!;
-        string Source(string key) => sources.GetValueOrDefault(key, key);
-        Fix ReadFix(JsonProperty p)
+        string file = "fixes";
+        try
         {
-            var f = p.Value;
-            return new Fix(
-                p.Name, Str(f, "kind"), Str(f, "name"), Str(f, "area"),
-                f.GetProperty("sources").EnumerateArray().Select(s => Source(s.GetString()!)).ToList(),
-                Str(f, "stub"), Str(f, "new_nid"),
-                f.TryGetProperty("insns", out var insns) ? insns.EnumerateArray().Select(i => Insn.Parse(i.GetString()!)).ToList() : [],
-                Str(f, "export_nid"), Str(f, "when", Fix.WhenMissing), Bool(f, "post_call", false), Bool(f, "proven", true),
-                Str(f, "note"), Str(f, "rationale"), Str(f, "below"));
+            using var fixes = Open(file);
+            var root = fixes.RootElement;
+            var sources = root.GetProperty("sources").EnumerateObject().ToDictionary(p => p.Name, p => StringValue(p.Value));
+            SourceNames = sources;
+            UmtxOp = StringValue(root.GetProperty("umtx_op"));
+            string Source(string key) => sources.GetValueOrDefault(key, key);
+            Fix ReadFix(JsonProperty p)
+            {
+                var f = p.Value;
+                return new Fix(
+                    p.Name, Str(f, "kind"), Str(f, "name"), Str(f, "area"),
+                    f.GetProperty("sources").EnumerateArray().Select(s => Source(StringValue(s))).ToList(),
+                    Str(f, "stub"), Str(f, "new_nid"),
+                    f.TryGetProperty("insns", out var insns) ? insns.EnumerateArray().Select(i => Insn.Parse(StringValue(i))).ToList() : [],
+                    Str(f, "export_nid"), Str(f, "when", Fix.WhenMissing), Bool(f, "post_call", false), Bool(f, "proven", true),
+                    Str(f, "note"), Str(f, "rationale"), Str(f, "below"));
+            }
+            var list = root.GetProperty("fixes").EnumerateObject().Select(ReadFix).ToList();
+            FixList = list;
+            Fixes = list.ToDictionary(f => f.Nid, StringComparer.Ordinal);
+            var options = new Dictionary<string, FixOption>(StringComparer.Ordinal);
+            if (root.TryGetProperty("options", out var opts))
+                foreach (var p in opts.EnumerateObject())
+                    options[p.Name] = new FixOption(
+                        p.Name, Str(p.Value, "name"), Str(p.Value, "description"), Str(p.Value, "warning"),
+                        p.Value.TryGetProperty("sources", out var os) ? os.EnumerateArray().Select(s => Source(StringValue(s))).ToList() : [],
+                        p.Value.GetProperty("fixes").EnumerateObject().Select(ReadFix).ToDictionary(f => f.Nid, StringComparer.Ordinal),
+                        Str(p.Value, "fakelib_variant"),
+                        p.Value.TryGetProperty("patterns", out var pats) ? pats.EnumerateArray().Select(ReadPattern).ToList() : []);
+            Options = options;
+            Patterns = root.TryGetProperty("patterns", out var defaults) ? defaults.EnumerateArray().Select(ReadPattern).ToList() : [];
+
+            FixPattern ReadPattern(JsonElement x) => new(
+                Str(x, "name"), Convert.FromHexString(Str(x, "find")), Convert.FromHexString(Str(x, "replace")),
+                x.TryGetProperty("files", out var fs) ? fs.EnumerateArray().Select(StringValue).ToList() : [],
+                Bool(x, "code", false),
+                x.TryGetProperty("sources", out var ss) ? ss.EnumerateArray().Select(s => Source(StringValue(s))).ToList() : [],
+                Str(x, "note"));
+
+            file = "stubs";
+            using (var stubs = Open(file))
+                Stubs = stubs.RootElement.GetProperty("stubs").EnumerateObject().ToDictionary(
+                    p => p.Name, p => new StubBody(p.Name, Convert.FromHexString(Str(p.Value, "hex")), Str(p.Value, "asm"), Str(p.Value, "note")));
+
+            file = "candidates";
+            using (var candidates = Open(file))
+                Candidates = candidates.RootElement.GetProperty("candidates").EnumerateObject().ToDictionary(
+                    p => p.Name, p => new Candidate(p.Name, Str(p.Value, "name"), CandidateValue(Str(p.Value, "value")),
+                                                    Str(p.Value, "source")), StringComparer.Ordinal);
+
+            file = "left_unpatched";
+            using (var left = Open(file))
+                LeftUnpatched = left.RootElement.GetProperty("left_unpatched").EnumerateObject().ToDictionary(
+                    p => p.Name, p => (IReadOnlyList<string>)p.Value.EnumerateArray().Select(s => Source(StringValue(s))).ToList(),
+                    StringComparer.Ordinal);
+
+            file = "introduced";
+            using (var introduced = Open(file))
+                Introduced = introduced.RootElement.GetProperty("introduced").EnumerateObject().ToDictionary(
+                    p => p.Name, p => (Str(p.Value, "firmware"), Str(p.Value, "source")), StringComparer.Ordinal);
+
+            file = "known_builds";
+            using (var builds = Open(file))
+                KnownBuilds = builds.RootElement.GetProperty("builds").EnumerateArray()
+                    .Select(b => new KnownBuild(Str(b, "module"), Str(b, "build_date"), Str(b, "state"), Str(b, "note"))).ToList();
+
+            file = "sony_builds";
+            using (var sony = Open(file))
+            {
+                var map = sony.RootElement.GetProperty("builds").EnumerateObject().ToDictionary(p => p.Name, p => StringValue(p.Value), StringComparer.Ordinal);
+                if (sony.RootElement.TryGetProperty("evidence", out var evidence))
+                    foreach (var p in evidence.EnumerateObject())
+                        map[p.Name] = Str(p.Value, "firmware");
+                SonyBuilds = map;
+            }
         }
-        var list = root.GetProperty("fixes").EnumerateObject().Select(ReadFix).ToList();
-        FixList = list;
-        Fixes = list.ToDictionary(f => f.Nid, StringComparer.Ordinal);
-        var options = new Dictionary<string, FixOption>(StringComparer.Ordinal);
-        if (root.TryGetProperty("options", out var opts))
-            foreach (var p in opts.EnumerateObject())
-                options[p.Name] = new FixOption(
-                    p.Name, Str(p.Value, "name"), Str(p.Value, "description"), Str(p.Value, "warning"),
-                    p.Value.TryGetProperty("sources", out var os) ? os.EnumerateArray().Select(s => Source(s.GetString()!)).ToList() : [],
-                    p.Value.GetProperty("fixes").EnumerateObject().Select(ReadFix).ToDictionary(f => f.Nid, StringComparer.Ordinal),
-                    Str(p.Value, "fakelib_variant"),
-                    p.Value.TryGetProperty("patterns", out var pats) ? pats.EnumerateArray().Select(ReadPattern).ToList() : []);
-        Options = options;
-        Patterns = root.TryGetProperty("patterns", out var defaults) ? defaults.EnumerateArray().Select(ReadPattern).ToList() : [];
-
-        FixPattern ReadPattern(JsonElement x) => new(
-            Str(x, "name"), Convert.FromHexString(Str(x, "find")), Convert.FromHexString(Str(x, "replace")),
-            x.TryGetProperty("files", out var fs) ? fs.EnumerateArray().Select(f => f.GetString()!).ToList() : [],
-            Bool(x, "code", false),
-            x.TryGetProperty("sources", out var ss) ? ss.EnumerateArray().Select(s => Source(s.GetString()!)).ToList() : [],
-            Str(x, "note"));
-
-        using (var stubs = Open("stubs"))
-            Stubs = stubs.RootElement.GetProperty("stubs").EnumerateObject().ToDictionary(
-                p => p.Name, p => new StubBody(p.Name, Convert.FromHexString(Str(p.Value, "hex")), Str(p.Value, "asm"), Str(p.Value, "note")));
-
-        using (var candidates = Open("candidates"))
-            Candidates = candidates.RootElement.GetProperty("candidates").EnumerateObject().ToDictionary(
-                p => p.Name, p => new Candidate(p.Name, Str(p.Value, "name"),
-                                                uint.Parse(Str(p.Value, "value").AsSpan(2), NumberStyles.HexNumber, CultureInfo.InvariantCulture),
-                                                Str(p.Value, "source")), StringComparer.Ordinal);
-
-        using (var left = Open("left_unpatched"))
-            LeftUnpatched = left.RootElement.GetProperty("left_unpatched").EnumerateObject().ToDictionary(
-                p => p.Name, p => (IReadOnlyList<string>)p.Value.EnumerateArray().Select(s => Source(s.GetString()!)).ToList(),
-                StringComparer.Ordinal);
-
-        using (var introduced = Open("introduced"))
-            Introduced = introduced.RootElement.GetProperty("introduced").EnumerateObject().ToDictionary(
-                p => p.Name, p => (Str(p.Value, "firmware"), Str(p.Value, "source")), StringComparer.Ordinal);
-
-        using (var builds = Open("known_builds"))
-            KnownBuilds = builds.RootElement.GetProperty("builds").EnumerateArray()
-                .Select(b => new KnownBuild(Str(b, "module"), Str(b, "build_date"), Str(b, "state"), Str(b, "note"))).ToList();
-
-        using (var sony = Open("sony_builds"))
+        catch (Exception e) when (e is JsonException or InvalidOperationException or KeyNotFoundException or FormatException or OverflowException or ArgumentException)
         {
-            var map = sony.RootElement.GetProperty("builds").EnumerateObject().ToDictionary(p => p.Name, p => p.Value.GetString()!, StringComparer.Ordinal);
-            if (sony.RootElement.TryGetProperty("evidence", out var evidence))
-                foreach (var p in evidence.EnumerateObject())
-                    map[p.Name] = Str(p.Value, "firmware");
-            SonyBuilds = map;
+            throw new InvalidDataException($"Invalid knowledge data in '{Path.Combine(DataDir, file + ".json")}': {e.Message}", e);
         }
+        Validate();
     }
 
     /// <summary>"J03828141 = FW 12.70" for a Sony system library's build path (W:/Build/J&lt;number&gt;/...), else "".
@@ -221,10 +265,139 @@ public sealed class Knowledge
     public KnownBuild? Build(string? module, string? buildDate) =>
         KnownBuilds.FirstOrDefault(b => b.Module == module && b.BuildDate == buildDate);
 
-    JsonDocument Open(string name) => JsonDocument.Parse(File.ReadAllBytes(Path.Combine(DataDir, name + ".json")));
+    void Validate()
+    {
+        string context = "fixes.json";
+        try
+        {
+            if (string.IsNullOrWhiteSpace(UmtxOp))
+                throw new ArgumentException("umtx_op must not be empty");
+            foreach (var fix in FixList)
+                ValidateFix(fix, allowNone: false);
+            foreach (var pattern in Patterns)
+                ValidatePattern(pattern);
+            foreach (var option in Options.Values)
+            {
+                context = $"fixes.json option '{option.Key}'";
+                if (string.IsNullOrWhiteSpace(option.Key))
+                    throw new ArgumentException("option key must not be empty");
+                if (option.FakelibVariant.Length > 0)
+                    _ = FakelibStore.VariantFolder(DataDir, option.FakelibVariant);
+                foreach (var fix in option.Fixes.Values)
+                    ValidateFix(fix, allowNone: true);
+                foreach (var pattern in option.Patterns)
+                    ValidatePattern(pattern);
+            }
+            context = "stubs.json";
+            foreach (var stub in Stubs.Values)
+                if (string.IsNullOrWhiteSpace(stub.Name) || stub.Bytes.Length == 0)
+                    throw new ArgumentException($"stub '{stub.Name}' must have a name and nonempty bytes");
+            context = "introduced.json";
+            foreach (var (nid, entry) in Introduced)
+            {
+                context = $"introduced.json NID '{nid}'";
+                _ = Firmware.Parse(entry.Firmware);
+            }
+            context = "sony_builds.json";
+            foreach (string key in SonyBuilds.Keys)
+                if (!key.StartsWith('J') || !long.TryParse(key.AsSpan(1), NumberStyles.None, CultureInfo.InvariantCulture, out _))
+                    throw new ArgumentException($"invalid build id '{key}'");
+        }
+        catch (Exception e) when (e is ArgumentException or FormatException or OverflowException or KeyNotFoundException)
+        {
+            throw new InvalidDataException($"Invalid knowledge data in '{Path.Combine(DataDir, context)}': {e.Message}", e);
+        }
+    }
+
+    void ValidateFix(Fix fix, bool allowNone)
+    {
+        if (string.IsNullOrWhiteSpace(fix.Nid))
+            throw new ArgumentException("fix NID must not be empty");
+        if (fix.When is not (Fix.WhenMissing or Fix.WhenAlways))
+            throw new ArgumentException($"fix '{fix.Nid}': unknown condition '{fix.When}'");
+        if (fix.Below.Length > 0)
+        {
+            try { _ = Firmware.Parse(fix.Below); }
+            catch (FormatException e) { throw new ArgumentException($"fix '{fix.Nid}': invalid below firmware '{fix.Below}'", e); }
+        }
+        switch (fix.Kind)
+        {
+            case Fix.KindStub or Fix.KindPltStub:
+                try { _ = StubBytes(fix.Stub); }
+                catch (Exception e) when (e is KeyNotFoundException or FormatException or OverflowException)
+                { throw new ArgumentException($"fix '{fix.Nid}': invalid stub '{fix.Stub}'", e); }
+                break;
+            case Fix.KindSwap:
+                if (string.IsNullOrWhiteSpace(fix.NewNid))
+                    throw new ArgumentException($"fix '{fix.Nid}': swap needs new_nid");
+                break;
+            case Fix.KindRedirect:
+                if (string.IsNullOrWhiteSpace(fix.ExportNid))
+                    throw new ArgumentException($"fix '{fix.Nid}': redirect needs export_nid");
+                break;
+            case Fix.KindAdapter:
+                if (fix.Insns.Count == 0 || fix.Insns.Any(i => i.Length == 0))
+                    throw new ArgumentException($"fix '{fix.Nid}': adapter needs nonempty instructions");
+                break;
+            case Fix.KindNone when allowNone:
+                break;
+            default:
+                throw new ArgumentException($"fix '{fix.Nid}': unknown or disallowed kind '{fix.Kind}'");
+        }
+    }
+
+    void ValidatePattern(FixPattern pattern)
+    {
+        if (pattern.Find.Length == 0 || pattern.Find.Length != pattern.Replace.Length)
+            throw new ArgumentException($"pattern '{pattern.Name}': find/replace must have equal, nonzero lengths");
+        foreach (string relative in pattern.Files)
+        {
+            try { _ = Paths.ResolveRelativeFile(DataDir, relative); }
+            catch (ArgumentException e) { throw new ArgumentException($"pattern '{pattern.Name}': {e.Message}", e); }
+        }
+    }
+
+    JsonDocument Open(string name)
+    {
+        byte[] bytes = File.ReadAllBytes(Path.Combine(DataDir, name + ".json"));
+        _documentHashes[name + ".json"] = Convert.ToHexStringLower(System.Security.Cryptography.SHA256.HashData(bytes));
+        var doc = JsonDocument.Parse(bytes);
+        try
+        {
+            ValidateKeys(doc.RootElement, "$");
+            return doc;
+        }
+        catch { doc.Dispose(); throw; }
+
+        void ValidateKeys(JsonElement node, string path)
+        {
+            if (node.ValueKind == JsonValueKind.Object)
+            {
+                var keys = new HashSet<string>(StringComparer.Ordinal);
+                foreach (var property in node.EnumerateObject())
+                {
+                    if (!keys.Add(property.Name))
+                        throw new InvalidDataException($"{name}.json: duplicate key '{property.Name}' at {path}");
+                    ValidateKeys(property.Value, path + "." + property.Name);
+                }
+            }
+            else if (node.ValueKind == JsonValueKind.Array)
+            {
+                int index = 0;
+                foreach (var item in node.EnumerateArray())
+                    ValidateKeys(item, $"{path}[{index++}]");
+            }
+        }
+    }
+
+    static uint CandidateValue(string value) => value.StartsWith("0x", StringComparison.OrdinalIgnoreCase)
+        ? uint.Parse(value.AsSpan(2), NumberStyles.AllowHexSpecifier, CultureInfo.InvariantCulture)
+        : throw new FormatException("candidate value must be a hexadecimal string starting with 0x");
+
+    static string StringValue(JsonElement e) => e.GetString() ?? throw new InvalidOperationException("expected a string, not null");
 
     static string Str(JsonElement e, string name, string fallback = "") =>
-        e.TryGetProperty(name, out var v) ? v.GetString() ?? fallback : fallback;
+        e.TryGetProperty(name, out var v) ? StringValue(v) : fallback;
 
     static bool Bool(JsonElement e, string name, bool fallback) =>
         e.TryGetProperty(name, out var v) ? v.GetBoolean() : fallback;

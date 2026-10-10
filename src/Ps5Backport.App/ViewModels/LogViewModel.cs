@@ -1,6 +1,7 @@
 using System.Collections.ObjectModel;
 using System.Text;
 using CommunityToolkit.Mvvm.ComponentModel;
+using Ps5Backport.Core;
 
 namespace Ps5Backport.App.ViewModels;
 
@@ -20,10 +21,16 @@ public sealed record LogEntry(DateTime Time, LogLevel Level, string Message, str
 /// </summary>
 public partial class LogViewModel : ObservableObject
 {
-    readonly List<LogEntry> _all = [];
+    public const int MaximumEntries = 2000;
+    readonly Queue<LogEntry> _all = new();
+    readonly BatchCollection<LogEntry> _visible = new();
+    readonly DiagnosticLog? _diagnostics;
+    internal string? RunId { get; set; }
+
+    public LogViewModel(DiagnosticLog? diagnostics = null) => _diagnostics = diagnostics;
 
     /// <summary>Entries matching the current filter (newest last).</summary>
-    public ObservableCollection<LogEntry> Visible { get; } = [];
+    public ObservableCollection<LogEntry> Visible => _visible;
 
     [ObservableProperty] public partial int ErrorCount { get; set; }
     [ObservableProperty] public partial int WarningCount { get; set; }
@@ -39,12 +46,24 @@ public partial class LogViewModel : ObservableObject
 
     public void Info(string message, string? module = null) => Add(LogLevel.Info, message, module);
     public void Warning(string message, string? module = null) => Add(LogLevel.Warning, message, module);
-    public void Error(string message, string? module = null) => Add(LogLevel.Error, message, module);
+    public void Error(string message, string? module = null, Exception? exception = null) => Add(LogLevel.Error, message, module, exception);
 
-    public void Add(LogLevel level, string message, string? module = null)
+    public void Add(LogLevel level, string message, string? module = null, Exception? exception = null)
     {
+        _diagnostics?.Write(new DiagnosticEvent("ui", level.ToString().ToLowerInvariant(), "activity", RunId, module,
+            Message: message, ErrorCategory: exception is null ? null : DiagnosticLog.Category(exception),
+            ExceptionType: exception?.GetType().FullName, ExceptionContext: exception?.ToString()));
+        if (message.Length > 2048) message = message[..2048] + "…";
+        if (module?.Length > 1024) module = module[..1024] + "…";
         var entry = new LogEntry(DateTime.Now, level, message, module);
-        _all.Add(entry);
+        _all.Enqueue(entry);
+        if (_all.Count > MaximumEntries)
+        {
+            var removed = _all.Dequeue();
+            Visible.Remove(removed);
+            if (removed.Level == LogLevel.Error) ErrorCount--;
+            else if (removed.Level == LogLevel.Warning) WarningCount--;
+        }
         if (level == LogLevel.Error)
             ErrorCount++;
         else if (level == LogLevel.Warning)
@@ -78,9 +97,7 @@ public partial class LogViewModel : ObservableObject
 
     partial void OnFilterChanged(string value)
     {
-        Visible.Clear();
-        foreach (var e in _all.Where(Matches))
-            Visible.Add(e);
+        _visible.ReplaceWith(_all.Where(Matches));
         OnPropertyChanged(nameof(ShowAll));
         OnPropertyChanged(nameof(ShowErrors));
         OnPropertyChanged(nameof(ShowWarnings));

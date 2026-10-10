@@ -25,7 +25,7 @@ public sealed class ModuleRow(ModuleResult m)
     public string UnresolvedTone => Unresolved > 0 ? "warn" : "muted";
     public int Fixed => m.Fixed.Count + m.StubbedNow.Count;
     public int Unresolved => m.Unknown.Count;
-    public string State => m.Error.Length > 0 ? "error" : m.Written ? "written" : Fixed > 0 || m.SdkPatched ? "will change" : "unchanged";
+    public string State => m.Error.Length > 0 ? "error" : m.Written ? "written" : Fixed > 0 || m.SdkPatched || m.Patterns.Count > 0 ? "will change" : "unchanged";
     /// <summary>Status key for coloring: ok / warn / error / muted.</summary>
     public string Tone => m.Error.Length > 0 ? "error" : State is "written" or "will change" ? "ok" : "muted";
 

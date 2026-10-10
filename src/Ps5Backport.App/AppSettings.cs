@@ -49,7 +49,10 @@ public sealed class AppSettings
             return new AppSettings();
         try
         {
-            return JsonSerializer.Deserialize<AppSettings>(File.ReadAllText(path), Json) ?? new AppSettings();
+            var settings = JsonSerializer.Deserialize<AppSettings>(File.ReadAllText(path), Json) ?? new AppSettings();
+            settings.Firmware ??= "4";
+            settings.RecentGames ??= [];
+            return settings;
         }
         catch (Exception e) when (e is JsonException or IOException or UnauthorizedAccessException)
         {
@@ -61,10 +64,9 @@ public sealed class AppSettings
     /// <summary>Writes through a temp file so a crash never leaves a half-written settings file.</summary>
     public void Save(string path)
     {
+        path = Path.GetFullPath(path);
         Directory.CreateDirectory(Path.GetDirectoryName(path)!);
-        string tmp = path + ".tmp";
-        File.WriteAllText(tmp, JsonSerializer.Serialize(this, Json));
-        File.Move(tmp, path, overwrite: true);
+        Ps5Backport.Core.Self.WriteAtomic(path, System.Text.Encoding.UTF8.GetBytes(JsonSerializer.Serialize(this, Json)));
     }
 
     /// <summary>Puts a game folder first in the recent list (no duplicates, at most <see cref="MaxRecentGames"/>).</summary>

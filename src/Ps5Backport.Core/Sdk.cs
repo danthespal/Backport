@@ -21,6 +21,8 @@ public static class Sdk
                 continue;
             if (elf.Data.AsSpan(checked((int)p.Offset), checked((int)p.Filesz)).IndexOfAnyExcept((byte)0) < 0)
                 return -1;
+            if (p.Filesz < 0x18)
+                throw new InvalidDataException("param segment is too short for SDK fields");
             uint magic = elf.U32(p.Offset + 8);
             uint expected = p.Type == SceElf.PtSceProcParam ? ProcessParamMagic : ModuleParamMagic;
             if (magic != expected)

@@ -23,7 +23,7 @@ public sealed class AmprIndexTests : IDisposable
         File.WriteAllText(Path.Combine(overlay, "backport_report.txt"), "private");
         File.WriteAllText(Path.Combine(overlay, "ampr_emu.log"), "diagnostic");
 
-        AmprIndexResult result = AmprIndex.Build(game, overlay);
+        AmprIndexResult result = AmprIndex.Build(game, overlay, cancel: TestContext.Current.CancellationToken);
 
         Assert.Equal(2, result.Entries);
         Assert.Equal(1, result.OverlayEntries);

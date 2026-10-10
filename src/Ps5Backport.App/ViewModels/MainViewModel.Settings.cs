@@ -59,7 +59,8 @@ public partial class MainViewModel
             Tone = dbs > 0 ? "ok" : "warn",
         });
         string? store = StoreDir;
-        var sets = store is not null && Directory.Exists(store) ? FakelibStore.List(store).Keys.ToList() : [];
+        var sets = store is not null && Directory.Exists(store)
+            ? Directory.EnumerateDirectories(store).Select(System.IO.Path.GetFileName).Order(StringComparer.Ordinal).ToList() : [];
         PathSettings.Add(new PathSetting
         {
             Kind = PathKind.FakelibStore, Title = "Fakelib store", Icon = "", Path = store ?? "not found",
@@ -96,7 +97,7 @@ public partial class MainViewModel
     {
         switch (kind)
         {
-            case PathKind.FirmwareDb: Settings.FirmwareDbDir = path; Database.Firmwares.Clear(); break;
+            case PathKind.FirmwareDb: Settings.FirmwareDbDir = path; Database.Firmwares.Clear(); Database.Selected = null; break;
             case PathKind.FakelibStore: Settings.FakelibStoreDir = path; break;
             case PathKind.Aerolib: Settings.AerolibPath = path; _names = null; break;
         }

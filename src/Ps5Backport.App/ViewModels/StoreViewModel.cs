@@ -87,6 +87,20 @@ public sealed partial class StoreViewModel(MainViewModel main) : ObservableObjec
     /// <summary>Reloads the set list (keeps the selection when the set still exists).</summary>
     public void Refresh()
     {
+        try { RefreshSets(); }
+        catch (Exception e) when (IsStoreError(e))
+        {
+            Sets.Clear();
+            SelectedSet = null;
+            Files.Clear();
+            SelectedFile = null;
+            OnPropertyChanged(nameof(StoreText));
+            Log.Error($"Fakelib store couldn't be read: {e.Message}", exception: e);
+        }
+    }
+
+    void RefreshSets()
+    {
         string? keep = SelectedSet?.Name;
         Sets.Clear();
         if (main.StoreDir is { } store && Directory.Exists(store))
@@ -113,9 +127,23 @@ public sealed partial class StoreViewModel(MainViewModel main) : ObservableObjec
     partial void OnSelectedSetChanged(StoreSetRow? value)
     {
         Files.Clear();
+        SelectedFile = null;
         CheckSummary = "";
         if (value is null)
             return;
+        try { LoadSet(value); }
+        catch (Exception e) when (IsStoreError(e))
+        {
+            Files.Clear();
+            Log.Error($"Fakelib set {value.Name} couldn't be read: {e.Message}", exception: e);
+        }
+    }
+
+    static bool IsStoreError(Exception e) => e is IOException or InvalidDataException or UnauthorizedAccessException
+        or System.Text.Json.JsonException or InvalidOperationException or FormatException;
+
+    void LoadSet(StoreSetRow value)
+    {
         var manifest = FakelibStore.LoadManifest(value.Folder);
         var problems = FakelibStore.Verify(value.Folder).ToDictionary(p => p.Name, p => p.Problem);
         var broken = FakelibStore.BuildWarnings(value.Folder, main.KnowledgeData);
@@ -137,7 +165,9 @@ public sealed partial class StoreViewModel(MainViewModel main) : ObservableObjec
     }
 
     [RelayCommand]
-    async Task Check()
+    Task Check() => main.IsClosing ? Task.CompletedTask : main.OwnPageWork(CheckCore());
+
+    async Task CheckCore()
     {
         if (SelectedSet is not { } set || CheckFirmware is not { } fw || main.FirmwareDbDir is not { } db)
             return;
@@ -146,6 +176,8 @@ public sealed partial class StoreViewModel(MainViewModel main) : ObservableObjec
         {
             var reference = Imports.LoadReference(db, fw);
             var results = await Task.Run(() => FakelibStore.Check(set.Folder, reference));
+            if (SelectedSet?.Folder != set.Folder || CheckFirmware != fw || main.FirmwareDbDir != db)
+                return;
             int unresolved = 0;
             foreach (var (name, _, statuses) in results)
             {
@@ -162,7 +194,7 @@ public sealed partial class StoreViewModel(MainViewModel main) : ObservableObjec
         }
         catch (Exception e) when (e is IOException or InvalidDataException or FormatException or ArgumentException)
         {
-            Log.Error($"Check of fakelib set {set.Name} failed: {e.Message}");
+            Log.Error($"Check of fakelib set {set.Name} failed: {e.Message}", exception: e);
         }
         finally { Busy = false; }
     }
@@ -179,6 +211,7 @@ public sealed partial class StoreViewModel(MainViewModel main) : ObservableObjec
             return;
         if (PickFiles is null || await PickFiles("Select fakelib libraries", "PS5 libraries", ["*.sprx", "*.prx"], true) is not { Length: > 0 } files)
             return;
+        if (main.IsClosing) return;
         try
         {
             var (folder, added) = FakelibStore.Add(store, AddFirmware, files, AddSource.Trim());
@@ -187,7 +220,7 @@ public sealed partial class StoreViewModel(MainViewModel main) : ObservableObjec
         }
         catch (Exception e) when (e is IOException or InvalidDataException or ArgumentException or UnauthorizedAccessException)
         {
-            Log.Error($"Adding fakelibs failed: {e.Message}");
+            Log.Error($"Adding fakelibs failed: {e.Message}", exception: e);
         }
     }
 
@@ -248,7 +281,7 @@ public sealed partial class StoreViewModel(MainViewModel main) : ObservableObjec
         }
         catch (Exception e) when (e is IOException or InvalidDataException or PatchException or ArgumentException or UnauthorizedAccessException)
         {
-            Log.Error($"BPS patch failed: {e.Message}");
+            Log.Error($"BPS patch failed: {e.Message}", exception: e);
         }
         finally
         {

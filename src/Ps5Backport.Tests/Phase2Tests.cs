@@ -171,6 +171,7 @@ public class FirmwareDbTests
     }
 
     [Fact]
+    [Trait("Lane", "Private")]
     public void ImportGenstub_MatchesGolden_AndIsASubsetOfThe320Dump()
     {
         string stubs = Repo.Need(".original", "reference", "PS5-3.20_Libs");
@@ -189,6 +190,7 @@ public class FirmwareDbTests
     }
 
     [Fact]
+    [Trait("Lane", "Private")]
     public void ImportDump_MatchesGolden_AndDiffs()
     {
         string folder = Repo.Need(".original", "backports", "PPSA01317", "4xx+", "USA", "fakelib");
@@ -257,6 +259,7 @@ public class FirmwareDbTests
     }
 }
 
+[Trait("Lane", "Private")]
 public class FakelibStoreTests
 {
     static string Temp() => Directory.CreateDirectory(Path.Combine(Path.GetTempPath(), "ps5backport-store-" + Guid.NewGuid().ToString("N"))).FullName;

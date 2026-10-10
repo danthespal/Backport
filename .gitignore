@@ -8,6 +8,9 @@ fakelibs/*
 # Unwrapped ELFs and scratch output
 work/
 
+# Local publication locks, recovery journals, staging, diagnostics and retained backups
+.ps5bp-*
+
 # Ghidra project: its database embeds the analysed game/system binaries
 Ghidra/
 

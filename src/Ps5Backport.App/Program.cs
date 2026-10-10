@@ -46,7 +46,7 @@ static class Program
         else
             Application.Current!.RequestedThemeVariant = ThemeVariant.Light;
 
-        var vm = new MainViewModel();
+        using var vm = new MainViewModel();
         int game = Array.IndexOf(args, "--game");
         if (game >= 0 && game + 1 < args.Length)
         {
@@ -80,7 +80,7 @@ static class Program
         window.Show();
         Dispatcher.UIThread.RunJobs();
         AvaloniaHeadlessPlatform.ForceRenderTimerTick();
-        var frame = window.CaptureRenderedFrame();
+        using var frame = window.CaptureRenderedFrame();
         frame?.Save(output, Avalonia.Media.Imaging.PngBitmapEncoderOptions.Default);
         window.Close();
         return frame is null ? 1 : 0;

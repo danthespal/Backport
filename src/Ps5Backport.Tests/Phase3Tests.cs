@@ -16,6 +16,9 @@ public sealed class AnalysisSet : IDisposable
 
     public AnalysisSet()
     {
+        if (Repo.RequirePrivate)
+            foreach (string root in SampleSet.SampleRoots)
+                Repo.Need(".original", root);
         Roots = SampleSet.SampleRoots.Select(r => Path.Combine(Repo.Root, ".original", r)).Where(Directory.Exists).ToList();
         string db320 = Path.Combine(Repo.Root, "firmware_db", "3.20.json");
         if (Roots.Count == 0 || !File.Exists(db320))
@@ -30,7 +33,7 @@ public sealed class AnalysisSet : IDisposable
     public List<string> Need()
     {
         if (!Directory.Exists(ExactDb))
-            Assert.Skip("sample games or firmware_db/3.20.json missing");
+            Repo.Missing("sample games or firmware_db/3.20.json", privateFixture: true);
         return Roots;
     }
 
@@ -44,6 +47,7 @@ public sealed class AnalysisSet : IDisposable
     }
 }
 
+[Trait("Lane", "Private")]
 public class AnalysisTests(AnalysisSet set) : IClassFixture<AnalysisSet>
 {
     static string Rows(IEnumerable<ImportStatus> statuses) =>
@@ -52,11 +56,11 @@ public class AnalysisTests(AnalysisSet set) : IClassFixture<AnalysisSet>
     /// <summary>The unwrapped, unencrypted modules of one sample game and the pooled provider exports.</summary>
     static List<(string Rel, SceElf Elf, HashSet<string> Provided)> Load(string root)
     {
-        var loaded = GameScan.FindModules(root)
+        var loaded = GameScan.FindModules(root, cancel: TestContext.Current.CancellationToken)
             .Where(rel => Self.IsSelf(Self.FileKind(Path.Combine(root, rel))) && Self.EncryptedSegments(Path.Combine(root, rel)) == 0)
             .Select(rel => (rel, Elf: new SceElf(Self.Unwrap(File.ReadAllBytes(Path.Combine(root, rel)))))).ToList();
-        var all = loaded.SelectMany(x => x.Elf.Exports()).ToHashSet(StringComparer.Ordinal);
-        return loaded.Select(x => (x.rel, x.Elf, all.Except(x.Elf.Exports()).ToHashSet(StringComparer.Ordinal))).ToList();
+        return loaded.Select((x, i) => (x.rel, x.Elf,
+            loaded.Where((_, j) => j != i).SelectMany(m => m.Elf.Exports()).ToHashSet(StringComparer.Ordinal))).ToList();
     }
 
     /// <summary>
@@ -73,11 +77,11 @@ public class AnalysisTests(AnalysisSet set) : IClassFixture<AnalysisSet>
         foreach (string root in set.Need())
         {
             var sb = new System.Text.StringBuilder();
-            sb.Append("modules: " + string.Join(", ", GameScan.FindModules(root).Select(m => m.Replace('\\', '/'))) + "\n");
+            sb.Append("modules: " + string.Join(", ", GameScan.FindModules(root, cancel: TestContext.Current.CancellationToken).Select(m => m.Replace('\\', '/'))) + "\n");
             foreach (var (rel, elf, provided) in Load(root))
             {
                 var statuses = Imports.Classify(elf, lower.Nids, provided, lower.Exact);
-                var refs = Imports.CodeReferences(elf, statuses).OrderBy(kv => kv.Key, StringComparer.Ordinal).Select(kv => $"{kv.Key}={kv.Value}");
+                var refs = Imports.CodeReferences(elf, statuses, cancel: TestContext.Current.CancellationToken).OrderBy(kv => kv.Key, StringComparer.Ordinal).Select(kv => $"{kv.Key}={kv.Value}");
                 sb.Append($"\n== {rel.Replace('\\', '/')}\n");
                 sb.Append($"lower {Golden.Sha(Rows(statuses))}\n");
                 sb.Append($"exact {Golden.Sha(Rows(Imports.Classify(elf, exact.Nids, provided, exact.Exact)))}\n");
@@ -160,9 +164,7 @@ public class AnalysisTests(AnalysisSet set) : IClassFixture<AnalysisSet>
         set.Need();
         foreach (string fw in new[] { "4", "4.03" })
         {
-            string folder = Path.Combine(Repo.Root, "fakelibs", fw);
-            if (!Directory.Exists(folder))
-                continue;
+            string folder = Repo.Need("fakelibs", fw);
             var reference = Imports.LoadReference(Path.Combine(Repo.Root, "firmware_db"), fw);
             var sb = new System.Text.StringBuilder();
             foreach (var (name, _, statuses) in FakelibStore.Check(folder, reference))

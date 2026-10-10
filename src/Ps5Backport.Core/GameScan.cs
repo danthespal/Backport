@@ -25,34 +25,37 @@ public static class GameScan
     static readonly string[] AmprIndexFiles = ["ampr_emu.index", "ampr_emu.index.tmp"];
 
     /// <summary>Every file under a folder, in os.walk order (a folder's files sorted, then its subfolders sorted).</summary>
-    public static IEnumerable<string> WalkFiles(string dir)
+    public static IEnumerable<string> WalkFiles(string dir) => WalkFiles(dir, default);
+
+    /// <summary>Ordered traversal with cancellation between directories/files.</summary>
+    public static IEnumerable<string> WalkFiles(string dir, CancellationToken cancel)
     {
-        foreach (string file in Directory.EnumerateFiles(dir).Order(StringComparer.Ordinal))
-            yield return file;
-        foreach (string sub in Directory.EnumerateDirectories(dir).Order(StringComparer.Ordinal))
-            foreach (string file in WalkFiles(sub))
+        var pending = new Stack<string>();
+        pending.Push(dir);
+        while (pending.TryPop(out string? current))
+        {
+            cancel.ThrowIfCancellationRequested();
+            foreach (string file in Directory.EnumerateFiles(current).Order(StringComparer.Ordinal))
+            {
+                cancel.ThrowIfCancellationRequested();
                 yield return file;
+            }
+            // Never follow directory links/junctions: they can lead back to an ancestor.
+            foreach (string sub in Directory.EnumerateDirectories(current).OrderDescending(StringComparer.Ordinal))
+                if ((File.GetAttributes(sub) & FileAttributes.ReparsePoint) == 0)
+                    pending.Push(sub);
+        }
     }
 
     /// <summary>Relative paths of eboot.bin, every .prx/.sprx and every .elf executable under the game root (os.walk order, sorted).</summary>
-    public static List<string> FindModules(string root)
-    {
-        var found = new List<string>();
-        Walk(root);
-        return found;
+    public static List<string> FindModules(string root) => FindModules(root, default);
 
-        void Walk(string dir)
-        {
-            foreach (string file in Directory.EnumerateFiles(dir).Order(StringComparer.Ordinal))
-            {
-                string name = Path.GetFileName(file);
-                string lower = name.ToLowerInvariant();
-                if (lower == MainExecutable || ModuleExtensions.Any(lower.EndsWith))
-                    found.Add(Path.GetRelativePath(root, file));
-            }
-            foreach (string sub in Directory.EnumerateDirectories(dir).Order(StringComparer.Ordinal))
-                Walk(sub);
-        }
+    /// <summary>Ordered module discovery with cancellation during traversal.</summary>
+    public static List<string> FindModules(string root, CancellationToken cancel)
+    {
+        return WalkFiles(root, cancel).Where(file => Path.GetFileName(file).Equals(MainExecutable, StringComparison.OrdinalIgnoreCase)
+            || ModuleExtensions.Any(e => file.EndsWith(e, StringComparison.OrdinalIgnoreCase)))
+            .Select(file => Path.GetRelativePath(root, file)).ToList();
     }
 
     /// <summary>

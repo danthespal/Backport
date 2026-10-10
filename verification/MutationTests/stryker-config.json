@@ -1,0 +1,12 @@
+{
+  "stryker-config": {
+    "project": "Ps5Backport.Core.csproj",
+    "test-runner": "mtp",
+    "mutate": ["Firmware.cs"],
+    "mutation-level": "Basic",
+    "reporters": ["json", "cleartext"],
+    "concurrency": 2,
+    "additional-timeout": 2000,
+    "thresholds": { "high": 80, "low": 60, "break": 0 }
+  }
+}
