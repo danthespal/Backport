@@ -190,10 +190,10 @@ public static class Patching
     }
 
     /// <summary>
-    /// Swap an import's NID in .dynstr (same library/module suffix). Imports are never looked up in this
+    /// Swap an import's NID in .dynstr, optionally using an existing target library/module suffix. Imports are never looked up in this
     /// module's hash table, so no hash rebuild is needed.
     /// </summary>
-    public static void RenameImport(SceElf elf, Import imp, string newNid)
+    public static void RenameImport(SceElf elf, Import imp, string newNid, string newLibrary = "")
     {
         if (newNid.Length != 11)
             throw new PatchException($"invalid NID '{newNid}'");
@@ -211,7 +211,21 @@ public static class Patching
         }
         if (!full.StartsWith(imp.Nid, StringComparison.Ordinal))
             throw new PatchException($"{imp.Nid}: unexpected symbol name '{full}'");
-        Encoding.ASCII.GetBytes(newNid).CopyTo(elf.Data, start);
+        string replacement = newNid + full[11..];
+        if (newLibrary.Length > 0 && newLibrary != imp.Library)
+        {
+            var symbols = elf.Symbols();
+            var suffixes = elf.Imports().Where(i => i.Library == newLibrary && !i.DefinedLocally)
+                .Select(i => symbols[i.SymIndex].Name[11..]).Distinct(StringComparer.Ordinal).ToArray();
+            if (suffixes.Length != 1)
+                throw new PatchException($"{imp.Nid}: target library '{newLibrary}' needs one existing import library/module suffix (found {suffixes.Length})");
+            replacement = newNid + suffixes[0];
+            if (replacement.Length > full.Length)
+                throw new PatchException($"{imp.Nid}: target library/module suffix does not fit the symbol name");
+        }
+        // Clear leftover bytes when the replacement suffix is shorter, including the terminator.
+        elf.Data.AsSpan((int)start, full.Length + 1).Clear();
+        Encoding.ASCII.GetBytes(replacement).CopyTo(elf.Data, start);
     }
 
     /// <summary>Rewrite a symbol into a local definition at <paramref name="vaddr"/> (st_shndx=1, as GT7's fakelibs).</summary>
@@ -331,7 +345,11 @@ public static class FixApplier
 
     /// <summary>NID -> stub for every stub fix (the rules StubImports uses for known fixes).</summary>
     public static Dictionary<string, string> StubRules(Knowledge knowledge) =>
-        knowledge.FixList.Where(f => f.Kind == Fix.KindStub).ToDictionary(f => f.Nid, f => f.Stub, StringComparer.Ordinal);
+        StubRules(knowledge.Fixes);
+
+    /// <summary>Stub rules from the run's fix table, including selected option overrides.</summary>
+    public static Dictionary<string, string> StubRules(IReadOnlyDictionary<string, Fix> fixes) =>
+        fixes.Values.Where(f => f.Kind == Fix.KindStub).ToDictionary(f => f.Nid, f => f.Stub, StringComparer.Ordinal);
 
     /// <summary>Address of <paramref name="nid"/> if this module exports it (own export library), else null.</summary>
     public static ulong? LocalExport(SceElf elf, string nid)
@@ -388,17 +406,18 @@ public static class FixApplier
             return null;
         if (imp is null)
             throw new PatchException($"{fix.Nid}: not a PLT import of this module");
+        string renamedTo = fix.NewNid + (fix.NewLibrary.Length > 0 && fix.NewLibrary != imp.Library ? $" ({fix.NewLibrary})" : "");
         switch (fix.Kind)
         {
             case Fix.KindSwap:
-                Patching.RenameImport(elf, imp, fix.NewNid);
-                return $"swap -> {fix.NewNid}";
+                Patching.RenameImport(elf, imp, fix.NewNid, fix.NewLibrary);
+                return $"swap -> {renamedTo}";
             case Fix.KindAdapter:
                 ulong cave = Patching.PlaceChain(elf, fix.Insns, imp.GotVaddr, tailJmp: !fix.PostCall);
                 if (fix.NewNid.Length > 0)
-                    Patching.RenameImport(elf, imp, fix.NewNid);
+                    Patching.RenameImport(elf, imp, fix.NewNid, fix.NewLibrary);
                 Patching.RedirectPlt(elf, imp, cave);
-                return $"adapter{(fix.NewNid.Length > 0 ? $" -> {fix.NewNid}" : " (argument fix)")} via cave 0x{cave:x}";
+                return $"adapter{(fix.NewNid.Length > 0 ? $" -> {renamedTo}" : " (argument fix)")} via cave 0x{cave:x}";
             case Fix.KindRedirect:
                 ulong target = LocalExport(elf, fix.ExportNid)
                     ?? throw new PatchException($"{fix.Nid}: this module does not export {fix.ExportNid}");

@@ -1,0 +1,22 @@
+{
+  "gameDirectory": "../../../.original/backports/PPSA34008",
+  "referenceDirectory": "../../../firmware_db",
+  "aerolib": "../../../data/aerolib.csv",
+  "dataDirectory": "../../../data",
+  "fakelibDirectory": "../../../fakelibs/10/ppsa34008",
+  "baseline": "default",
+  "variants": ["decrypted", "default", "10xx+"],
+  "firmwares": ["4.03", "4.51", "10.01", "10.40", "12.00"],
+  "studioFirmwares": ["4.03", "10.01"],
+  "options": ["gpu_scratch"],
+  "importNids": ["32KQRUK13kI", "4h6F1LLbTiw", "Hc4CaR6JBL0", "dFym5b41JLU", "XgVs4jRehcY"],
+  "windows": [
+    {"module": "sce_module/libc.prx", "address": "0x3af26", "length": 11},
+    {"module": "sce_module/libc.prx", "address": "0x3afe7", "length": 14},
+    {"module": "sce_module/libc.prx", "address": "0x80af0", "length": 43},
+    {"module": "sce_module/libc.prx", "address": "0x118ae0", "length": 32},
+    {"module": "sce_module/libc.prx", "address": "0x118b70", "length": 31},
+    {"module": "eboot.bin", "address": "0x768d02b", "length": 26},
+    {"module": "eboot.bin", "address": "0x7ba32d0", "length": 13}
+  ]
+}

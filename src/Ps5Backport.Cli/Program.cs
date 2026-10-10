@@ -73,7 +73,7 @@ public static class Cli
     }
 
     static string RepoPath(params string[] parts) => Paths.FindUp(Path.Combine(parts)) ?? Path.Combine(parts);
-    static string DefaultAerolib => RepoPath(".original", "reference", "sce_symbols_new", "aerolib.csv");
+    static string DefaultAerolib => Paths.AerolibPath ?? RepoPath("data", "aerolib.csv");
     static string DefaultReference => Paths.FirmwareDbDir ?? RepoPath(".original", "reference", "PS5-3.20_Libs");
     static string DefaultStore => Paths.FakelibStoreDir ?? "fakelibs";
     static string DefaultDb => Paths.FirmwareDbDir ?? "firmware_db";

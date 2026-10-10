@@ -54,13 +54,22 @@ public static class FirmwareDb
 
     public static FirmwareExports Load(string path)
     {
-        using var doc = JsonDocument.Parse(File.ReadAllBytes(path));
-        var r = doc.RootElement;
-        var modules = r.GetProperty("modules").EnumerateObject().ToDictionary(
-            p => p.Name, p => p.Value.EnumerateArray().Select(n => n.GetString()!).ToHashSet(StringComparer.Ordinal));
-        return new FirmwareExports(r.GetProperty("firmware").GetString()!,
-                                   r.TryGetProperty("source", out var s) ? s.GetString() ?? "" : "",
-                                   r.TryGetProperty("data_symbols", out var d) && d.GetBoolean(), modules, path);
+        try
+        {
+            using var doc = JsonDocument.Parse(File.ReadAllBytes(path));
+            var r = doc.RootElement;
+            var modules = r.GetProperty("modules").EnumerateObject().ToDictionary(
+                p => p.Name, p => p.Value.EnumerateArray().Select(n => n.GetString()
+                    ?? throw new InvalidDataException($"{path}: export NIDs must not be null")).ToHashSet(StringComparer.Ordinal));
+            return new FirmwareExports(r.GetProperty("firmware").GetString()
+                                       ?? throw new InvalidDataException($"{path}: firmware must not be null"),
+                                       r.TryGetProperty("source", out var s) ? s.GetString() ?? "" : "",
+                                       r.TryGetProperty("data_symbols", out var d) && d.GetBoolean(), modules, path);
+        }
+        catch (Exception e) when (e is JsonException or InvalidOperationException or KeyNotFoundException or FormatException or ArgumentException)
+        {
+            throw new InvalidDataException($"Invalid firmware database '{path}': {e.Message}", e);
+        }
     }
 
     /// <summary>Every database in a folder, oldest firmware first.</summary>

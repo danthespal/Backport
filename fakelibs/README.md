@@ -15,7 +15,7 @@ ps5backport fakelib list
 ps5backport fakelib verify
 ```
 
-Current contents (2026-10-09):
+Current contents (2026-10-10):
 
 | Folder | Source |
 |---|---|
@@ -30,6 +30,9 @@ Variants:
 | Folder | Source |
 |---|---|
 | `4/gpu_scratch`, `4.03/gpu_scratch` | `libSceAgcDriver` with AC Black Flag Resynced's compute-scratch hook (option `gpu_scratch`): `4` = AC `10xx+` (GT7's AgcDriver build + hook), `4.03` = AC `4xx+` (Control's build + hook). |
+| `10/ppsa34008` | Complete five-library set copied from Mortal Shell II PPSA34008 01.000.010 `10xx+`: Agc, AgcDriver and Psml = Sony J03828141 (12.70), with patched imports/lowered SDKs; Ampr = Aug 24 build; supplied PlayGo stub. Hashes and provenance are recorded in its manifest. The 10.xx target comes from the supplied backport; console compatibility was not independently verified. This set is retained separately from the existing `10` PSML/model combination and is not certified for 4.xx. |
 | `4/ampr_debug`, `4.03/ampr_debug`, `7/ampr_debug`, `9.60/ampr_debug` | Official `drakmor/ampr_emu` 0.3.6.6 `test-debug` (414,614 bytes, SHA-256 `27dec32b…`), selected because the normal AMPR in `4.03` and `7` is the exact 0.3.6.6 `test` asset (255,126 bytes, SHA-256 `362c84e3…`). The debug module has the same 118 exports, adds 14 logging-related imports, and contains `/app0/ampr_emu.log`. The GUI's **Enable AMPR emulator logging** toggle swaps it in for one diagnostic run. It is not a release library and is not console-tested on these firmware sets; its imports classify cleanly against FW 4.00, 4.03, 6.50 lower bound for 7, and 9.60. |
 
 **Do not publish this folder.** It contains console system libraries (Sony's Agc/AgcDriver/Psml), unlike the app itself.
+
+Select the imported PPSA34008 set explicitly in Studio's extra fakelib folder, or with `--fakelib fakelibs/10/ppsa34008`. A variant folder is not selected by firmware lookup alone, and this research set has no automatic patch option. The original game sample stays intact. For other imported sets, use `fakelib add ... --firmware <target> --variant <source_label> --source <provenance>` when an existing default set should be preserved.

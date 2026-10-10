@@ -83,7 +83,7 @@ public sealed partial class FirmwareDbViewModel(MainViewModel main) : Observable
             OnPropertyChanged(nameof(DbText));
             Selected = Firmwares.FirstOrDefault(f => f.Firmware == keep) ?? Firmwares.FirstOrDefault();
         }
-        catch (Exception e) when (e is IOException or System.Text.Json.JsonException or FormatException)
+        catch (Exception e) when (e is IOException or InvalidDataException or UnauthorizedAccessException or System.Text.Json.JsonException or FormatException)
         {
             main.Log.Error($"Firmware database couldn't be read: {e.Message}", exception: e);
         }

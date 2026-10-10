@@ -24,7 +24,7 @@ public sealed record Insn(byte[] Bytes, bool CallGot, string Asm)
 public sealed record Fix(
     string Nid, string Kind, string Name, string Area, IReadOnlyList<string> Sources,
     string Stub, string NewNid, IReadOnlyList<Insn> Insns, string ExportNid,
-    string When, bool PostCall, bool Proven, string Note, string Rationale, string Below = "")
+    string When, bool PostCall, bool Proven, string Note, string Rationale, string Below = "", string NewLibrary = "")
 {
     public const string KindStub = "stub", KindSwap = "swap", KindAdapter = "adapter", KindRedirect = "redirect",
                         KindPltStub = "plt_stub", KindNone = "none";
@@ -133,7 +133,7 @@ public sealed class Knowledge
                     Str(f, "stub"), Str(f, "new_nid"),
                     f.TryGetProperty("insns", out var insns) ? insns.EnumerateArray().Select(i => Insn.Parse(StringValue(i))).ToList() : [],
                     Str(f, "export_nid"), Str(f, "when", Fix.WhenMissing), Bool(f, "post_call", false), Bool(f, "proven", true),
-                    Str(f, "note"), Str(f, "rationale"), Str(f, "below"));
+                    Str(f, "note"), Str(f, "rationale"), Str(f, "below"), Str(f, "new_library"));
             }
             var list = root.GetProperty("fixes").EnumerateObject().Select(ReadFix).ToList();
             FixList = list;
@@ -211,10 +211,11 @@ public sealed class Knowledge
         string id = m.Groups[1].Value;
         if (SonyBuilds.TryGetValue(id, out var fw))
             return $"{id} = FW {fw}";
-        long n = long.Parse(id[1..], CultureInfo.InvariantCulture);
+        if (SonyBuilds.Count == 0 || !long.TryParse(id.AsSpan(1), NumberStyles.None, CultureInfo.InvariantCulture, out long n))
+            return "";
         var known = SonyBuilds.Keys.Select(k => long.Parse(k[1..], CultureInfo.InvariantCulture)).ToList();
         long? lower = known.Where(k => k < n).Select(k => (long?)k).Max(), higher = known.Where(k => k > n).Select(k => (long?)k).Min();
-        string Fw(long k) => SonyBuilds[$"J{k:D8}"];
+        string Fw(long k) => SonyBuilds.First(p => long.Parse(p.Key.AsSpan(1), CultureInfo.InvariantCulture) == k).Value;
         return lower is null ? $"{id} = older than FW {Fw(higher!.Value)}"
              : higher is null ? $"{id} = newer than FW {Fw(lower.Value)}"
              : $"{id} = between FW {Fw(lower.Value)} and {Fw(higher.Value)}";

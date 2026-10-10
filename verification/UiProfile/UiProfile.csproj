@@ -2,9 +2,10 @@
   <PropertyGroup>
     <OutputType>Exe</OutputType>
     <TargetFramework>net10.0</TargetFramework>
+    <DefineConstants>$(DefineConstants);BACKPORT_SYNTHETIC_ONLY</DefineConstants>
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="../../src/Ps5Backport.App/Ps5Backport.App.csproj" />
-    <Compile Include="../../src/Ps5Backport.Tests/SyntheticBinary.cs" Link="SyntheticBinary.cs" />
+    <Compile Include="../../src/Ps5Backport.Tests/Tests.cs" Link="Tests.cs" />
   </ItemGroup>
 </Project>

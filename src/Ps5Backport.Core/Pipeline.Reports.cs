@@ -7,7 +7,10 @@ public static partial class Pipeline
 {
     // --- reports -----------------------------------------------------------------
     /// <summary>The text report.</summary>
-    public static string FormatReport(GameResult r)
+    public static string FormatReport(GameResult r) => FormatReport(r, Knowledge.Default);
+
+    /// <summary>Formats using the knowledge that supplied the run's options.</summary>
+    public static string FormatReport(GameResult r, Knowledge knowledge)
     {
         var lines = new List<string>
         {
@@ -18,7 +21,7 @@ public static partial class Pipeline
             $"  fakelibs: {(r.FakelibSource.Length > 0 ? r.FakelibSource : "none (no --fakelib and no store folder for this firmware)")}",
         };
         if (r.Options.Count > 0)
-            lines.Add("  options: " + string.Join(", ", r.Options.Select(key => $"{key} ({Knowledge.Default.Options[key].Name})")));
+            lines.Add("  options: " + string.Join(", ", r.Options.Select(key => knowledge.Options.TryGetValue(key, out var option) ? $"{key} ({option.Name})" : key)));
         foreach (string f in r.App0Files)
             lines.Add($"  added file {f} (from the fakelib set)");
         foreach (var d in r.DataFiles)
@@ -106,10 +109,13 @@ public static partial class Pipeline
     /// <summary>
     /// backport_report.json and backport_report.txt. Line endings are the platform's.
     /// </summary>
-    public static void WriteReports(GameResult r, string output)
+    public static void WriteReports(GameResult r, string output) => WriteReports(r, output, Knowledge.Default);
+
+    /// <summary>Writes reports using the run's captured knowledge.</summary>
+    public static void WriteReports(GameResult r, string output, Knowledge knowledge)
     {
         var utf8 = new UTF8Encoding(false);
         File.WriteAllText(System.IO.Path.Combine(output, ReportJson), PyJson.Serialize(ToJson(r), 2).Replace("\n", Environment.NewLine), utf8);
-        File.WriteAllText(System.IO.Path.Combine(output, ReportTxt), (FormatReport(r) + "\n").Replace("\n", Environment.NewLine), utf8);
+        File.WriteAllText(System.IO.Path.Combine(output, ReportTxt), (FormatReport(r, knowledge) + "\n").Replace("\n", Environment.NewLine), utf8);
     }
 }

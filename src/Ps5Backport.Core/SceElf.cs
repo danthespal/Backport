@@ -81,7 +81,12 @@ public sealed class SceElf
             ulong offset = U64(at + 8), filesz = U64(at + 0x20), memsz = U64(at + 0x28);
             if (offset > (ulong)data.Length || filesz > (ulong)data.Length - offset || memsz > long.MaxValue)
                 throw new InvalidDataException($"ELF segment #{i} points outside the file or has an invalid size");
-            phdrs.Add(new Phdr(i, U32(at), U32(at + 4), (long)offset, U64(at + 0x10), (long)filesz, (long)memsz));
+            uint type = U32(at);
+            ulong vaddr = U64(at + 0x10);
+            if (type == PtLoad && ((filesz > 0 && filesz - 1 > ulong.MaxValue - vaddr) ||
+                                   (memsz > 0 && memsz - 1 > ulong.MaxValue - vaddr)))
+                throw new InvalidDataException($"ELF load segment #{i} has an overflowing virtual address range");
+            phdrs.Add(new Phdr(i, type, U32(at + 4), (long)offset, vaddr, (long)filesz, (long)memsz));
         }
         Phdrs = phdrs;
 

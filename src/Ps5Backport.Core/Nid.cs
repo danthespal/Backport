@@ -23,12 +23,16 @@ public static class Nid
     /// <summary>Library/module ids in symbol names are base-64 digits: 's' = 44, 'BM' = 76.</summary>
     public static int IdFromChars(string chars)
     {
+        if (chars.Length == 0)
+            throw new FormatException("a library/module ID needs at least one NID alphabet character");
         int n = 0;
         foreach (char c in chars)
         {
             int digit = Alphabet.IndexOf(c);
             if (digit < 0)
                 throw new FormatException($"'{c}' is not a NID alphabet character");
+            if (n > (int.MaxValue - digit) / 64)
+                throw new FormatException("library/module ID exceeds the supported integer range");
             n = n * 64 + digit;
         }
         return n;
@@ -38,7 +42,7 @@ public static class Nid
     public static (string Nid, int Library, int Module)? SplitSymbol(string symbol)
     {
         string[] parts = symbol.Split('#');
-        if (parts.Length != 3 || parts[0].Length != 11)
+        if (parts.Length != 3 || parts[0].Length != 11 || !parts[0].All(Alphabet.Contains))
             return null;
         return (parts[0], IdFromChars(parts[1]), IdFromChars(parts[2]));
     }

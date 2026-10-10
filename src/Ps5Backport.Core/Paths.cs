@@ -112,4 +112,7 @@ public static class Paths
 
     /// <summary>fakelibs/ (per-firmware fakelib store), or null when absent.</summary>
     public static string? FakelibStoreDir => FindUp("fakelibs");
+
+    /// <summary>data/aerolib.csv (the symbol database), or null when absent.</summary>
+    public static string? AerolibPath => FindUp(Path.Combine("data", "aerolib.csv"));
 }

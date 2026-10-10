@@ -296,7 +296,10 @@ public static class DataGenerators
     static List<(string Rel, HashSet<string> Named)> SilentStubBullets(string anyps5)
     {
         string text = File.ReadAllText(Path.Combine(anyps5, "docs", "dev", "TechnicalDebt.md")).Replace("\r\n", "\n");
-        string section = text.Split("### Silent stubs", 2)[1].Split("\n### ", 2)[0];
+        string[] sections = text.Split("### Silent stubs", 2);
+        if (sections.Length != 2)
+            throw new InvalidDataException("AnyPS5 TechnicalDebt.md is missing the 'Silent stubs' section; candidates left unchanged");
+        string section = sections[1].Split("\n### ", 2)[0];
         var output = new List<(string, HashSet<string>)>();
         foreach (string line in section.Split('\n'))
         {

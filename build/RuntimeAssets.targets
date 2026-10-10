@@ -1,0 +1,19 @@
+<Project>
+  <!-- Shared by the two executable projects; source assets remain in the repository. -->
+  <ItemGroup>
+    <Content Include="$(MSBuildThisFileDirectory)..\data\**\*.json"
+             Link="data\%(RecursiveDir)%(Filename)%(Extension)"
+             CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+    <Content Include="$(MSBuildThisFileDirectory)..\firmware_db\**\*.json"
+             Link="firmware_db\%(RecursiveDir)%(Filename)%(Extension)"
+             CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+    <Content Include="$(MSBuildThisFileDirectory)DISTRIBUTION.md" Link="DISTRIBUTION.md"
+             CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+    <Content Include="$(MSBuildThisFileDirectory)..\fakelibs\**\*.sprx;$(MSBuildThisFileDirectory)..\fakelibs\**\*.prx;$(MSBuildThisFileDirectory)..\fakelibs\**\*.psp;$(MSBuildThisFileDirectory)..\fakelibs\**\manifest.json"
+             Exclude="$(MSBuildThisFileDirectory)..\fakelibs\**\.ps5bp-*\**\*"
+             Link="fakelibs\%(RecursiveDir)%(Filename)%(Extension)"
+             CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+    <Content Include="$(MSBuildThisFileDirectory)..\data\aerolib.csv"
+             Link="data\aerolib.csv" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+  </ItemGroup>
+</Project>

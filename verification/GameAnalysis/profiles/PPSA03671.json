@@ -1,0 +1,11 @@
+{
+  "gameDirectory": "../../../.original/backports/PPSA03671",
+  "referenceDirectory": "../../../firmware_db",
+  "aerolib": "../../../data/aerolib.csv",
+  "dataDirectory": "../../../data",
+  "fakelibDirectory": "../../../fakelibs/4",
+  "baseline": "default",
+  "variants": ["default", "4xx+"],
+  "firmwares": ["4.00", "4.03", "9.60", "12.70"],
+  "studioFirmwares": ["4.00"]
+}

@@ -120,6 +120,6 @@ public partial class MainViewModel
     {
         string folder = System.IO.Path.GetDirectoryName(SettingsFile)!;
         Directory.CreateDirectory(folder);
-        Process.Start(new ProcessStartInfo(folder) { UseShellExecute = true });
+        using var process = Process.Start(new ProcessStartInfo(folder) { UseShellExecute = true });
     }
 }

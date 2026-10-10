@@ -120,22 +120,36 @@ public static partial class Pipeline
                        .Where(n => !statuses.Any(s => s.Nid == n && s.Status == Imports.Stubbed)).ToList();
         if (toStub.Count > 0)
         {
-            var rules = FixApplier.StubRules(k);
+            var rules = FixApplier.StubRules(fixes);
             foreach (string n in toStub)
-                if (k.Candidates.TryGetValue(n, out var c) && !k.Fixes.ContainsKey(n))
+                if (k.Candidates.TryGetValue(n, out var c) && !fixes.ContainsKey(n))
                     rules[n] = $"ret:0x{c.Value:x}";
             foreach (var p in Patching.StubImports(elf, toStub, k, rules, o.DefineSymbol))
             {
                 cancel.ThrowIfCancellationRequested();
-                string origin = k.Fixes.TryGetValue(p.Nid, out var f) ? (f.Proven ? "known fix, proven" : "known fix, derived")
+                string origin = fixes.TryGetValue(p.Nid, out var f) ? (f.Proven ? "known fix, proven" : "known fix, derived")
                               : k.Candidates.ContainsKey(p.Nid) ? "candidate (AnyPS5), derived" : "requested";
                 mod.StubbedNow.Add(new StubbedEntry
                 {
                     Nid = p.Nid, Name = Name(o.Names, p.Nid), Stub = p.Stub, Got = $"0x{p.GotVaddr:x}", At = $"0x{p.StubVaddr:x}",
-                    KnownFix = k.Fixes.ContainsKey(p.Nid), Origin = origin,
+                    KnownFix = fixes.ContainsKey(p.Nid), Origin = origin,
                 });
             }
             changed = true;
+        }
+        if (o.KnownFixes && o.Options.Contains(UnitySkuFallback.Option, StringComparer.Ordinal) && UnitySkuFallback.Apply(elf, cancel) > 0)
+        {
+            mod.Patterns.Add(new PatternEntry { Name = UnitySkuFallback.Name, Count = 1 });
+            changed = true;
+        }
+        if (o.KnownFixes && o.Options.Contains(UbisoftOfflinePopups.Option, StringComparer.Ordinal))
+        {
+            int count = UbisoftOfflinePopups.Apply(elf, cancel);
+            if (count > 0)
+            {
+                mod.Patterns.Add(new PatternEntry { Name = UbisoftOfflinePopups.Name, Count = count });
+                changed = true;
+            }
         }
         foreach (var pattern in patterns)
         {
@@ -185,7 +199,7 @@ public static partial class Pipeline
             File.WriteAllBytes(dest, Self.Sign(elf.Data));   // always a fake-signed SELF: the console loads SELFs, also for a decrypted (plain ELF) dump
             mod.Written = true;
         }
-        else if (mod.Added)   // unchanged extra fakelib: copy verbatim, keep its container
+        else if (mod.Added || mod.PathCaseCorrected)   // unchanged fakelib or renamed module: keep its container
         {
             Directory.CreateDirectory(System.IO.Path.GetDirectoryName(dest)!);
             File.Copy(file, dest, overwrite: true);

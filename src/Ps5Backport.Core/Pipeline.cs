@@ -66,7 +66,8 @@ public sealed class DataFileEntry
 
 public sealed class ModuleResult(string path, string container, bool added)
 {
-    public string Path { get; } = path;
+    public string Path { get; internal set; } = path;
+    internal bool PathCaseCorrected { get; set; }
     public string Container { get; } = container;
     /// <summary>Comes from the fakelib store / --fakelib, not from the game folder.</summary>
     public bool Added { get; } = added;
@@ -230,7 +231,24 @@ public static partial class Pipeline
         var target = FirmwareDb.Key(o.Firmware);
         var newerDbs = firmwareDbs.Where(d => FirmwareDb.Key(d.Firmware).CompareTo(target) > 0).ToList();
 
-        string fingerprint = snapshot.Fingerprint(evidence, result.FakelibSource);
+        var (loaded, provided) = LoadProviders(modules, result, o, knowledge, progress, cancel, trace);
+        var sourceFiles = evidence.CaptureInventory(src);
+        var pathCase = FilePathCase.Resolve(sourceFiles.Select(f => Path.GetRelativePath(src, f).Replace('\\', '/')),
+            loaded.Where(m => !m.Mod.Added).Select(m => m.Elf.Data), result.ParamWarnings, cancel);
+        var outputPaths = sourceFiles.Select(f => Path.GetRelativePath(src, f).Replace('\\', '/'))
+            .GroupBy(p => p, StringComparer.OrdinalIgnoreCase).Where(g => g.Count() == 1)
+            .ToDictionary(g => g.Key, g => pathCase.GetValueOrDefault(g.Key, g.Key), StringComparer.OrdinalIgnoreCase);
+        foreach (var (mod, file, _) in loaded)
+            if (!mod.Added && pathCase.TryGetValue(Path.GetRelativePath(src, file).Replace('\\', '/'), out string? expected))
+            {
+                mod.Path = expected;
+                mod.PathCaseCorrected = true;
+            }
+        foreach (string relative in pathCase.Keys)
+            if (!evidence.Files.ContainsKey("game:" + relative))
+                evidence.Capture(Paths.ResolveRelativeFile(src, relative), "game:" + relative);
+        string fingerprint = Convert.ToHexStringLower(System.Security.Cryptography.SHA256.HashData(Encoding.UTF8.GetBytes(
+            snapshot.Fingerprint(evidence, result.FakelibSource) + string.Join('\n', sourceFiles.Select(f => Path.GetRelativePath(src, f))))));
         if (analysis is not null && analysis.Fingerprint != fingerprint)
             throw new InvalidOperationException("Analysis is stale: inputs or settings changed. Analyze again before cooking.");
 
@@ -242,13 +260,11 @@ public static partial class Pipeline
         {
             if (param.PatchedText is not null)
             {
-                string dest = System.IO.Path.Combine(writeDir, "sce_sys", "param.json");
+                string dest = Paths.ResolveRelativeFile(writeDir, outputPaths.GetValueOrDefault("sce_sys/param.json", "sce_sys/param.json"));
                 Directory.CreateDirectory(System.IO.Path.GetDirectoryName(dest)!);
                 File.WriteAllText(dest, param.PatchedText, new UTF8Encoding(false));
             }
         }
-
-        var (loaded, provided) = LoadProviders(modules, result, o, knowledge, progress, cancel, trace);
 
         var patchContext = new PatchContext(o, knowledge, fixes, patterns, reference, provided, newerDbs, targetPs5, targetPs4, cancel);
 
@@ -284,15 +300,32 @@ public static partial class Pipeline
                 {
                     int count = FixApplier.ReplaceAll(data, pattern, cancel);
                     changed |= count > 0;
-                    result.DataFiles.Add(new DataFileEntry { Path = rel.Replace('\\', '/'), Pattern = pattern.Name, Count = count, Written = count > 0 && !o.DryRun });
+                    result.DataFiles.Add(new DataFileEntry { Path = outputPaths.GetValueOrDefault(rel, rel), Pattern = pattern.Name, Count = count, Written = count > 0 && !o.DryRun });
                 }
                 if (changed && !o.DryRun)
                 {
-                    string dest = Paths.ResolveRelativeFile(writeDir, rel);
+                    string dest = Paths.ResolveRelativeFile(writeDir, outputPaths.GetValueOrDefault(rel, rel));
                     Directory.CreateDirectory(System.IO.Path.GetDirectoryName(dest)!);
                     File.WriteAllBytes(dest, data);
                 }
             }
+
+        // Rename-only data files are part of the overlay too; keep any already patched contents.
+        var modulePaths = modules.Select(m => m.Rel.Replace('\\', '/')).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        foreach (var (relative, expected) in pathCase.Where(p => !modulePaths.Contains(p.Key)))
+        {
+            cancel.ThrowIfCancellationRequested();
+            if (!o.DryRun)
+            {
+                string dest = Paths.ResolveRelativeFile(writeDir, expected);
+                if (!File.Exists(dest))
+                {
+                    Directory.CreateDirectory(Path.GetDirectoryName(dest)!);
+                    File.Copy(Paths.ResolveRelativeFile(src, relative), dest);
+                }
+            }
+            result.DataFiles.Add(new DataFileEntry { Path = expected, Pattern = "file path casing", Count = 1, Written = !o.DryRun });
+        }
 
         // the fakelib set's app0/ folder: data files its libraries read from the game folder (k9.psp, the PSSR
         // model an app0-patched libScePsml loads on a PS5 Pro). Added only when a fakelib the game uses (one that
@@ -321,14 +354,14 @@ public static partial class Pipeline
         }
 
         // a dry run writes nothing: there, "unchanged" means no SDK change, fix, stub or pattern
-        bool Changed(ModuleResult m) => o.DryRun ? m.SdkPatched || m.Fixed.Count + m.StubbedNow.Count + m.Patterns.Count > 0 : m.Written;
+        bool Changed(ModuleResult m) => o.DryRun ? m.PathCaseCorrected || m.SdkPatched || m.Fixed.Count + m.StubbedNow.Count + m.Patterns.Count > 0 : m.Written;
         var plain = result.Modules.Where(m => m.Container == Self.KindElf && !Changed(m) && m.Error.Length == 0).Select(m => m.Path).ToList();
         if (plain.Count > 0)
             result.ParamWarnings.Add($"plain ELF module(s) left unchanged and not in the output: {string.Join(", ", plain)}; " +
                                      "most tested backports ship fake SELFs (one plain-ELF backport ran on a PS5 Pro at FW 9.60), so sign them " +
                                      "(ps5backport sign) if the game does not start");
         cancel.ThrowIfCancellationRequested();
-        FinishRun(result, o, reference, evidence, publication, writeDir, fingerprint, modules.Count, progress, cancel);
+        FinishRun(result, o, reference, evidence, publication, writeDir, fingerprint, modules.Count, progress, cancel, knowledge);
         return result;
     }
 

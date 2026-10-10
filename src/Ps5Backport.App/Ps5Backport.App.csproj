@@ -3,6 +3,7 @@
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
     <TargetFramework>net10.0</TargetFramework>
+    <RuntimeIdentifiers>win-x64</RuntimeIdentifiers>
     <AssemblyName>Ps5BackportStudio</AssemblyName>
     <RootNamespace>Ps5Backport.App</RootNamespace>
     <ApplicationManifest>app.manifest</ApplicationManifest>
@@ -22,4 +23,5 @@
     <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.2" />
   </ItemGroup>
 
+  <Import Project="..\..\build\RuntimeAssets.targets" />
 </Project>

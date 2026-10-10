@@ -1,6 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
+    <DefineConstants>$(DefineConstants);BACKPORT_PARSER_TESTS_ONLY</DefineConstants>
     <OutputType>Exe</OutputType>
     <IsPackable>false</IsPackable>
     <UseMicrosoftTestingPlatformRunner>true</UseMicrosoftTestingPlatformRunner>
@@ -10,7 +11,6 @@
     <PackageReference Include="FsCheck.Xunit.v3" Version="3.4.0" />
     <Using Include="Xunit" />
     <ProjectReference Include="../../src/Ps5Backport.Core/Ps5Backport.Core.csproj" />
-    <Compile Include="../../src/Ps5Backport.Tests/GeneratedParserTests.cs" Link="GeneratedParserTests.cs" />
-    <Compile Include="../../src/Ps5Backport.Tests/SyntheticBinary.cs" Link="SyntheticBinary.cs" />
+    <Compile Include="../../src/Ps5Backport.Tests/Tests.cs" Link="Tests.cs" />
   </ItemGroup>
 </Project>

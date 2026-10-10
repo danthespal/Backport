@@ -4,11 +4,11 @@ public static partial class Pipeline
 {
     static void FinishRun(GameResult result, BackportOptions o, Reference reference, RunEvidence evidence,
         DirectoryTransaction? publication, string writeDir, string fingerprint, int moduleCount,
-        IProgress<BackportProgress>? progress, CancellationToken cancel)
+        IProgress<BackportProgress>? progress, CancellationToken cancel, Knowledge knowledge)
     {
         if (!o.DryRun)
         {
-            WriteReports(result, writeDir);
+            WriteReports(result, writeDir, knowledge);
             if (result.Modules.Any(m => m.Error.Length > 0))
                 result.DiagnosticDirectory = publication!.RetainDiagnostic();
             else

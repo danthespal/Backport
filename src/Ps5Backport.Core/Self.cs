@@ -348,12 +348,21 @@ public static class Self
     }
 
     // --- file helpers ----------------------------------------------------------
-    public static void UnwrapFile(string selfPath, string elfPath) => WriteAtomic(elfPath, Unwrap(File.ReadAllBytes(selfPath)));
+    public static void UnwrapFile(string selfPath, string elfPath) => UnwrapFile(selfPath, elfPath, overwrite: true);
 
-    public static void SignFile(string elfPath, string selfPath) => WriteAtomic(selfPath, Sign(File.ReadAllBytes(elfPath)));
+    /// <summary>Unwraps with an explicit destination replacement policy.</summary>
+    public static void UnwrapFile(string selfPath, string elfPath, bool overwrite) => WriteAtomic(elfPath, Unwrap(File.ReadAllBytes(selfPath)), overwrite);
+
+    public static void SignFile(string elfPath, string selfPath) => SignFile(elfPath, selfPath, overwrite: true);
+
+    /// <summary>Signs with an explicit destination replacement policy.</summary>
+    public static void SignFile(string elfPath, string selfPath, bool overwrite) => WriteAtomic(selfPath, Sign(File.ReadAllBytes(elfPath)), overwrite);
 
     /// <summary>Writes through a temp file so a failure never leaves a truncated output.</summary>
-    public static void WriteAtomic(string path, byte[] data)
+    public static void WriteAtomic(string path, byte[] data) => WriteAtomic(path, data, overwrite: true);
+
+    /// <summary>Writes atomically; create-only publication refuses a destination created by another writer.</summary>
+    public static void WriteAtomic(string path, byte[] data, bool overwrite)
     {
         string full = Path.GetFullPath(path);
         string tmp = full + "." + Guid.NewGuid().ToString("N") + ".tmp";
@@ -361,7 +370,7 @@ public static class Self
         {
             using (var stream = new FileStream(tmp, FileMode.CreateNew, FileAccess.Write, FileShare.None))
                 stream.Write(data);
-            File.Move(tmp, full, overwrite: true);
+            File.Move(tmp, full, overwrite);
         }
         finally
         {

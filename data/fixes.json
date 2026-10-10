@@ -1,5 +1,5 @@
 {
-  "_about": "Known fixes at the game <-> system-library boundary, keyed by the imported NID. Per library function, never per game. Read by Ps5Backport.Core. Fields: kind (stub | swap | adapter | redirect | plt_stub = stub body in a cave and the PLT entry jumps to it, the GOT slot is left alone: forces a value even where the target firmware has the function | none = only in an option: removes the default fix for that NID), name, area, sources (keys of \"sources\" or free text), stub (a name in stubs.json, or \"ret:<value>\"), new_nid (swap/adapter target), export_nid (redirect target, exported by the same module), insns (adapter code, one \"hex  ; asm\" per instruction, branch-free; \"call_got\" = call the real function through its GOT slot), when (missing = only when the import is missing on the target [default] | always = argument fixes), below (optional firmware: apply only when the target is lower, e.g. 5.00), post_call (adapter runs after the real function), proven (default true; false = derived, not console-tested), note, rationale. \"options\": opt-in groups (never applied by default; selected per backport). Each has name, description, warning, sources and its own fixes (a selected option's fixes replace the default fix for the same NID), optionally fakelib_variant (files in the fakelib set's <variant>/ subfolder replace the same-named fakelibs) and patterns (byte replacements: find/replace hex; in modules only 4-aligned hits inside non-executable segments, in the listed data files every hit). \"patterns\": byte replacements applied with the known fixes (name, area, sources, find/replace hex, code = search executable segments at any offset instead of 4-aligned data, note, rationale); the find bytes carry enough context to match one function only.",
+  "_about": "Known fixes at the game <-> system-library boundary, keyed by the imported NID. Per library function, never per game. Read by Ps5Backport.Core. Fields: kind (stub | swap | adapter | redirect | plt_stub = stub body in a cave and the PLT entry jumps to it, the GOT slot is left alone: forces a value even where the target firmware has the function | none = only in an option: removes the default fix for that NID), name, area, sources (keys of \"sources\" or free text), stub (a name in stubs.json, or \"ret:<value>\"), new_nid (swap/adapter target), new_library (optional target import library; reuse its existing library/module suffix), export_nid (redirect target, exported by the same module), insns (adapter code, one \"hex  ; asm\" per instruction, branch-free; \"call_got\" = call the real function through its GOT slot), when (missing = only when the import is missing on the target [default] | always = argument fixes), below (optional firmware: apply only when the target is lower, e.g. 5.00), post_call (adapter runs after the real function), proven (default true; false = derived, not console-tested), note, rationale. \"options\": opt-in groups (never applied by default; selected per backport). Each has name, description, warning, sources and its own fixes (a selected option's fixes replace the default fix for the same NID), optionally fakelib_variant (files in the fakelib set's <variant>/ subfolder replace the same-named fakelibs) and patterns (byte replacements: find/replace hex; in modules only 4-aligned hits inside non-executable segments, in the listed data files every hit). \"patterns\": byte replacements applied with the known fixes (name, area, sources, find/replace hex, code = search executable segments at any offset instead of 4-aligned data, note, rationale); the find bytes carry enough context to match one function only.",
   "sources": {
     "GT7": "GT7 1.71 FW4",
     "CONTROL": "CONTROL Resonant 1.300 FW4.03",
@@ -447,6 +447,7 @@
         "HKSS"
       ],
       "new_nid": "04AjkP0jO9U",
+      "new_library": "libkernel",
       "insns": [
         "4989d0  ; mov r8, rdx",
         "89f2  ; mov edx, esi",
@@ -467,6 +468,7 @@
         "HKSS"
       ],
       "new_nid": "04AjkP0jO9U",
+      "new_library": "libkernel",
       "insns": [
         "4989d0  ; mov r8, rdx",
         "4889f2  ; mov rdx, rsi",
@@ -487,6 +489,7 @@
         "HKSS"
       ],
       "new_nid": "04AjkP0jO9U",
+      "new_library": "libkernel",
       "insns": [
         "4863d6  ; movsxd rdx, esi",
         "6a03  ; push 3",
@@ -508,6 +511,7 @@
         "HKSS"
       ],
       "new_nid": "04AjkP0jO9U",
+      "new_library": "libkernel",
       "insns": [
         "4989d0  ; mov r8, rdx",
         "89f2  ; mov edx, esi",
@@ -632,6 +636,20 @@
     }
   },
   "options": {
+    "ubisoft_offline_popups": {
+      "name": "Ubisoft offline popups",
+      "description": "Suppresses MUFFIN-4520 and MUFFIN-4521 using the existing silent-error callbacks in recognized Unity/Esut Ubisoft code. Detects linked code patterns without a game ID or fixed address.",
+      "warning": "Opt-in. Requires Known fixes. Suppresses these two warnings only; online services remain unavailable when authentication fails. Tested on Rogue Prince of Persia; other matching games require console verification. Does not fix progress saving.",
+      "sources": ["Rogue Prince of Persia 01.006.000 PPSA28155: Ghidra analysis and console-confirmed popup suppression"],
+      "fixes": {}
+    },
+    "unity_sku_offline": {
+      "name": "Unity unset-SKU offline fallback",
+      "description": "Allows recognized Unity/Esut authentication code to use its existing recoverable startup path when the platform reports an unset SKU. Detects linked code patterns rather than a game ID or fixed address; leaves trial and full-game results unchanged.",
+      "warning": "Opt-in. Console-tested on The Rogue Prince of Persia 01.006.000 (PPSA28155); other games require testing. Unrecognized or ambiguous code is left unchanged. Online-service warnings may still appear.",
+      "sources": ["The Rogue Prince of Persia 01.006.000 PPSA28155, user console-tested guarded NotSet fallback"],
+      "fixes": {}
+    },
     "force_pro": {
       "name": "Force PS5 Pro mode",
       "description": "Makes the game treat the console as a PS5 Pro (Pro graphics mode, PSSR when the game supports it): sceKernelGetOperationMode reports mode 3, sceKernelIsTrinityMode and sceAgcGetIsTrinityMode report true, and scePsmlMfsrInit is called again (the default skips it below FW 9.00).",

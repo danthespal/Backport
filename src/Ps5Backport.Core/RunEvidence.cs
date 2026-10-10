@@ -60,6 +60,14 @@ internal sealed class RunEvidence(CancellationToken cancel) : IDisposable
             Capture(file, category + ":" + Path.GetRelativePath(root, file).Replace('\\', '/'));
     }
 
+    internal string[] CaptureInventory(string root)
+    {
+        Paths.RequireNoLinks(root, tree: true);
+        string[] files = GameScan.WalkFiles(root, cancel).Order(StringComparer.Ordinal).ToArray();
+        _trees.Add((root, files));
+        return files;
+    }
+
     internal void CaptureModules(string root, IReadOnlyList<string> modules)
     {
         Paths.RequireNoLinks(root, tree: true);

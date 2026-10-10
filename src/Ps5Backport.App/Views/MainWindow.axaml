@@ -61,8 +61,8 @@
               <TextBlock Classes="caption" Text="{Binding TargetText}" />
               <ProgressBar Grid.Column="1" Value="{Binding GapPercent}" Minimum="0" Maximum="100" Height="6" MinWidth="200"
                            VerticalAlignment="Center" Background="{DynamicResource GapBrush}"
-                           ToolTip.Tip="Target firmware compared with what the game requires" />
-              <TextBlock Grid.Column="2" Classes="caption" Text="{Binding RequiredText}" />
+                           ToolTip.Tip="Target firmware compared with sdkVersion in param.json; this does not establish compatibility." />
+              <TextBlock Grid.Column="2" Classes="caption" Text="{Binding GameSdkText}" />
             </Grid>
           </StackPanel>
           <StackPanel Grid.Column="2" Spacing="8" VerticalAlignment="Center" Width="230">

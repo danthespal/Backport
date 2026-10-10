@@ -118,7 +118,7 @@ public static class GameScan
         }
         // rewrite only the version values, keeping the file's formatting
         foreach (string k in above)
-            text = Regex.Replace(text, "(\"" + k + "\"\\s*:\\s*\")0x[0-9A-Fa-f]+(\")", m => m.Groups[1].Value + target + m.Groups[2].Value);
+            text = Regex.Replace(text, "(\"" + k + "\"\\s*:\\s*\")0[xX][0-9A-Fa-f]+(\")", m => m.Groups[1].Value + target + m.Groups[2].Value);
         info.Warnings.Add($"param.json {string.Join(", ", above)} lowered to {target} (written to sce_sys/param.json)");
         return info with { PatchedText = text };
     }

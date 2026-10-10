@@ -112,12 +112,12 @@ public sealed partial class ToolsViewModel(MainViewModel main) : ObservableObjec
 
     /// <summary>Every SELF in the list -> &lt;name&gt;.elf.</summary>
     [RelayCommand]
-    Task Unwrap() => ConvertFiles(f => f.IsSelf, "unwrap", f => f.Name + ".elf", Self.UnwrapFile);
+    Task Unwrap() => ConvertFiles(f => f.IsSelf, "unwrap", f => f.Name + ".elf", (input, output) => Self.UnwrapFile(input, output, overwrite: false));
 
     /// <summary>Every ELF in the list -> a fake-signed SELF (&lt;name&gt; without .elf, else &lt;name&gt;.self).</summary>
     [RelayCommand]
     Task Sign() => ConvertFiles(f => f.IsElf, "sign", f => f.Name.EndsWith(".elf", StringComparison.OrdinalIgnoreCase) ? f.Name[..^4] : f.Name + ".self",
-                           Self.SignFile);
+                           (input, output) => Self.SignFile(input, output, overwrite: false));
 
     /// <summary>Converts the matching files; never overwrites an existing file.</summary>
     Task ConvertFiles(Func<SelfFileRow, bool> applies, string verb, Func<SelfFileRow, string> outputName, Action<string, string> run) =>

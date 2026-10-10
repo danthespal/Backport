@@ -77,11 +77,22 @@ public static class FakelibStore
             return [];
         if (JsonNode.Parse(File.ReadAllText(path)) is not JsonObject manifest || manifest.Any(e => e.Value is not JsonObject))
             throw new InvalidDataException($"{path}: manifest must be an object of file entries");
-        foreach (string name in manifest.Select(e => e.Key))
+        foreach (var (name, entry) in manifest)
         {
             _ = Paths.ResolveRelativeFile(folder, name);
             if (name != Path.GetFileName(name) || !IsModule(name))
                 throw new InvalidDataException($"{path}: expected a module filename, got '{name}'");
+            foreach (var (field, value) in entry!.AsObject())
+            {
+                if (value is null) continue;
+                if (field is "container" or "module" or "ps5_sdk" or "ps4_sdk" or "build_path" or "build_date" or "sha256" or "source")
+                {
+                    if (value is not JsonValue text || !text.TryGetValue<string>(out _))
+                        throw new InvalidDataException($"{path}: {name}.{field} must be a string or null");
+                }
+                else if (field == "size" && (value is not JsonValue number || !number.TryGetValue<long>(out long size) || size < 0))
+                    throw new InvalidDataException($"{path}: {name}.size must be a nonnegative integer or null");
+            }
         }
         return manifest;
     }

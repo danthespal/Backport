@@ -92,7 +92,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
     public string? FirmwareDbDir => Settings.FirmwareDbDir ?? Paths.FirmwareDbDir;
     public string? StoreDir => Settings.FakelibStoreDir ?? Paths.FakelibStoreDir;
     public string? AerolibPath => Settings.AerolibPath
-        ?? Paths.FindUp(System.IO.Path.Combine(".original", "reference", "sce_symbols_new", "aerolib.csv"));
+        ?? Paths.AerolibPath;
 
     /// <summary>Copies the current firmware and options into <see cref="Settings"/> (before saving).</summary>
     public void CaptureSettings()
@@ -131,7 +131,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
 
     // --- game ------------------------------------------------------------------------
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(HasGame), nameof(GameTitle), nameof(GameLine), nameof(RequiredText), nameof(GapPercent))]
+    [NotifyPropertyChangedFor(nameof(HasGame), nameof(GameTitle), nameof(GameLine), nameof(GameSdkText), nameof(GapPercent))]
     [NotifyCanExecuteChangedFor(nameof(AnalyzeCommand), nameof(CookCommand), nameof(BuildAmprIndexCommand))]
     public partial GameInfo? Game { get; set; }
 
@@ -163,7 +163,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
     public string GameLine => Game is null ? "A decrypted dump: eboot.bin, sce_module/, sce_sys/param.json" :
         string.Join("  ·  ", new[] { Game.TitleId, Game.Region, Game.ContentVersion.Length > 0 ? $"v{Game.ContentVersion}" : "",
                                      Game.SdkVersion.Length > 0 ? $"SDK {Game.SdkVersion}" : "" }.Where(s => s.Length > 0));
-    public string RequiredText => Game is { RequiredFirmware.Length: > 0 } g ? $"Game requires FW {g.RequiredFirmware}" : "";
+    public string GameSdkText => Game is null ? "" : Game.SdkVersion.Length > 0 ? $"Game SDK {Game.SdkVersion}" : "Game SDK unknown";
 
     // --- target and options ----------------------------------------------------------------
     public ObservableCollection<string> Firmwares { get; } = [];
@@ -174,15 +174,15 @@ public partial class MainViewModel : ObservableObject, IDisposable
 
     public string TargetText => TryName(SelectedFirmware) is { } fw ? $"Target FW {fw}" : "Target firmware?";
 
-    /// <summary>How far the target firmware is from what the game requires (0-100, for the gap bar).</summary>
+    /// <summary>The target firmware compared with the declared game SDK (0-100, not a compatibility verdict).</summary>
     public double GapPercent
     {
         get
         {
-            if (Game is not { RequiredFirmware.Length: > 0 } g || TryName(SelectedFirmware) is not { } target)
+            if (Game is not { SdkVersion.Length: > 0 } g || TryName(SelectedFirmware) is not { } target)
                 return 0;
-            double required = Version(g.RequiredFirmware), have = Version(target);
-            return required <= 0 ? 0 : Math.Clamp(have / required * 100, 0, 100);
+            double sdk = Version(g.SdkVersion), have = Version(target);
+            return sdk <= 0 ? 0 : Math.Clamp(have / sdk * 100, 0, 100);
         }
     }
 
@@ -350,7 +350,9 @@ public partial class MainViewModel : ObservableObject, IDisposable
     void OpenOutput()
     {
         if (Directory.Exists(OutputFolder))
-            Process.Start(new ProcessStartInfo(OutputFolder) { UseShellExecute = true });
+        {
+            using var process = Process.Start(new ProcessStartInfo(OutputFolder) { UseShellExecute = true });
+        }
         else
             Log.Warning($"Output folder doesn't exist yet: {OutputFolder}");
     }
@@ -558,7 +560,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
         if (derived.Count > 0)
             Log.Warning($"{derived.Count} fix(es) not yet console-tested: {string.Join(", ", derived)}");
         OnPropertyChanged(nameof(HasWarnings));
-        ReportText = Pipeline.FormatReport(r);
+        ReportText = Pipeline.FormatReport(r, k);
         ApplyImportFilter();
     }
 

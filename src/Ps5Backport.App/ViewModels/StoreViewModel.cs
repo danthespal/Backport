@@ -294,7 +294,9 @@ public sealed partial class StoreViewModel(MainViewModel main) : ObservableObjec
     void OpenFolder()
     {
         if (SelectedSet is { } set && Directory.Exists(set.Folder))
-            System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(set.Folder) { UseShellExecute = true });
+        {
+            using var process = System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(set.Folder) { UseShellExecute = true });
+        }
     }
 
     void Select(string name)
