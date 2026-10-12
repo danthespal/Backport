@@ -13,10 +13,26 @@ namespace Ps5Backport.App.Views;
 
 public partial class MainWindow : Window
 {
+    double _expandedLogHeight = 140;
+
     public MainWindow()
     {
         InitializeComponent();
         LogList.DoubleTapped += (_, _) => (DataContext as MainViewModel)?.JumpTo(LogList.SelectedItem as LogEntry);
+        LogToggle.Click += (_, _) =>
+        {
+            if (LogToggle.IsChecked == true)
+            {
+                Body.RowDefinitions[3].Height = new GridLength(_expandedLogHeight);
+                LogToggle.Content = "Activity log ▾";
+            }
+            else
+            {
+                _expandedLogHeight = Math.Max(80, Body.RowDefinitions[3].ActualHeight);
+                Body.RowDefinitions[3].Height = new GridLength(44);
+                LogToggle.Content = "Activity log ▸";
+            }
+        };
 
         // drop a game folder (or a file in it) anywhere on the Backport page; other pages handle their own drops
         DragDrop.SetAllowDrop(this, true);
@@ -88,7 +104,8 @@ public partial class MainWindow : Window
         }
         if (s.Maximized)
             WindowState = WindowState.Maximized;
-        Body.RowDefinitions[3].Height = new GridLength(Math.Clamp(s.LogHeight, 80, 600));
+        _expandedLogHeight = Math.Clamp(s.LogHeight, 80, 600);
+        Body.RowDefinitions[3].Height = new GridLength(LogToggle.IsChecked == true ? _expandedLogHeight : 44);
     }
 
     /// <summary>Copies the current size, position and log height into the settings (before saving).</summary>
@@ -102,7 +119,7 @@ public partial class MainWindow : Window
             s.WindowX = Position.X;
             s.WindowY = Position.Y;
         }
-        s.LogHeight = Body.RowDefinitions[3].ActualHeight;
+        s.LogHeight = LogToggle.IsChecked == true ? Body.RowDefinitions[3].ActualHeight : _expandedLogHeight;
     }
 
     async Task<string[]> PickFiles(string title, string typeName, string[] patterns, bool multiple)

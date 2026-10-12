@@ -149,15 +149,15 @@ refs +BzXYkqYeLE=1 +L98PIbGttk=2 -YTW+qXc3CQ=2 -o5uEDpN+oY=4 0Cq8ipKr9n0=1 0NTHN
    build: W:/Build/J03701430/sys/internal/usermode/src/libc/Prospero_Release/libc.prx
    reference=108, provided=0, stubbed=9, patched=0, data=2, missing=0, unknown=0
    libSceLibcInternalExt:
-      stubbed  OQ-dzhlnM28  OQ-dzhlnM28  (GOT 0x19e4b0)
-      stubbed  qBS714-Jr3g  qBS714-Jr3g  (GOT 0x19e4f8)
-      stubbed  tB59hFLH3SA  tB59hFLH3SA  (GOT 0x19e4a0)
+      stubbed  tB59hFLH3SA  _sceLibcInternalForceTlsDestructor  (GOT 0x19e4a0)
+      stubbed  qBS714-Jr3g  _sceLibcInternalThreadAtexit  (GOT 0x19e4f8)
+      stubbed  OQ-dzhlnM28  _sceLibcInternalThreadDtors  (GOT 0x19e4b0)
    libkernel:
-      stubbed  XgVs4jRehcY  XgVs4jRehcY  (GOT 0x19e5f8)
-      stubbed  dFym5b41JLU  dFym5b41JLU  (GOT 0x19e5f0)
       stubbed  Hc4CaR6JBL0  sceKernelSyncOnAddressWait  (GOT 0x19e618)
+      stubbed  XgVs4jRehcY  sceKernelSyncOnAddressWait16  (GOT 0x19e5f8)
       stubbed  B2n8aDorSH4  sceKernelSyncOnAddressWait32  (GOT 0x19e600)
       stubbed  PZQhiiLXRFs  sceKernelSyncOnAddressWait64  (GOT 0x19e608)
+      stubbed  dFym5b41JLU  sceKernelSyncOnAddressWait8  (GOT 0x19e5f0)
       stubbed  q2y-wDIVWZA  sceKernelSyncOnAddressWake  (GOT 0x19e610)
 == sce_sys/about/right.sprx
 lower 4aa7083b012069c2f1c896060c21cfe66e177ebe35fff6c512873546ec9cbe4a

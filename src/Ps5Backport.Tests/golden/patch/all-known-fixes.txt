@@ -1,16 +1,13 @@
 == eboot.elf
-sha256 ab621bbce167b3d19838f231d7f7fb3f4c3aea03c1f81e1478f4801c7f8ed229
+sha256 dbbc68bd22d706ebd06ecbe81d824d63d250b6ca4bc8a38b585691102b4f453d
 fix 3WVD91e12ZQ PLT -> ret0 @ 0x8c
-fix ZP4e7rlzOUk adapter (argument fix) via cave 0xd6
-fix sDCBrmc61XU adapter (argument fix) via cave 0x4b6
-fix DImz2Ft9E2g adapter (argument fix) via cave 0x3f8
-stub NH6xARDOVv8 90043504 opmode_normal 38674
-stub La9uyZv4Kvw 90049864 ret:0xff 1048
-stub 5tRaBjtdTzY 90044016 ret0 1082
-stub T4ucGB8CsnM 90044024 ret0 1082
-stub kP2L8t3j-aM 90044040 ret0 1082
-stub LibwuIonIBw 90044088 ret0 1082
-stub uv0Ae+jCeWY 90043816 ret0 1082
+stub NH6xARDOVv8 90043504 opmode_normal 978
+stub La9uyZv4Kvw 90049864 ret:0xff 214
+stub 5tRaBjtdTzY 90044016 ret0 230
+stub T4ucGB8CsnM 90044024 ret0 230
+stub kP2L8t3j-aM 90044040 ret0 230
+stub LibwuIonIBw 90044088 ret0 230
+stub uv0Ae+jCeWY 90043816 ret0 230
 extended 0
 == fakelib/libSceAmpr.elf
 sha256 c681b42e2d9ad844f8acba524bf835b79b5914c15daa3e6de7e720e4fffc545c

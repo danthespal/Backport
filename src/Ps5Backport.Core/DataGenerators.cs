@@ -186,7 +186,7 @@ public static class DataGenerators
         var consts = LoadConstants(Path.Combine(anyps5, "core", "libs"));
         var found = new List<Candidate>();
         var index = new Dictionary<string, int>(StringComparer.Ordinal);
-        foreach (var (rel, named) in SilentStubBullets(anyps5))
+        foreach (var (rel, named, functionScoped) in SilentStubBullets(anyps5))
         {
             string path = Path.Combine(prx, rel);
             if (!File.Exists(path))
@@ -197,7 +197,7 @@ public static class DataGenerators
             foreach (Match m in matches)
             {
                 string name = m.Groups[2].Value;
-                if (restrict.Count > 0 && !restrict.Contains(name))
+                if ((functionScoped || restrict.Count > 0) && !restrict.Contains(name))
                     continue;
                 if (ConstantReturn(BodyOf(text, m.Index + m.Length - 1), consts) is not { } value)
                     continue;
@@ -292,22 +292,30 @@ public static class DataGenerators
         return consts.TryGetValue(expr, out var v) ? v : null;
     }
 
-    /// <summary>[(linked file, named functions)] from the "Silent stubs" section.</summary>
-    static List<(string Rel, HashSet<string> Named)> SilentStubBullets(string anyps5)
+    /// <summary>Linked files and function scope from the "Silent stubs" section; explicit labels override prose mentions.</summary>
+    static List<(string Rel, HashSet<string> Named, bool FunctionScoped)> SilentStubBullets(string anyps5)
     {
         string text = File.ReadAllText(Path.Combine(anyps5, "docs", "dev", "TechnicalDebt.md")).Replace("\r\n", "\n");
         string[] sections = text.Split("### Silent stubs", 2);
         if (sections.Length != 2)
             throw new InvalidDataException("AnyPS5 TechnicalDebt.md is missing the 'Silent stubs' section; candidates left unchanged");
         string section = sections[1].Split("\n### ", 2)[0];
-        var output = new List<(string, HashSet<string>)>();
+        var output = new List<(string, HashSet<string>, bool)>();
         foreach (string line in section.Split('\n'))
         {
             if (!line.StartsWith("- [", StringComparison.Ordinal))
                 continue;
-            var link = Regex.Match(line, @"\]\(\.\./\.\./core/libs/prx/([^)]+)\)");
+            var link = Regex.Match(line, @"^- \[([^\]]+)\]\(\.\./\.\./core/libs/prx/([^)]+)\)");
             if (link.Success)
-                output.Add((link.Groups[1].Value, Regex.Matches(line, @"`(\w+)`").Select(m => m.Groups[1].Value).ToHashSet(StringComparer.Ordinal)));
+            {
+                string rel = link.Groups[2].Value;
+                string label = link.Groups[1].Value.Replace("`", "").Trim();
+                bool functionScoped = label != rel.Split('/')[0] &&
+                    Regex.IsMatch(label, @"^[A-Za-z_]\w*(?:\s*,\s*[A-Za-z_]\w*)*$");
+                var named = (functionScoped ? label.Split(',').Select(n => n.Trim())
+                    : Regex.Matches(line, @"`(\w+)`").Select(m => m.Groups[1].Value)).ToHashSet(StringComparer.Ordinal);
+                output.Add((rel, named, functionScoped));
+            }
         }
         return output;
     }

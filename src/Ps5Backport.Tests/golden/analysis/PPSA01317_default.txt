@@ -8,33 +8,33 @@ refs +2KpvixvL6E=1 +B-xlbiWDJ4=2 +FYcYefsVX0=1 +KDWny9Y-6k=1 +L98PIbGttk=7 +P6FR
    build: C:/pdi/src/gt7/maintenance/build-ppr.d5d9be91b292e905250b2129cdbab98c/application/gt7/Product/application_gt7.elf
    reference=927, provided=148, stubbed=0, patched=2, data=60, missing=0, unknown=32
    libSceAgc:
-      unknown  -KRzWekV120  -KRzWekV120  (GOT 0x55e1110)
       unknown  dbOlWdppb4o  dbOlWdppb4o  (GOT 0x55e11c8)
+      unknown  -KRzWekV120  sceAgcDcbSetIndexSize_0600  (GOT 0x55e1110)
       unknown  BfBDZGbti7A  sceAgcGetIsTrinityMode  (GOT 0x55e1040)
       unknown  fPSCdQxgpSw  sceAgcWriteDataPatchSetAddressOrOffset  (GOT 0x55e1198)
    libSceHmd2:
       unknown  uv0Ae+jCeWY  sceHmd2ReprojectionSetAllowPositionalReprojection  (GOT 0x55df5a8)
       unknown  QxBJF-G2v5k  sceHmd2ReprojectionSetParamWithBuffer  (GOT 0x55df650)
    libScePsml:
-      unknown  DDVUyPyYHTA  DDVUyPyYHTA  (GOT 0x55e0f98)
-      unknown  kLF7WtQ1-Dg  kLF7WtQ1-Dg  (GOT 0x55e0f80)
+      unknown  kLF7WtQ1-Dg  scePsmlMfsrCreateContext1300  (GOT 0x55e0f80)
       unknown  eWoKNeB6V-k  scePsmlMfsrCreateSharedResources  (GOT 0x55e0f68)
       unknown  VGjrQa-WqdU  scePsmlMfsrGetContextBufferRequirement1100  (GOT 0x55e0f78)
+      unknown  DDVUyPyYHTA  scePsmlMfsrGetDispatchMfsrPacket1300  (GOT 0x55e0f98)
       unknown  AHalTX9wFZY  scePsmlMfsrGetDispatchMfsrPacketSizeInDwords  (GOT 0x55e0f90)
       unknown  +2KpvixvL6E  scePsmlMfsrGetSharedResourcesInitRequirement  (GOT 0x55e0f60)
       unknown  3WVD91e12ZQ  scePsmlMfsrInit  (GOT 0x55e0f58)
       unknown  JaLBe0P3jSU  scePsmlMfsrReleaseContext  (GOT 0x55e0f88)
       unknown  jEevBXmagOQ  scePsmlMfsrReleaseSharedResources  (GOT 0x55e0f70)
    libScePsml_mfsr2:
-      unknown  0GAw7SmkwII  0GAw7SmkwII  (GOT 0x55e0fb8)
-      unknown  1ic5q-kdOsc  1ic5q-kdOsc  (GOT 0x55e0fa8)
-      unknown  5z2gBlqxJ+0  5z2gBlqxJ+0  (GOT 0x55e0fc0)
-      unknown  Kyy1baXgaVU  Kyy1baXgaVU  (GOT 0x55e0fd0)
-      unknown  ZLL31lzzxr4  ZLL31lzzxr4  (GOT 0x55e0fd8)
-      unknown  gMduXCLYrNg  gMduXCLYrNg  (GOT 0x55e0fb0)
-      unknown  lrJwpLjKXRc  lrJwpLjKXRc  (GOT 0x55e0fe0)
-      unknown  m9JLPc3wOQw  m9JLPc3wOQw  (GOT 0x55e0fc8)
-      unknown  o+NM86gEwFE  o+NM86gEwFE  (GOT 0x55e0fa0)
+      unknown  m9JLPc3wOQw  scePsmlMfsr2CreateContext  (GOT 0x55e0fc8)
+      unknown  gMduXCLYrNg  scePsmlMfsr2CreateSharedResources  (GOT 0x55e0fb0)
+      unknown  5z2gBlqxJ+0  scePsmlMfsr2GetContextInitRequirement  (GOT 0x55e0fc0)
+      unknown  lrJwpLjKXRc  scePsmlMfsr2GetDispatchPackets  (GOT 0x55e0fe0)
+      unknown  ZLL31lzzxr4  scePsmlMfsr2GetDispatchPacketsSizeInDwords  (GOT 0x55e0fd8)
+      unknown  1ic5q-kdOsc  scePsmlMfsr2GetSharedResourcesInitRequirement  (GOT 0x55e0fa8)
+      unknown  o+NM86gEwFE  scePsmlMfsr2Init  (GOT 0x55e0fa0)
+      unknown  Kyy1baXgaVU  scePsmlMfsr2ReleaseContext  (GOT 0x55e0fd0)
+      unknown  0GAw7SmkwII  scePsmlMfsr2ReleaseSharedResources  (GOT 0x55e0fb8)
    libScePsml_quality8K:
       unknown  lcZD9tJraAw  lcZD9tJraAw  (GOT 0x55df458)
    libScePsml_specularAA:
@@ -43,13 +43,13 @@ refs +2KpvixvL6E=1 +B-xlbiWDJ4=2 +FYcYefsVX0=1 +KDWny9Y-6k=1 +L98PIbGttk=7 +P6FR
       unknown  5tRaBjtdTzY  sceVideoOutVrrPegToFixedRate  (GOT 0x55df670)
       unknown  T4ucGB8CsnM  sceVideoOutVrrUnpegFromFixedRate  (GOT 0x55df678)
    libSceVideoOutVrrStatus:
-      unknown  LibwuIonIBw  LibwuIonIBw  (GOT 0x55df6b8)
-      unknown  kP2L8t3j-aM  kP2L8t3j-aM  (GOT 0x55df688)
+      unknown  LibwuIonIBw  sceVideoOutAddVrrActiveStatusEvent  (GOT 0x55df6b8)
+      unknown  kP2L8t3j-aM  sceVideoOutAddVrrStatusFlagsPrivilege  (GOT 0x55df688)
    libc:
       patched  4bp9gcNLwMI  _ZNSt8__sce_v211_Mtx_unlockEPP13pthread_mutex  (GOT 0x55df0a8)
       patched  5qXct3c1skg  _ZNSt8__sce_v29_Mtx_lockEPP13pthread_mutex  (GOT 0x55df0a0)
    libkernel:
-      unknown  La9uyZv4Kvw  La9uyZv4Kvw  (GOT 0x55e0d48)
+      unknown  La9uyZv4Kvw  sceKernelGetAvailableCpumask  (GOT 0x55e0d48)
       unknown  NH6xARDOVv8  sceKernelGetOperationMode  (GOT 0x55df470)
 == libSieRdNNabla.prx
 lower 6bb130923e0d4332d7da242f9450bcf9f677d1d8d5015f6ff87e66770d904dba
@@ -96,16 +96,16 @@ refs +BzXYkqYeLE=1 +L98PIbGttk=2 -YTW+qXc3CQ=2 -o5uEDpN+oY=5 0Cq8ipKr9n0=2 0NTHN
    build: W:/Build/J03848509/sys/internal/usermode/src/libc/Prospero_Release/libc.prx
    reference=110, provided=0, stubbed=0, patched=0, data=2, missing=0, unknown=10
    libSceLibcInternalExt:
-      unknown  OQ-dzhlnM28  OQ-dzhlnM28  (GOT 0x18e288)
-      unknown  qBS714-Jr3g  qBS714-Jr3g  (GOT 0x18e330)
-      unknown  tB59hFLH3SA  tB59hFLH3SA  (GOT 0x18e268)
+      unknown  tB59hFLH3SA  _sceLibcInternalForceTlsDestructor  (GOT 0x18e268)
+      unknown  qBS714-Jr3g  _sceLibcInternalThreadAtexit  (GOT 0x18e330)
+      unknown  OQ-dzhlnM28  _sceLibcInternalThreadDtors  (GOT 0x18e288)
    libkernel:
-      unknown  XgVs4jRehcY  XgVs4jRehcY  (GOT 0x18e4f0)
-      unknown  dFym5b41JLU  dFym5b41JLU  (GOT 0x18e4e8)
       unknown  4h6F1LLbTiw  sceKernelMapNamedFlexibleMemoryInternal  (GOT 0x18e1f8)
       unknown  Hc4CaR6JBL0  sceKernelSyncOnAddressWait  (GOT 0x18e510)
+      unknown  XgVs4jRehcY  sceKernelSyncOnAddressWait16  (GOT 0x18e4f0)
       unknown  B2n8aDorSH4  sceKernelSyncOnAddressWait32  (GOT 0x18e4f8)
       unknown  PZQhiiLXRFs  sceKernelSyncOnAddressWait64  (GOT 0x18e500)
+      unknown  dFym5b41JLU  sceKernelSyncOnAddressWait8  (GOT 0x18e4e8)
       unknown  q2y-wDIVWZA  sceKernelSyncOnAddressWake  (GOT 0x18e508)
 == sce_sys/about/right.sprx
 lower 4aa7083b012069c2f1c896060c21cfe66e177ebe35fff6c512873546ec9cbe4a

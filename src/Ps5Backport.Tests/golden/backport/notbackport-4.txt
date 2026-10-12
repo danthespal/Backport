@@ -1,7 +1,7 @@
-backport_report.json 9b30bece228dccb411acd93e433269608426f4f45dc2007de951ad6625a7939c
-backport_report.txt f1bbddcdbfb49796d953e841e8ece17681652bc80019b9af1ddce8903feb5351
-eboot.bin b15d2c143853c9a049e1fe2e644011511e413a5c602156ac51a5823261ab3137
-fakelib/libSceAgc.sprx eace8ac152404132e632a7e170ddcca47f230e7c0c02cd4b76f29ca9604037ff
+backport_report.json e1a0003fd410111d705551e96810ef3a9dcdb8f622ae3529aa241afa26fd997f
+backport_report.txt 126187e9bb0bfa26ca5e2534c77ba427a4f0f0ac4a14eff018d11af0d53dc983
+eboot.bin 141c79e0c9c4a5c3c6c7c7afda6b14c002c591047272880aaddd95d5aa99e9dd
+fakelib/libSceAgc.sprx 07a995b32edd9db7506462b8f8f2e77fcd4dbd2e61f4dccffc50bb72c00261d0
 fakelib/libSceAgcDriver.sprx 43153558e5917b818207cd9fd81a817b2f2fe338b9a740ef35a563dcbec03cfe
 fakelib/libSceAmpr.sprx 8248448608f36d8c937c77bd35b9b5b037b14d781544a14a39491a9bf88bc83b
 fakelib/libScePlayGo.sprx a0f20f40107713523ba1a3a0281fb7c4e238b2b5d3fda9354119352d9393d2f0
@@ -23,22 +23,30 @@ Backport of <game>
   WARNING: param.json requiredSystemSoftwareVersion=0x1360000000000000, sdkVersion=0x1300000000000000 is above the target FW 4; left unchanged (--patch-param lowers it; tested backports have done both)
   WARNING: uses PS VR2 (eboot.bin libSceHmd2 x17, eboot.bin libSceVrTracker2 x6): a VR-only game cannot run below the firmware that supports the headset; a game with an optional VR mode usually runs without it. Check before backporting to an old firmware
   refs = direct code references to an unresolved import (0: reachable only through data, e.g. a vtable, or not at all)
-  NOTE: 6 derived fix(es) applied, not yet console-tested: sceAudioOut2GetSpeakerInfo, sceHmd2ReprojectionSetAllowPositionalReprojection, sceKernelSyncOnAddressWait, scePsmlMfsrInit, sceSaveDataMount3, sceSaveDataPrepare
+  NOTE: 3 derived fix(es) applied, not yet console-tested: sceHmd2ReprojectionSetAllowPositionalReprojection, sceKernelSyncOnAddressWait, scePsmlMfsrInit
+  deployment: Assessed profile: ShadowMountPlus 1.7beta5-fix1 (98c524890176c7b474fcb03387bec88c4a559861). Console loader version, settings and launch format are unknown.
+  deployment: Planned merged-game inventory includes unchanged source libraries; this output is a changed-file overlay, not a complete game. Merge with the matching original for folder/image launches.
+  deployment: After successful publication, backport_publication.json Files records output paths, Size and Sha256; backport_run.json records source provenance. Analysis has no final output hashes; these reports do not confirm a console mount.
+  deployment: Fakelib modules in the planned merge: fakelib/libSceAgc.sprx, fakelib/libSceAgcDriver.sprx, fakelib/libSceAmpr.sprx, fakelib/libScePlayGo.sprx, fakelib/libScePsml.sprx
+  deployment: Select explicit per-title Full mode: folder/image Emulators only excludes fakelib/libSceAgc.sprx, fakelib/libSceAgcDriver.sprx, fakelib/libScePsml.sprx. A per-title default inherits the loader's default mode.
+  deployment: For a controlled test, confirm backport_fakelib=1, auto_update_ampr=0, update_emulators=0 and global_fakelib_exclude=PPSA01317; fakelib mode must not be Disabled. These are tester settings, not settings applied or observed by Studio.
+  deployment: Confirm the selected directory: external backport/fakelib2, backport/fakelib, game/fakelib2, then game/fakelib. fakelib2 prevents global composition but remains filtered.
+  deployment: Installed-package Emulators only uses a narrower allowlist and excludes fakelib/libSceAgc.sprx, fakelib/libSceAgcDriver.sprx, fakelib/libSceAmpr.sprx, fakelib/libScePlayGo.sprx, fakelib/libScePsml.sprx; confirm the package launch path separately.
+  deployment: Installed PPR cleanup can remove Ampr/PlayGo from default /data/homebrew/backports/<TITLE_ID>/fakelib when app0 is the NSFS overlay over ppr_pfs. This is conditional; Full mode does not bypass that cleanup.
+  deployment: Keep the selected libraries with their added app0 data: k9.psp. Hashes are in the successful-publication manifest.
+  deployment: Preserve an existing playgo_stub.dat. It is optional for the supplied PlayGo stubs; Studio does not generate it.
 
 eboot.bin  [PS5-style SELF]  written
   SDK 0x10000040/0x12090001 -> 0x04000031/0x09040001
-  imports: data=60, missing=1, patched=6, provided=171, reference=924, stubbed=7
-  fixed    ZP4e7rlzOUk  sceSaveDataMount3  (adapter (argument fix) via cave 0xd6; DERIVED, not console-tested; from GT7 1.71 FW4, CONTROL Resonant 1.300 FW4.03, AC Black Flag Resynced 01.006.038 FW4.xx/10.xx, Borderlands 4 PPSA01494 FW4.xx, EA SPORTS UFC 6 PPSA23566 (tested on PS5 Pro FW 9.60), Hades II PPSA36082 FW4.03 (console-tested), Hollow Knight: Silksong PPSA12544 FW4.xx (test status unknown))
-  fixed    sDCBrmc61XU  sceSaveDataPrepare  (adapter (argument fix) via cave 0x4b6; DERIVED, not console-tested; from CONTROL Resonant 1.300 FW4.03)
-  fixed    DImz2Ft9E2g  sceAudioOut2GetSpeakerInfo  (adapter (argument fix) via cave 0x3f8; DERIVED, not console-tested; from CONTROL README + eboot analysis, AnyPS5 struct)
+  imports: data=60, missing=1, patched=3, provided=171, reference=927, stubbed=7
   fixed    3WVD91e12ZQ  scePsmlMfsrInit  (PLT -> ret0 @ 0x8c; DERIVED, not console-tested; from Kingdom Come: Deliverance II PPSA21704 FW4.xx (test status unknown))
-  stubbed  NH6xARDOVv8  sceKernelGetOperationMode  (opmode_normal @ 0x9712; known fix, proven)
-  stubbed  uv0Ae+jCeWY  sceHmd2ReprojectionSetAllowPositionalReprojection  (ret0 @ 0x418; known fix, derived)
-  stubbed  5tRaBjtdTzY  sceVideoOutVrrPegToFixedRate  (ret0 @ 0x418; known fix, proven)
-  stubbed  T4ucGB8CsnM  sceVideoOutVrrUnpegFromFixedRate  (ret0 @ 0x418; known fix, proven)
-  stubbed  kP2L8t3j-aM  kP2L8t3j-aM  (ret0 @ 0x418; known fix, proven)
-  stubbed  LibwuIonIBw  LibwuIonIBw  (ret0 @ 0x418; known fix, proven)
-  stubbed  La9uyZv4Kvw  La9uyZv4Kvw  (ret:0xff @ 0x468; known fix, proven)
+  stubbed  NH6xARDOVv8  sceKernelGetOperationMode  (opmode_normal @ 0x3d2; known fix, proven)
+  stubbed  uv0Ae+jCeWY  sceHmd2ReprojectionSetAllowPositionalReprojection  (ret0 @ 0xd6; known fix, derived)
+  stubbed  5tRaBjtdTzY  sceVideoOutVrrPegToFixedRate  (ret0 @ 0xd6; known fix, proven)
+  stubbed  T4ucGB8CsnM  sceVideoOutVrrUnpegFromFixedRate  (ret0 @ 0xd6; known fix, proven)
+  stubbed  kP2L8t3j-aM  sceVideoOutAddVrrStatusFlagsPrivilege  (ret0 @ 0xd6; known fix, proven)
+  stubbed  LibwuIonIBw  sceVideoOutAddVrrActiveStatusEvent  (ret0 @ 0xd6; known fix, proven)
+  stubbed  La9uyZv4Kvw  sceKernelGetAvailableCpumask  (ret:0xff @ 0xe6; known fix, proven)
   missing  QxBJF-G2v5k  sceHmd2ReprojectionSetParamWithBuffer  [libSceHmd2]  refs=1   introduced: FW 5.02 / firmware_db 5.02   left unpatched by: GT7 1.71 FW4
 
 libSieRdNNabla.prx  [PS5-style SELF]  written
@@ -64,21 +72,21 @@ sce_module/libc.prx  [PS5-style SELF]  written
   Sony build J03848509 = between FW 12.70 and 13.60
   imports: data=2, patched=3, reference=110, stubbed=4
   fixed    4h6F1LLbTiw  sceKernelMapNamedFlexibleMemoryInternal  (adapter -> IWIBBdTHit4 via cave 0x642; proven; from GT7 1.71 FW4, CONTROL Resonant 1.300 FW4.03, BackPork 6xx, Dying Light: The Beast PPSA24003 FW4.xx, EA SPORTS UFC 6 PPSA23566 (tested on PS5 Pro FW 9.60), Hades II PPSA36082 FW4.03 (console-tested), Hollow Knight: Silksong PPSA12544 FW4.xx (test status unknown), Kingdom Come: Deliverance II PPSA21704 FW4.xx (test status unknown))
-  fixed    qBS714-Jr3g  libSceLibcInternalExt qBS714-Jr3g (used by __cxa_thread_atexit)  (redirect -> local export tsvEmnenz48 @ 0x113e0; proven; from GT7 1.71 FW4, CONTROL Resonant 1.300 FW4.03, Dying Light: The Beast PPSA24003 FW4.xx, EA SPORTS UFC 6 PPSA23566 (tested on PS5 Pro FW 9.60), Hollow Knight: Silksong PPSA12544 FW4.xx (test status unknown))
+  fixed    qBS714-Jr3g  _sceLibcInternalThreadAtexit (used by __cxa_thread_atexit)  (redirect -> local export tsvEmnenz48 @ 0x113e0; proven; from GT7 1.71 FW4, CONTROL Resonant 1.300 FW4.03, Dying Light: The Beast PPSA24003 FW4.xx, EA SPORTS UFC 6 PPSA23566 (tested on PS5 Pro FW 9.60), Hollow Knight: Silksong PPSA12544 FW4.xx (test status unknown))
   fixed    B2n8aDorSH4  sceKernelSyncOnAddressWait32  (adapter -> 04AjkP0jO9U via cave 0x3b29; proven; from GT7 1.71 FW4, CONTROL Resonant 1.300 FW4.03, Hollow Knight: Silksong PPSA12544 FW4.xx (test status unknown))
   fixed    PZQhiiLXRFs  sceKernelSyncOnAddressWait64  (adapter -> 04AjkP0jO9U via cave 0x4546; proven; from GT7 1.71 FW4, CONTROL Resonant 1.300 FW4.03, Hollow Knight: Silksong PPSA12544 FW4.xx (test status unknown))
   fixed    q2y-wDIVWZA  sceKernelSyncOnAddressWake  (adapter -> 04AjkP0jO9U via cave 0x45e0; proven; from GT7 1.71 FW4, CONTROL Resonant 1.300 FW4.03, Hollow Knight: Silksong PPSA12544 FW4.xx (test status unknown))
   fixed    Hc4CaR6JBL0  sceKernelSyncOnAddressWait  (adapter -> 04AjkP0jO9U via cave 0x6bbc6; DERIVED, not console-tested; from GT7 1.71 FW4, CONTROL Resonant 1.300 FW4.03, AnyPS5 signature, Hollow Knight: Silksong PPSA12544 FW4.xx (test status unknown))
-  stubbed  tB59hFLH3SA  tB59hFLH3SA  (ret0 @ 0x137; known fix, proven)
-  stubbed  OQ-dzhlnM28  OQ-dzhlnM28  (ret0 @ 0x137; known fix, proven)
-  stubbed  dFym5b41JLU  dFym5b41JLU  (ret0 @ 0x137; known fix, proven)
-  stubbed  XgVs4jRehcY  XgVs4jRehcY  (ret0 @ 0x137; known fix, proven)
+  stubbed  tB59hFLH3SA  _sceLibcInternalForceTlsDestructor  (ret0 @ 0x137; known fix, proven)
+  stubbed  OQ-dzhlnM28  _sceLibcInternalThreadDtors  (ret0 @ 0x137; known fix, proven)
+  stubbed  dFym5b41JLU  sceKernelSyncOnAddressWait8  (ret0 @ 0x137; known fix, proven)
+  stubbed  XgVs4jRehcY  sceKernelSyncOnAddressWait16  (ret0 @ 0x137; known fix, proven)
 
 sce_sys/about/right.sprx  [PS5-style SELF]  written
   SDK 0x10000040/0x12090001 -> 0x04000031/0x09040001
   imports: data=1, reference=3
 
-fakelib/libSceAgc.sprx  [PS5-style SELF]  written
+fakelib/libSceAgc.sprx  [PS4-style fake SELF (make_fself.py)]  written
   SDK 0x04000031/0x09040001 (kept)
   Sony build J03828141 = FW 12.70
   imports: data=2, provided=4, reference=82, stubbed=9

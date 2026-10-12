@@ -26,6 +26,11 @@
       "asm": "mov dword [rdi], 3; and dword [rsi], 0; xor eax, eax; ret",
       "note": "sceKernelGetOperationMode forcing PS5 Pro: *mode = 3; *lowEnergy = 0; return 0 (AC 4xx+, Yotei)"
     },
+    "byte0": {
+      "hex": "c6070031c0c3",
+      "asm": "mov byte [rdi], 0; xor eax, eax; ret",
+      "note": "bool out-parameter = 0 (missing sceAgcGetIsTrinityMode): *(u8*)rdi = 0; return 0"
+    },
     "byte1": {
       "hex": "c6070131c0c3",
       "asm": "mov byte [rdi], 1; xor eax, eax; ret",

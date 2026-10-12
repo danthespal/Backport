@@ -19,7 +19,7 @@ public sealed record Reference(HashSet<string> Nids, string Label, bool Exact);
 ///   missing    not exported by the target firmware (exact firmware_db): needs a fix
 ///   unknown    none of the above, with a lower-bound reference: possibly missing on the target
 /// </summary>
-public static class Imports
+public static partial class Imports
 {
     public const string Reference = "reference", Provided = "provided", Stubbed = "stubbed", Patched = "patched";
     public const string Data = "data", Missing = "missing", Unknown = "unknown";

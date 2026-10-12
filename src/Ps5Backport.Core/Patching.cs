@@ -199,7 +199,7 @@ public static class Patching
             throw new PatchException($"invalid NID '{newNid}'");
         long symOff = elf.SymtabOffset(imp.SymIndex);
         uint nameOff = elf.U32(symOff);
-        long start = elf.Off(elf.Dyn[SceElf.DtStrtab]) + nameOff;
+        long start = elf.StringTableOffset + nameOff;
         string full = elf.CStr(start);
         // refuse when another symbol's name shares these bytes (string-table suffix merging)
         int count = elf.Symbols().Count;

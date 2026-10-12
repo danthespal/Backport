@@ -102,6 +102,7 @@ public partial class MainViewModel
             case PathKind.Aerolib: Settings.AerolibPath = path; _names = null; break;
         }
         AddStoreFirmwares();
+        MarkAnalysisStale();
         OnPropertyChanged(nameof(FakelibText));
         RefreshPaths();
         Log.Info($"Settings: firmware DB {FirmwareDbDir ?? "not found"}; fakelib store {StoreDir ?? "not found"}; aerolib {AerolibPath ?? "not found"}");

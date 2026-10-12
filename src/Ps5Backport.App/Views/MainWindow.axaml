@@ -6,10 +6,12 @@
         x:Class="Ps5Backport.App.Views.MainWindow"
         x:DataType="vm:MainViewModel"
         Title="PS5 Backport Studio"
+        Icon="/Assets/backport.png"
+        Background="{DynamicResource CanvasBrush}"
         Width="1280" Height="820" MinWidth="980" MinHeight="600"
         WindowStartupLocation="CenterScreen">
 
-  <Grid ColumnDefinitions="52,*">
+  <Grid ColumnDefinitions="64,*">
 
     <!-- navigation rail -->
     <Border Grid.Column="0" Classes="panel" BorderThickness="0,0,1,0">
@@ -18,10 +20,12 @@
           <TextBlock Classes="icon" Text="&#xE713;" />
         </RadioButton>
         <StackPanel>
+          <Image Source="/Assets/backport.png" Width="44" Height="44" Margin="0,0,0,14"
+                 ToolTip.Tip="PS5 Backport Studio" />
           <RadioButton AutomationProperties.Name="Backport" Classes="rail" GroupName="rail" ToolTip.Tip="Backport" IsChecked="{Binding Page, Converter={x:Static app:PageIsConverter.Instance}, ConverterParameter={x:Static vm:AppPage.Backport}}">
             <TextBlock Classes="icon" Text="&#xE90F;" />
           </RadioButton>
-          <RadioButton AutomationProperties.Name="Fakelib store" Classes="rail" GroupName="rail" ToolTip.Tip="Fakelib store" IsChecked="{Binding Page, Converter={x:Static app:PageIsConverter.Instance}, ConverterParameter={x:Static vm:AppPage.Store}}">
+          <RadioButton AutomationProperties.Name="Compatibility libraries" Classes="rail" GroupName="rail" ToolTip.Tip="Compatibility libraries (fakelibs)" IsChecked="{Binding Page, Converter={x:Static app:PageIsConverter.Instance}, ConverterParameter={x:Static vm:AppPage.Store}}">
             <TextBlock Classes="icon" Text="&#xE7B8;" />
           </RadioButton>
           <RadioButton AutomationProperties.Name="Firmware database" Classes="rail" GroupName="rail" ToolTip.Tip="Firmware database" IsChecked="{Binding Page, Converter={x:Static app:PageIsConverter.Instance}, ConverterParameter={x:Static vm:AppPage.FirmwareDb}}">
@@ -34,113 +38,213 @@
       </DockPanel>
     </Border>
 
-    <Grid Name="Body" Grid.Column="1" RowDefinitions="Auto,*,4,200">
+    <ThemeVariantScope Grid.Column="1" Classes.gameArtwork="{Binding HasGameBackground}">
+      <ThemeVariantScope.Styles>
+        <Style Selector="ThemeVariantScope.gameArtwork">
+          <Setter Property="RequestedThemeVariant" Value="Dark" />
+        </Style>
+      </ThemeVariantScope.Styles>
+    <Grid Name="Body" RowDefinitions="Auto,*,4,44">
 
-      <!-- game header -->
-      <Border Grid.Row="0" BorderBrush="{DynamicResource HairlineBrush}" BorderThickness="0,0,0,1" Padding="16,14"
+      <!-- Game artwork stays behind the controls, with a PlayStation-style black fade. -->
+      <Panel Grid.RowSpan="4" IsVisible="{Binding HasGameBackground}" IsHitTestVisible="False" ClipToBounds="True">
+        <Image Source="{Binding GameBackground}" Stretch="UniformToFill" />
+        <Border>
+          <Border.Background>
+            <LinearGradientBrush StartPoint="0%,0%" EndPoint="0%,100%">
+              <GradientStop Offset="0" Color="#80000000" />
+              <GradientStop Offset="0.55" Color="#BF000000" />
+              <GradientStop Offset="1" Color="#E6000000" />
+            </LinearGradientBrush>
+          </Border.Background>
+        </Border>
+      </Panel>
+
+      <!-- Game identity, target and actions form separate groups. -->
+      <Border Grid.Row="0" BorderBrush="{DynamicResource HairlineBrush}" BorderThickness="0,0,0,1" Padding="24,20,24,16"
               IsVisible="{Binding Page, Converter={x:Static app:PageIsConverter.Instance}, ConverterParameter={x:Static vm:AppPage.Backport}}">
-        <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="16">
-          <Border Width="96" Height="96" CornerRadius="10" ClipToBounds="True" Background="{DynamicResource PanelBrush}"
+        <Grid ColumnDefinitions="Auto,*,260" RowDefinitions="Auto,Auto,Auto" ColumnSpacing="20" RowSpacing="16">
+          <Border Width="88" Height="88" CornerRadius="6" ClipToBounds="True" Background="{DynamicResource PanelBrush}"
                   BorderBrush="{DynamicResource HairlineBrush}" BorderThickness="1">
             <Panel>
               <TextBlock Classes="icon muted" FontSize="28" HorizontalAlignment="Center" Text="&#xE7FC;" IsVisible="{Binding Cover, Converter={x:Static ObjectConverters.IsNull}}" />
               <Image Source="{Binding Cover}" Stretch="UniformToFill" />
             </Panel>
           </Border>
-          <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="4">
+          <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="8">
+            <TextBlock Classes="caption" Text="SELECTED GAME" />
             <TextBlock Classes="title" Text="{Binding GameTitle}" TextTrimming="CharacterEllipsis" />
-            <StackPanel Orientation="Horizontal" Spacing="8">
-              <TextBlock Classes="muted" Text="{Binding GameLine}" VerticalAlignment="Center" />
-              <Border IsVisible="{Binding HasPsvr2}" CornerRadius="4" Padding="6,1" BorderThickness="1"
-                      BorderBrush="{DynamicResource StatusWarn}" ToolTip.Tip="{Binding Psvr2Text}">
-                <TextBlock Text="PS VR2" FontSize="11" FontWeight="SemiBold" Foreground="{DynamicResource StatusWarn}" />
-              </Border>
-            </StackPanel>
-            <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="10" Margin="0,8,0,0" MaxWidth="560" HorizontalAlignment="Left"
-                  IsVisible="{Binding HasGame}">
-              <TextBlock Classes="caption" Text="{Binding TargetText}" />
-              <ProgressBar Grid.Column="1" Value="{Binding GapPercent}" Minimum="0" Maximum="100" Height="6" MinWidth="200"
-                           VerticalAlignment="Center" Background="{DynamicResource GapBrush}"
-                           ToolTip.Tip="Target firmware compared with sdkVersion in param.json; this does not establish compatibility." />
-              <TextBlock Grid.Column="2" Classes="caption" Text="{Binding GameSdkText}" />
-            </Grid>
+            <TextBlock Classes="muted" Text="{Binding GameLine}" TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding GameLine}" />
+            <Border IsVisible="{Binding HasPsvr2}" HorizontalAlignment="Left" CornerRadius="4" Padding="6,2" BorderThickness="1"
+                    BorderBrush="{DynamicResource StatusWarn}" ToolTip.Tip="{Binding Psvr2Text}">
+              <TextBlock Text="PS VR2" FontSize="11" FontWeight="SemiBold" Foreground="{DynamicResource StatusWarn}" />
+            </Border>
           </StackPanel>
-          <StackPanel Grid.Column="2" Spacing="8" VerticalAlignment="Center" Width="230">
+          <StackPanel Grid.Column="2" Spacing="6" VerticalAlignment="Center">
+            <TextBlock Classes="caption" Text="TARGET FIRMWARE" />
             <ComboBox ItemsSource="{Binding Firmwares}" SelectedItem="{Binding SelectedFirmware}" HorizontalAlignment="Stretch"
-                      ToolTip.Tip="Target firmware" />
-            <TextBlock Classes="caption" Text="{Binding FakelibText}" />
-            <Grid ColumnDefinitions="*,*" RowDefinitions="Auto,Auto" ColumnSpacing="6" RowSpacing="6">
-              <Button Content="Open game" Command="{Binding OpenGameCommand}" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" />
-              <DropDownButton Grid.Column="1" Content="Options" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center">
+                      AutomationProperties.Name="Target firmware" ToolTip.Tip="Firmware installed on your console" />
+            <TextBlock Classes="caption" Text="{Binding FakelibText}" TextTrimming="PathSegmentEllipsis" ToolTip.Tip="{Binding FakelibText}" />
+          </StackPanel>
+          <Grid Grid.Row="1" Grid.ColumnSpan="3" ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12">
+            <Button Content="Open game" Command="{Binding OpenGameCommand}" MinHeight="36" />
+            <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="8">
+              <DropDownButton Content="Advanced options" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center">
                 <DropDownButton.Flyout>
                   <Flyout Placement="BottomEdgeAlignedRight">
-                    <StackPanel Spacing="6" Width="300">
-                      <TextBlock Classes="section" Text="Backport options" />
+                    <StackPanel Spacing="6" Width="340">
+                      <TextBlock Classes="section" Text="Advanced backport options" />
                       <CheckBox IsChecked="{Binding KnownFixes}" Content="Known fixes (data/fixes.json)" />
                       <CheckBox IsChecked="{Binding CandidateFixes}" Content="AnyPS5 candidate stubs (not console-tested)" />
                       <CheckBox IsChecked="{Binding StubUnknown}" Content="Stub every unknown import" />
                       <CheckBox IsChecked="{Binding DefineSymbol}" Content="Also rewrite stubbed symbols" />
                       <CheckBox IsChecked="{Binding ExtendText}" Content="Extend code segment when padding runs out" />
                       <CheckBox IsChecked="{Binding PatchParam}" Content="Lower param.json versions" />
-                      <TextBlock Classes="caption" Text="Output folder" Margin="0,6,0,0" />
-                      <TextBox Text="{Binding OutputFolder}" />
                     </StackPanel>
                   </Flyout>
                 </DropDownButton.Flyout>
               </DropDownButton>
-              <Button Name="AnalyzeButton" Grid.Row="1" Content="Analyze" Command="{Binding AnalyzeCommand}" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" />
-              <Button Name="CookButton" Grid.Row="1" Grid.Column="1" Classes="accent" Content="Cook backport" Command="{Binding CookCommand}"
-                      HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" />
+              <Button Name="AnalyzeButton" Content="Analyze game" Command="{Binding AnalyzeCommand}" MinHeight="36"
+                      ToolTip.Tip="Check imports and proposed changes without creating a backport" />
+              <Button Name="CookButton" Classes="accent" Content="Create backport" Command="{Binding CookCommand}" MinHeight="36"
+                      ToolTip.Tip="Write the backport to the output folder" />
+            </StackPanel>
+          </Grid>
+          <Border Grid.Row="2" Grid.ColumnSpan="3" Classes="card" IsVisible="{Binding IsAnalysisStale}">
+            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="16">
+              <StackPanel Spacing="4">
+                <TextBlock Classes="caption" Text="{Binding ResultTargetText}" />
+                <TextBlock Text="Analysis needs updating" FontWeight="SemiBold" Foreground="{DynamicResource StatusWarn}" IsVisible="{Binding IsAnalysisStale}" />
+                <TextBlock Classes="muted" Text="Settings changed. Analyze again to review the current settings."
+                           TextWrapping="Wrap" IsVisible="{Binding IsAnalysisStale}" />
+              </StackPanel>
+              <Button Grid.Column="1" Content="Analyze again" Command="{Binding AnalyzeCommand}" VerticalAlignment="Center" IsVisible="{Binding IsAnalysisStale}" />
             </Grid>
-          </StackPanel>
+          </Border>
         </Grid>
       </Border>
 
       <!-- tabs -->
-      <TabControl Grid.Row="1" Margin="12,4,12,0" SelectedIndex="{Binding SelectedTab}" IsVisible="{Binding Page, Converter={x:Static app:PageIsConverter.Instance}, ConverterParameter={x:Static vm:AppPage.Backport}}">
+      <TabControl Classes="workbench" Grid.Row="1" Margin="24,12,24,0" SelectedIndex="{Binding SelectedTab}" IsVisible="{Binding Page, Converter={x:Static app:PageIsConverter.Instance}, ConverterParameter={x:Static vm:AppPage.Backport}}">
         <TabItem Header="Overview">
           <ScrollViewer>
-            <StackPanel Spacing="14" Margin="4,8">
-              <WrapPanel ItemSpacing="10" LineSpacing="10">
-                <Border Classes="card" Width="190">
+            <StackPanel Spacing="16" Margin="0,16,0,16">
+              <Border Classes="card" IsVisible="{Binding !HasResult}">
+                <StackPanel Spacing="4">
+                  <TextBlock Classes="section" Text="Start with an analysis" />
+                  <TextBlock Classes="muted" Text="Analyze the game to review modules, proposed fixes and unresolved imports before creating the backport." TextWrapping="Wrap" />
+                </StackPanel>
+              </Border>
+              <Border Classes="card" IsVisible="{Binding HasPublishedResult}" BorderBrush="{DynamicResource StatusOk}">
+                <StackPanel Spacing="10">
+                  <TextBlock Classes="section" Text="Last published backport" Foreground="{DynamicResource StatusOk}" />
+                  <TextBlock Text="{Binding CompletionText}" TextWrapping="Wrap" />
+                  <SelectableTextBlock Classes="mono" Text="{Binding PublishedOutput}" TextWrapping="Wrap" />
+                  <TextBlock Classes="muted" Text="If this release uses AMPR, build its index before packaging. Merge the release into the matching game folder before testing." TextWrapping="Wrap" />
+                  <WrapPanel ItemSpacing="8" LineSpacing="8">
+                    <Button Content="Open created backport" Command="{Binding OpenPublishedOutputCommand}" />
+                    <Button Content="Build AMPR index" Command="{Binding BuildPublishedAmprIndexCommand}" />
+                  </WrapPanel>
+                  <TextBlock Classes="caption" Text="{Binding AmprIndexText}" TextWrapping="Wrap" />
+                </StackPanel>
+              </Border>
+              <TextBlock Classes="caption" Text="{Binding ResultTargetText}" IsVisible="{Binding HasResult}" />
+              <UniformGrid Columns="4" IsVisible="{Binding HasResult}">
+                <Border Classes="card" Margin="0,0,8,0">
                   <StackPanel><TextBlock Classes="caption" Text="Modules" /><TextBlock Classes="metric" Text="{Binding ModuleCount}" /></StackPanel>
                 </Border>
-                <Border Classes="card" Width="190">
-                  <StackPanel><TextBlock Classes="caption" Text="Fixes" /><TextBlock Classes="metric" Text="{Binding FixedCount}" Foreground="{DynamicResource StatusOk}" /></StackPanel>
+                <Border Classes="card" Margin="0,0,8,0">
+                  <StackPanel><TextBlock Classes="caption" Text="Fixes" ToolTip.Tip="Proposed by analysis or applied when creating a backport" /><TextBlock Classes="metric" Text="{Binding FixedCount}" Foreground="{DynamicResource StatusOk}" /></StackPanel>
                 </Border>
-                <Border Classes="card" Width="190">
+                <Border Classes="card" Margin="0,0,8,0">
                   <StackPanel><TextBlock Classes="caption" Text="Unresolved imports" /><TextBlock Classes="metric" Text="{Binding UnresolvedCount}" Foreground="{DynamicResource StatusWarn}" /></StackPanel>
                 </Border>
-                <Border Classes="card" Width="190">
+                <Border Classes="card" Margin="0,0,8,0">
                   <StackPanel><TextBlock Classes="caption" Text="Not console-tested" /><TextBlock Classes="metric" Text="{Binding DerivedCount}" /></StackPanel>
                 </Border>
-              </WrapPanel>
-              <StackPanel Spacing="6" IsVisible="{Binding HasGame}">
-                <TextBlock Classes="section" Text="Optional patches" />
-                <TextBlock Classes="caption" Text="Off by default and not remembered: choose them per game, then analyze or cook again." />
-                <ItemsControl ItemsSource="{Binding PatchOptions}" MaxWidth="780" HorizontalAlignment="Left">
-                  <ItemsControl.ItemsPanel>
-                    <ItemsPanelTemplate><StackPanel Spacing="8" /></ItemsPanelTemplate>
-                  </ItemsControl.ItemsPanel>
+              </UniformGrid>
+              <Border Classes="card" IsVisible="{Binding HasWarnings}">
+                <StackPanel Spacing="6">
+                <TextBlock Classes="section" Text="Warnings" />
+                <ItemsControl ItemsSource="{Binding WarningDetails}">
                   <ItemsControl.ItemTemplate>
-                    <DataTemplate x:DataType="vm:OptionRow">
-                      <Border Classes="card" Classes.optionOn="{Binding IsEnabled}">
-                        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="16">
-                          <StackPanel Spacing="3">
-                            <TextBlock Text="{Binding Name}" FontWeight="SemiBold" />
-                            <TextBlock Classes="muted" Text="{Binding Description}" TextWrapping="Wrap" />
-                            <TextBlock Text="{Binding Warning}" TextWrapping="Wrap" Foreground="{DynamicResource StatusWarn}" />
-                          </StackPanel>
-                          <ToggleSwitch Grid.Column="1" IsChecked="{Binding IsEnabled}" OnContent="" OffContent="" VerticalAlignment="Top"
-                                        ToolTip.Tip="{Binding Name}" />
-                        </Grid>
-                      </Border>
+                    <DataTemplate x:DataType="vm:WarningRow">
+                      <TextBlock Text="{Binding Summary}" TextWrapping="Wrap" Foreground="{DynamicResource StatusWarn}" Margin="0,4" />
                     </DataTemplate>
                   </ItemsControl.ItemTemplate>
                 </ItemsControl>
-              </StackPanel>
-              <StackPanel Spacing="6" IsVisible="{Binding HasGame}">
-                <TextBlock Classes="section" Text="Diagnostics" />
+                <Expander Header="Show technical details" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch">
+                  <ItemsControl ItemsSource="{Binding WarningDetails}">
+                    <ItemsControl.ItemTemplate>
+                      <DataTemplate x:DataType="vm:WarningRow">
+                        <SelectableTextBlock Classes="mono" Text="{Binding Detail}" TextWrapping="Wrap" Margin="0,6" />
+                      </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                  </ItemsControl>
+                </Expander>
+                </StackPanel>
+              </Border>
+              <Border Classes="card">
+                <StackPanel Spacing="10">
+                  <Grid ColumnDefinitions="*,Auto" ColumnSpacing="16">
+                    <StackPanel Spacing="4">
+                      <TextBlock Classes="section" Text="Output folder" />
+                      <TextBlock Classes="caption" Text="The backport will be written here." />
+                    </StackPanel>
+                    <Button Grid.Column="1" Content="Open output folder" Command="{Binding OpenOutputCommand}" VerticalAlignment="Center" />
+                  </Grid>
+                  <TextBox Classes="mono" Text="{Binding OutputFolder}" AutomationProperties.Name="Output folder" />
+                  <Expander Header="AMPR index and deployment" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch">
+                    <StackPanel Spacing="8">
+                      <TextBlock Classes="caption" Text="{Binding AmprIndexText}" TextWrapping="Wrap" />
+                      <TextBlock Classes="muted" Text="After creating the backport, build the index if this release needs AMPR. It indexes the original game and this overlay, excludes private reports and logs, and writes ampr_emu.index in the output folder." TextWrapping="Wrap" />
+                      <TextBlock Classes="muted" Text="Include the index with the release. For testing, merge the release contents into the matching game folder (overwrite files), then copy the complete game folder to /data/homebrew/&lt;GAME&gt;/ for ShadowMountPlus." TextWrapping="Wrap" />
+                      <Button Content="Build AMPR index" Command="{Binding BuildAmprIndexCommand}" HorizontalAlignment="Left" />
+                    </StackPanel>
+                  </Expander>
+                </StackPanel>
+              </Border>
+              <Expander Header="{Binding PatchOptionsSummary}" IsVisible="{Binding HasGame}"
+                        HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch">
+                <StackPanel Spacing="8">
+                  <TextBlock Classes="caption" Text="Off by default and not remembered. Review the warnings, choose patches per game, then analyze or create the backport again." TextWrapping="Wrap" />
+                  <Grid ColumnDefinitions="320,*" ColumnSpacing="12" Height="196">
+                    <Grid RowDefinitions="Auto,*" RowSpacing="6">
+                      <TextBox Text="{Binding PatchSearch}" PlaceholderText="Search optional patches" />
+                      <ListBox Grid.Row="1" Classes="patchOptions" ItemsSource="{Binding VisiblePatchOptions}" SelectedItem="{Binding SelectedPatchOption}"
+                               Background="{DynamicResource CardBrush}" BorderBrush="{DynamicResource HairlineBrush}" BorderThickness="1">
+                        <ListBox.ItemTemplate>
+                          <DataTemplate x:DataType="vm:OptionRow">
+                            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8" MinHeight="32">
+                              <TextBlock Text="{Binding Name}" FontWeight="SemiBold" VerticalAlignment="Center" TextWrapping="Wrap">
+                                <ToolTip.Tip>
+                                  <StackPanel Spacing="6" MaxWidth="420">
+                                    <TextBlock Text="{Binding Description}" TextWrapping="Wrap" />
+                                    <TextBlock Text="{Binding Warning}" TextWrapping="Wrap" Foreground="{DynamicResource StatusWarn}" />
+                                  </StackPanel>
+                                </ToolTip.Tip>
+                              </TextBlock>
+                              <ToggleSwitch Grid.Column="1" IsChecked="{Binding IsEnabled}" OnContent="" OffContent=""
+                                            MinHeight="0" Height="32" VerticalAlignment="Center"
+                                            AutomationProperties.Name="{Binding Name}" ToolTip.Tip="{Binding Warning}" />
+                            </Grid>
+                          </DataTemplate>
+                        </ListBox.ItemTemplate>
+                      </ListBox>
+                    </Grid>
+                    <Border Grid.Column="1" Classes="card">
+                      <ScrollViewer>
+                        <StackPanel Spacing="6">
+                          <TextBlock Text="{Binding SelectedPatchOption.Name, FallbackValue='Select a patch to see details'}" FontWeight="SemiBold" TextWrapping="Wrap" />
+                          <TextBlock Classes="muted" Text="{Binding SelectedPatchOption.Description, FallbackValue=''}" TextWrapping="Wrap" />
+                          <TextBlock Text="{Binding SelectedPatchOption.Warning, FallbackValue=''}" TextWrapping="Wrap" Foreground="{DynamicResource StatusWarn}" />
+                        </StackPanel>
+                      </ScrollViewer>
+                    </Border>
+                  </Grid>
+                </StackPanel>
+              </Expander>
+              <Expander Header="Diagnostics" IsVisible="{Binding HasGame}" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch">
                 <Border Classes="card" Classes.optionOn="{Binding AmprDebugLogging}" MaxWidth="780" HorizontalAlignment="Left">
                   <Grid ColumnDefinitions="*,Auto" ColumnSpacing="16">
                     <StackPanel Spacing="3">
@@ -151,47 +255,38 @@
                     <ToggleSwitch Grid.Column="1" IsChecked="{Binding AmprDebugLogging}" OnContent="" OffContent="" VerticalAlignment="Top" ToolTip.Tip="Enable AMPR emulator logging" />
                   </Grid>
                 </Border>
-              </StackPanel>
-              <StackPanel Spacing="4">
-                <TextBlock Classes="section" Text="Reference" />
+              </Expander>
+
+              <StackPanel Spacing="4" IsVisible="{Binding HasResult}">
+                <TextBlock Classes="section" Text="Analysis reference" />
                 <TextBlock Classes="muted" Text="{Binding ReferenceText}" TextWrapping="Wrap" />
-              </StackPanel>
-              <StackPanel Spacing="4" IsVisible="{Binding HasWarnings}">
-                <TextBlock Classes="section" Text="Warnings" />
-                <ItemsControl ItemsSource="{Binding Warnings}">
-                  <ItemsControl.ItemTemplate>
-                    <DataTemplate x:DataType="x:String">
-                      <TextBlock Text="{Binding}" TextWrapping="Wrap" Foreground="{DynamicResource StatusWarn}" Margin="0,2" />
-                    </DataTemplate>
-                  </ItemsControl.ItemTemplate>
-                </ItemsControl>
-              </StackPanel>
-              <StackPanel Spacing="4">
-                <TextBlock Classes="section" Text="Output" />
-                <StackPanel Orientation="Horizontal" Spacing="8">
-                  <TextBlock Classes="muted" Text="{Binding OutputFolder}" VerticalAlignment="Center" />
-                  <Button Content="Open" Command="{Binding OpenOutputCommand}" Padding="10,2" />
-                  <Button Content="Build AMPR index" Command="{Binding BuildAmprIndexCommand}" Padding="10,2" />
-                </StackPanel>
-                <TextBlock Classes="caption" Text="{Binding AmprIndexText}" TextWrapping="Wrap" />
-                <TextBlock Classes="caption" Text="Build this after Cook: it indexes the original game plus this overlay, excludes private reports/logs, and writes ampr_emu.index here. Include the index. For testing, merge the release contents into the matching game folder (overwrite files), then copy the complete game folder to /data/homebrew/&lt;GAME&gt;/ (ShadowMountPlus)." TextWrapping="Wrap" />
               </StackPanel>
             </StackPanel>
           </ScrollViewer>
         </TabItem>
 
-        <TabItem Header="Modules">
-          <TableView ItemsSource="{Binding Modules}" SelectedItem="{Binding SelectedModule}" Margin="0,8,0,0">
+        <TabItem>
+          <TabItem.Header>
+            <StackPanel Orientation="Horizontal" Spacing="8">
+              <TextBlock Text="Modules" />
+              <TextBlock Classes="caption" Text="{Binding ModuleCount}" IsVisible="{Binding HasResult}" VerticalAlignment="Center" />
+            </StackPanel>
+          </TabItem.Header>
+          <Grid RowDefinitions="Auto,*" RowSpacing="10" Margin="0,12,0,0">
+            <TextBlock Classes="caption" Text="Select a module to limit the Imports view to that file." TextWrapping="Wrap" />
+            <Border Grid.Row="1" Classes="card" Padding="0">
+              <Grid>
+          <TableView ItemsSource="{Binding Modules}" SelectedItem="{Binding SelectedModule}" Foreground="{DynamicResource InkBrush}" IsVisible="{Binding HasModules}">
             <TableView.Columns>
               <TableViewColumn Header="Module" Width="*" x:DataType="vm:ModuleRow">
                 <TableViewColumn.CellTemplate>
                   <DataTemplate x:DataType="vm:ModuleRow">
-                    <TextBlock Text="{Binding Path}" />
+                    <TextBlock Classes="mono" Text="{Binding Path}" TextTrimming="PathSegmentEllipsis" ToolTip.Tip="{Binding Path}" />
                   </DataTemplate>
                 </TableViewColumn.CellTemplate>
               </TableViewColumn>
-              <TableViewColumn Header="Container" Binding="{Binding Container}" Width="190" x:DataType="vm:ModuleRow" />
-              <TableViewColumn Header="SDK" Binding="{Binding Sdk}" Width="140" x:DataType="vm:ModuleRow" />
+              <TableViewColumn Header="Container" Binding="{Binding Container}" Width="140" x:DataType="vm:ModuleRow" />
+              <TableViewColumn Header="SDK" Binding="{Binding Sdk}" Width="100" x:DataType="vm:ModuleRow" />
               <TableViewColumn Header="Fixes" Binding="{Binding Fixed}" Width="70" x:DataType="vm:ModuleRow" />
               <TableViewColumn Header="Unresolved" Width="100" x:DataType="vm:ModuleRow">
                 <TableViewColumn.CellTemplate>
@@ -200,56 +295,99 @@
                   </DataTemplate>
                 </TableViewColumn.CellTemplate>
               </TableViewColumn>
-              <TableViewColumn Header="State" Width="110" x:DataType="vm:ModuleRow">
+              <TableViewColumn Header="State" Width="130" x:DataType="vm:ModuleRow">
                 <TableViewColumn.CellTemplate>
                   <DataTemplate x:DataType="vm:ModuleRow">
-                    <TextBlock Text="{Binding State}"
-                               Foreground="{Binding Tone, Converter={x:Static app:ToneBrushConverter.Instance}}" />
+                    <Border Classes="status" Classes.ok="{Binding HasChanges}" Classes.error="{Binding HasError}" ToolTip.Tip="{Binding StateDescription}">
+                      <TextBlock Text="{Binding StateDisplay}" />
+                    </Border>
                   </DataTemplate>
                 </TableViewColumn.CellTemplate>
               </TableViewColumn>
             </TableView.Columns>
           </TableView>
+                <StackPanel Spacing="8" Margin="24" VerticalAlignment="Center" HorizontalAlignment="Center" IsVisible="{Binding !HasModules}">
+                  <TextBlock Classes="section" Text="No module results" />
+                  <TextBlock Classes="muted" Text="{Binding ModulesEmptyText}" TextWrapping="Wrap" />
+                </StackPanel>
+              </Grid>
+            </Border>
+          </Grid>
         </TabItem>
 
-        <TabItem Header="Imports">
-          <Grid ColumnDefinitions="*,300" ColumnSpacing="12" Margin="0,8,0,0">
+        <TabItem MinWidth="174">
+          <TabItem.Header>
+            <StackPanel Orientation="Horizontal" Spacing="8">
+              <TextBlock Text="Imports" />
+              <TextBlock Classes="caption" Text="{Binding ImportTabText}" ToolTip.Tip="Count reflects the current module, status and search filters." IsVisible="{Binding HasResult}" VerticalAlignment="Center" />
+            </StackPanel>
+          </TabItem.Header>
+          <Grid ColumnDefinitions="*,280" ColumnSpacing="12" Margin="0,12,0,0">
             <DockPanel>
-              <Grid DockPanel.Dock="Top" ColumnDefinitions="*,150,Auto,Auto" ColumnSpacing="8" Margin="0,0,0,8">
-                <TextBox Name="ImportSearchBox" AutomationProperties.Name="Search imports" PlaceholderText="Search name, NID or library" Text="{Binding ImportSearch}" />
-                <ComboBox Grid.Column="1" ItemsSource="{Binding ImportFilters}" SelectedItem="{Binding ImportFilter}" HorizontalAlignment="Stretch" />
-                <Button Grid.Column="2" Content="All modules" Command="{Binding ClearModuleFilterCommand}" />
-                <TextBlock Grid.Column="3" Classes="caption" VerticalAlignment="Center" Text="{Binding ImportCountText}" />
+              <Grid DockPanel.Dock="Top" ColumnDefinitions="*,140,Auto" RowDefinitions="Auto,Auto" ColumnSpacing="8" RowSpacing="8" Margin="0,0,0,10">
+                <TextBox Name="ImportSearchBox" AutomationProperties.Name="Search imports" PlaceholderText="Search function, NID or library" Text="{Binding ImportSearch}" />
+                <ComboBox Grid.Column="1" AutomationProperties.Name="Filter import status" ItemsSource="{Binding ImportFilters}" SelectedItem="{Binding ImportFilter}" HorizontalAlignment="Stretch" />
+                <Button Grid.Column="2" Content="Show all" ToolTip.Tip="Clear the search, status and module filters" Command="{Binding ClearImportFiltersCommand}" />
+                <TextBlock Grid.Row="1" Grid.ColumnSpan="3" Classes="caption" Text="{Binding ImportCountText}" TextWrapping="Wrap" />
               </Grid>
-              <TableView Name="ImportsTable" AutomationProperties.Name="Imports" ItemsSource="{Binding Imports}" SelectedItem="{Binding SelectedImport}">
+              <Border Classes="card" Padding="0">
+                <Grid>
+              <TableView Name="ImportsTable" Foreground="{DynamicResource InkBrush}" IsVisible="{Binding HasImports}" AutomationProperties.Name="Imports" ItemsSource="{Binding Imports}" SelectedItem="{Binding SelectedImport}">
                 <TableView.Columns>
-                  <TableViewColumn Header="Status" Width="90" x:DataType="vm:ImportRow">
+                  <TableViewColumn Header="Status" Width="130" x:DataType="vm:ImportRow">
                     <TableViewColumn.CellTemplate>
                       <DataTemplate x:DataType="vm:ImportRow">
-                        <TextBlock Text="{Binding Status}"
-                                   Foreground="{Binding Tone, Converter={x:Static app:ToneBrushConverter.Instance}}" />
+                        <Border Classes="status" Classes.ok="{Binding IsResolved}" Classes.warning="{Binding IsUnresolved}" ToolTip.Tip="{Binding StatusDescription}">
+                          <TextBlock Text="{Binding StatusDisplay}" />
+                        </Border>
                       </DataTemplate>
                     </TableViewColumn.CellTemplate>
                   </TableViewColumn>
-                  <TableViewColumn Header="Function" Binding="{Binding Name}" Width="*" x:DataType="vm:ImportRow" />
-                  <TableViewColumn Header="Library" Binding="{Binding Library}" Width="170" x:DataType="vm:ImportRow" />
-                  <TableViewColumn Header="Refs" Binding="{Binding RefsText}" Width="60" x:DataType="vm:ImportRow" />
-                  <TableViewColumn Header="Module" Binding="{Binding Module}" Width="170" x:DataType="vm:ImportRow" />
+                  <TableViewColumn Header="Function" Width="*" x:DataType="vm:ImportRow">
+                    <TableViewColumn.CellTemplate>
+                      <DataTemplate x:DataType="vm:ImportRow">
+                        <TextBlock Classes="mono" Text="{Binding Name}" TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding Name}" />
+                      </DataTemplate>
+                    </TableViewColumn.CellTemplate>
+                  </TableViewColumn>
+                  <TableViewColumn Header="Library" Width="120" x:DataType="vm:ImportRow">
+                    <TableViewColumn.CellTemplate>
+                      <DataTemplate x:DataType="vm:ImportRow">
+                        <TextBlock Classes="mono" Text="{Binding Library}" TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding Library}" />
+                      </DataTemplate>
+                    </TableViewColumn.CellTemplate>
+                  </TableViewColumn>
+                  <TableViewColumn Header="Refs" Binding="{Binding RefsText}" Width="48" x:DataType="vm:ImportRow" />
+                  <TableViewColumn Header="Module" Width="100" x:DataType="vm:ImportRow">
+                    <TableViewColumn.CellTemplate>
+                      <DataTemplate x:DataType="vm:ImportRow">
+                        <TextBlock Classes="mono" Text="{Binding Module}" TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding Module}" />
+                      </DataTemplate>
+                    </TableViewColumn.CellTemplate>
+                  </TableViewColumn>
                 </TableView.Columns>
               </TableView>
+                  <StackPanel Spacing="8" Margin="24" VerticalAlignment="Center" HorizontalAlignment="Center" IsVisible="{Binding !HasImports}">
+                    <TextBlock Classes="section" Text="No imports to display" />
+                    <TextBlock Classes="muted" Text="{Binding ImportsEmptyText}" TextWrapping="Wrap" MaxWidth="400" />
+                    <Button Content="Show all imports" Command="{Binding ClearImportFiltersCommand}" IsVisible="{Binding HasResult}" HorizontalAlignment="Left" />
+                  </StackPanel>
+                </Grid>
+              </Border>
             </DockPanel>
 
             <!-- inspector -->
-            <Border Grid.Column="1" Classes="card" VerticalAlignment="Top">
+            <Border Grid.Column="1" Classes="card">
+              <ScrollViewer>
               <Panel>
                 <TextBlock Classes="muted" Text="Select an import to see what we know about it." TextWrapping="Wrap"
                            IsVisible="{Binding !HasSelectedImport}" />
                 <StackPanel Spacing="8" IsVisible="{Binding HasSelectedImport}">
                   <TextBlock Classes="caption" Text="Inspector" />
-                  <SelectableTextBlock FontWeight="Medium" Text="{Binding SelectedImport.Name, FallbackValue=''}" TextWrapping="Wrap" />
+                  <SelectableTextBlock Classes="mono" FontWeight="Medium" Text="{Binding SelectedImport.Name, FallbackValue=''}" TextWrapping="Wrap" />
                   <SelectableTextBlock Classes="mono" Text="{Binding SelectedImport.Nid, FallbackValue=''}" />
                   <TextBlock Classes="muted" Text="{Binding SelectedImport.Library, FallbackValue=''}" />
-                  <TextBlock Text="{Binding SelectedImport.Status, FallbackValue=''}"
+                  <TextBlock Text="{Binding SelectedImport.StatusDisplay, FallbackValue=''}" ToolTip.Tip="{Binding SelectedImport.StatusDescription}"
                              Foreground="{Binding SelectedImport.Tone, FallbackValue='muted', Converter={x:Static app:ToneBrushConverter.Instance}}" />
                   <StackPanel IsVisible="{Binding SelectedImport.HasApplied, FallbackValue=False}">
                     <TextBlock Classes="caption" Text="Applied" />
@@ -278,13 +416,14 @@
                   </StackPanel>
                 </StackPanel>
               </Panel>
+              </ScrollViewer>
             </Border>
           </Grid>
         </TabItem>
 
         <TabItem Header="Report">
           <TextBox Classes="mono" Text="{Binding ReportText}" IsReadOnly="True" AcceptsReturn="True" TextWrapping="NoWrap" Margin="0,8,0,0"
-                   PlaceholderText="Analyze or cook to see the report" />
+                   PlaceholderText="Analyze the game or create a backport to see the report" />
         </TabItem>
       </TabControl>
 
@@ -339,7 +478,7 @@
           </ItemsControl>
 
           <TextBlock Classes="section" Text="Defaults for new backports" Margin="0,14,0,0" />
-          <TextBlock Classes="caption" Text="The same options as the Options menu; the app remembers what you last used." Margin="0,0,0,4" />
+          <TextBlock Classes="caption" Text="The same options as the Advanced options menu; the app remembers what you last used." Margin="0,0,0,4" />
           <Border Classes="card setting">
             <Grid ColumnDefinitions="*,Auto">
               <TextBlock FontWeight="Medium" Text="Target firmware" VerticalAlignment="Center" />
@@ -399,27 +538,28 @@
         </StackPanel>
       </ScrollViewer>
 
-      <GridSplitter Grid.Row="2" ResizeDirection="Rows" Background="{DynamicResource HairlineBrush}" />
+      <GridSplitter Name="LogSplitter" IsVisible="{Binding #LogToggle.IsChecked}" Grid.Row="2" ResizeDirection="Rows" Background="{DynamicResource HairlineBrush}" />
 
       <!-- development log -->
-      <Border Grid.Row="3" Classes="panel" BorderThickness="0">
+      <ThemeVariantScope Grid.Row="3" RequestedThemeVariant="{Binding $parent[Window].ActualThemeVariant}">
+      <Border Classes="panel" BorderThickness="0">
         <DockPanel>
-          <Grid DockPanel.Dock="Top" ColumnDefinitions="Auto,Auto,Auto,Auto,*,Auto,Auto,Auto" ColumnSpacing="6" Margin="12,6">
-            <TextBlock Classes="section" Text="Development log" ToolTip.Tip="Latest 2,000 entries; counts apply to retained history. Local diagnostic files keep recent activity after closing." VerticalAlignment="Center" Margin="0,0,8,0" />
+          <Grid DockPanel.Dock="Top" ColumnDefinitions="Auto,Auto,Auto,Auto,*,Auto,Auto,Auto" ColumnSpacing="6" Margin="16,8">
+            <ToggleButton Name="LogToggle" Content="Activity log ▸" IsChecked="False" Classes="chip" AutomationProperties.Name="Expand or collapse activity log" ToolTip.Tip="Show or hide the latest 2,000 entries. Status and progress remain visible." VerticalAlignment="Center" Margin="0,0,8,0" />
             <ToggleButton Grid.Column="1" Classes="chip" Content="{Binding Log.ErrorsLabel}" IsChecked="{Binding Log.ShowErrors}"
                           Foreground="{DynamicResource StatusError}" />
             <ToggleButton Grid.Column="2" Classes="chip" Content="{Binding Log.WarningsLabel}" IsChecked="{Binding Log.ShowWarnings}"
                           Foreground="{DynamicResource StatusWarn}" />
             <ToggleButton Grid.Column="3" Classes="chip" Content="All" IsChecked="{Binding Log.ShowAll}" />
             <StackPanel Grid.Column="4" Orientation="Horizontal" Spacing="8" HorizontalAlignment="Right" Margin="0,0,8,0">
-              <TextBlock Classes="caption" Text="{Binding StatusText}" VerticalAlignment="Center" />
-              <ProgressBar Width="120" Height="4" Value="{Binding Progress}" IsVisible="{Binding Busy}" VerticalAlignment="Center" />
+              <TextBlock Text="{Binding StatusText}" FontWeight="Medium" VerticalAlignment="Center" />
+              <ProgressBar Width="140" Height="6" Value="{Binding Progress}" IsVisible="{Binding Busy}" VerticalAlignment="Center" />
             </StackPanel>
             <Button Name="CancelButton" Grid.Column="5" Content="Cancel" Command="{Binding CancelCommand}" IsVisible="{Binding Busy}" Classes="chip" />
             <Button Grid.Column="6" Content="Copy" Command="{Binding CopyLogCommand}" Classes="chip" />
             <Button Grid.Column="7" Content="Clear" ToolTip.Tip="Clear the displayed history; local diagnostic files remain." Command="{Binding ClearLogCommand}" Classes="chip" />
           </Grid>
-          <ListBox Name="LogList" Classes="log" ItemsSource="{Binding Log.Visible}" Background="Transparent" Padding="6,0">
+          <ListBox IsVisible="{Binding #LogToggle.IsChecked}" Name="LogList" Classes="log" ItemsSource="{Binding Log.Visible}" Background="Transparent" Padding="6,0">
             <ListBox.ItemTemplate>
               <DataTemplate x:DataType="vm:LogEntry">
                 <Grid ColumnDefinitions="64,44,Auto,*" ColumnSpacing="8">
@@ -435,6 +575,8 @@
           </ListBox>
         </DockPanel>
       </Border>
+      </ThemeVariantScope>
     </Grid>
+    </ThemeVariantScope>
   </Grid>
 </Window>

@@ -61,6 +61,22 @@ public partial class MainViewModel : ObservableObject, IDisposable
         PatchParam = Settings.PatchParam;
         foreach (var option in Knowledge.Options.Values)
             PatchOptions.Add(new OptionRow(option));
+          foreach (var option in PatchOptions)
+              option.PropertyChanged += (_, e) =>
+              {
+                  if (e.PropertyName == nameof(OptionRow.IsEnabled))
+                  {
+                      if (option.IsEnabled && option.Key is "auto_pro" or "force_pro")
+                          foreach (var other in PatchOptions.Where(o => o.Key == (option.Key == "auto_pro" ? "force_pro" : "auto_pro")))
+                              other.IsEnabled = false;
+                      if (option.IsEnabled && option.Key is "playgo_0_6" or "playgo_0_6_log")
+                          foreach (var other in PatchOptions.Where(o => o.Key == (option.Key == "playgo_0_6" ? "playgo_0_6_log" : "playgo_0_6")))
+                              other.IsEnabled = false;
+                      OnPropertyChanged(nameof(PatchOptionsSummary));
+                      MarkAnalysisStale();
+                  }
+              };
+          SelectedPatchOption = PatchOptions.FirstOrDefault();
         Log.Info($"PS5 Backport Studio ready. Firmware DB: {FirmwareDbDir ?? "not found"}; fakelib store: {StoreDir ?? "not found"}");
         ReportDiagnosticFailure();
     }
@@ -74,7 +90,9 @@ public partial class MainViewModel : ObservableObject, IDisposable
     public Task PageLoad { get; private set; } = Task.CompletedTask;
 
     /// <summary>The page shown next to the navigation rail.</summary>
-    [ObservableProperty] public partial AppPage Page { get; set; }
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasGameBackground))]
+    public partial AppPage Page { get; set; }
 
     partial void OnPageChanged(AppPage value)
     {
@@ -139,12 +157,23 @@ public partial class MainViewModel : ObservableObject, IDisposable
 
     partial void OnCoverChanged(Bitmap? oldValue, Bitmap? newValue) => oldValue?.Dispose();
 
-    /// <summary>Releases the cover and cancels any work when the window closes.</summary>
+    /// <summary>The selected game's sce_sys/pic0.png artwork.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasGameBackground))]
+    public partial Bitmap? GameBackground { get; set; }
+
+    /// <summary>Shows artwork only on the game workbench.</summary>
+    public bool HasGameBackground => Page == AppPage.Backport && GameBackground is not null;
+
+    partial void OnGameBackgroundChanged(Bitmap? oldValue, Bitmap? newValue) => oldValue?.Dispose();
+
+    /// <summary>Releases game images and cancels any work when the window closes.</summary>
     public void Dispose()
     {
         _closing = true;
         Cancel();
         Cover = null;
+        GameBackground = null;
     }
 
     /// <summary>Close policy: stop new work, request cancellation, then wait for staging/commit cleanup.</summary>
@@ -200,10 +229,10 @@ public partial class MainViewModel : ObservableObject, IDisposable
         get
         {
             if (StoreDir is not { } store || TryName(SelectedFirmware) is null)
-                return "No fakelib store";
+                return "No compatibility library folder";
             return FakelibStore.Find(store, SelectedFirmware) is { } folder
-                ? $"Fakelibs: fakelibs/{System.IO.Path.GetFileName(folder)}"
-                : $"No fakelib set for FW {SelectedFirmware}";
+                ? $"Compatibility libraries: FW {System.IO.Path.GetFileName(folder)}"
+                : $"No compatibility libraries for FW {SelectedFirmware}";
         }
     }
 
@@ -220,14 +249,27 @@ public partial class MainViewModel : ObservableObject, IDisposable
     public partial string OutputFolder { get; set; } = "";
     /// <summary>Optional patches (opt-in fix groups); reset when another game is opened.</summary>
     public ObservableCollection<OptionRow> PatchOptions { get; } = [];
+      public string PatchOptionsSummary => $"Optional patches · {PatchOptions.Count} available · {PatchOptions.Count(o => o.IsEnabled)} enabled";
+      [ObservableProperty] public partial OptionRow? SelectedPatchOption { get; set; }
+      [ObservableProperty]
+      [NotifyPropertyChangedFor(nameof(VisiblePatchOptions))]
+      public partial string PatchSearch { get; set; } = "";
+      public IEnumerable<OptionRow> VisiblePatchOptions => PatchOptions.Where(o =>
+          o.Name.Contains(PatchSearch.Trim(), StringComparison.OrdinalIgnoreCase) ||
+          o.Description.Contains(PatchSearch.Trim(), StringComparison.OrdinalIgnoreCase));
+      partial void OnPatchSearchChanged(string value)
+      {
+          if (SelectedPatchOption is null || !VisiblePatchOptions.Contains(SelectedPatchOption))
+              SelectedPatchOption = VisiblePatchOptions.FirstOrDefault();
+      }
 
     // --- run state ---------------------------------------------------------------------------
     [ObservableProperty]
-    [NotifyCanExecuteChangedFor(nameof(AnalyzeCommand), nameof(CookCommand), nameof(BuildAmprIndexCommand), nameof(OpenGameCommand))]
+    [NotifyCanExecuteChangedFor(nameof(AnalyzeCommand), nameof(CookCommand), nameof(BuildAmprIndexCommand), nameof(OpenGameCommand), nameof(BuildPublishedAmprIndexCommand))]
     public partial bool Busy { get; set; }
 
     [ObservableProperty] public partial string StatusText { get; set; } = "Open a game folder to start";
-    [ObservableProperty] public partial string AmprIndexText { get; set; } = "Build after cooking if the release should include an AMPR index.";
+    [ObservableProperty] public partial string AmprIndexText { get; set; } = "Build after creating the backport if the release needs an AMPR index.";
     [ObservableProperty] public partial double Progress { get; set; }
     [ObservableProperty] public partial OperationState OperationState { get; set; } = OperationState.Pending;
     [ObservableProperty] public partial int SelectedTab { get; set; }
@@ -313,11 +355,15 @@ public partial class MainViewModel : ObservableObject, IDisposable
             Cover = null;
             try { Cover = info.IconPath is { } icon ? new Bitmap(icon) : null; }
             catch (Exception e) { Log.Warning($"Could not load the cover image: {e.Message}"); }
+            GameBackground = null;
+            try { GameBackground = info.BackgroundPath is { } background ? new Bitmap(background) : null; }
+            catch (Exception e) { Log.Warning($"Could not load the background image: {e.Message}"); }
             OutputFolder = DefaultOutput(info);
             foreach (var option in PatchOptions)
                 option.IsEnabled = false;
+              PatchSearch = "";
             AmprDebugLogging = false;
-            AmprIndexText = "Build after cooking if the release should include an AMPR index.";
+            AmprIndexText = "Build after creating the backport if the release needs an AMPR index.";
             ClearResults();
             StatusText = "Ready to analyze";
             Settings.Remember(folder);
@@ -361,18 +407,17 @@ public partial class MainViewModel : ObservableObject, IDisposable
 
     /// <summary>Builds the AMPRIDX3 file map for the game plus its cooked overlay.</summary>
     [RelayCommand(CanExecute = nameof(CanBuildAmprIndex))]
-    Task BuildAmprIndex() => CanBuildAmprIndex() ? _activeWork = BuildAmprIndexCore() : Task.CompletedTask;
+    Task BuildAmprIndex() => CanBuildAmprIndex() ? _activeWork = BuildAmprIndexCore(OutputFolder) : Task.CompletedTask;
 
-    async Task BuildAmprIndexCore()
+    async Task BuildAmprIndexCore(string output)
     {
-        if (!CanBuildAmprIndex() || Game is not { } game)
+        if (Busy || _closing || Game is not { } game || !Directory.Exists(output))
             return;
         Busy = true;
         OperationState = OperationState.Running;
         Progress = 0;
         _cancel = new CancellationTokenSource();
         StatusText = "Building AMPR index…";
-        string output = OutputFolder;
         string runId = Guid.NewGuid().ToString("N");
         var timer = Stopwatch.StartNew();
         Log.RunId = runId;
@@ -446,7 +491,9 @@ public partial class MainViewModel : ObservableObject, IDisposable
         Busy = true;
         Progress = 0;
         OperationState = OperationState.Running;
-        string verb = dryRun ? "Analyzing" : "Cooking";
+        int presentationRevision = _presentationRevision;
+        IsAnalysisStale = HasResult;
+        string verb = dryRun ? "Analyzing" : "Creating backport";
         StatusText = $"{verb}…";
         try
         {
@@ -480,12 +527,13 @@ public partial class MainViewModel : ObservableObject, IDisposable
             Progress = result.State == OperationState.Completed ? 100 : 0;
             if (dryRun) _analysis = result.Analysis;
             Show(result, knowledge);
+            IsAnalysisStale = presentationRevision != _presentationRevision;
             int written = result.Modules.Count(m => m.Written);
             StatusText = dryRun ? result.State == OperationState.Completed
                 ? $"Analyzed: {FixedCount} fixes planned, {UnresolvedCount} unresolved" : "Incomplete: analysis contains module errors"
-                : result.Published ? $"Cooked: {written} files written" : "Incomplete: output not published";
+                : result.Published ? $"Backport created: {written} files written" : "Incomplete: output not published";
             if (!dryRun && result.Published)
-                AmprIndexText = "Overlay cooked. Build the AMPR index before packaging the release.";
+                AmprIndexText = "Backport created. Build the AMPR index before packaging if the release uses AMPR.";
             if (result.State == OperationState.Failed)
                 Log.Error(dryRun ? "Analysis contains module errors; resolve them before cooking"
                     : $"Output left unchanged; incomplete-run reports: {result.DiagnosticDirectory}");
@@ -562,6 +610,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
         OnPropertyChanged(nameof(HasWarnings));
         ReportText = Pipeline.FormatReport(r, k);
         ApplyImportFilter();
+        NotifyResultPresentation();
     }
 
     void ClearResults()
@@ -576,6 +625,9 @@ public partial class MainViewModel : ObservableObject, IDisposable
         ModuleCount = FixedCount = UnresolvedCount = DerivedCount = 0;
         SelectedImport = null;
         SelectedModule = null;
+        IsAnalysisStale = false;
+        ImportCountText = "";
+        NotifyResultPresentation();
     }
 
     void ApplyImportFilter()
@@ -596,6 +648,9 @@ public partial class MainViewModel : ObservableObject, IDisposable
         _imports.ReplaceWith(rows);
         SelectedImport = selection is not null && Imports.Contains(selection) ? selection : null;
         ImportCountText = $"{Imports.Count} of {_allImports.Count} imports" + (SelectedModule is null ? "" : $" in {SelectedModule.Path}");
+        OnPropertyChanged(nameof(HasImports));
+        OnPropertyChanged(nameof(ImportTabText));
+        OnPropertyChanged(nameof(ImportsEmptyText));
     }
 
     // --- helpers -------------------------------------------------------------------------------

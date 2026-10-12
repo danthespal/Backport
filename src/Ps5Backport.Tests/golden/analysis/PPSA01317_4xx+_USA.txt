@@ -14,13 +14,13 @@ refs +2KpvixvL6E=1 +B-xlbiWDJ4=2 +FYcYefsVX0=1 +KDWny9Y-6k=1 +L98PIbGttk=7 +P6FR
       stubbed  5tRaBjtdTzY  sceVideoOutVrrPegToFixedRate  (GOT 0x55df670)
       stubbed  T4ucGB8CsnM  sceVideoOutVrrUnpegFromFixedRate  (GOT 0x55df678)
    libSceVideoOutVrrStatus:
-      stubbed  LibwuIonIBw  LibwuIonIBw  (GOT 0x55df6b8)
-      stubbed  kP2L8t3j-aM  kP2L8t3j-aM  (GOT 0x55df688)
+      stubbed  LibwuIonIBw  sceVideoOutAddVrrActiveStatusEvent  (GOT 0x55df6b8)
+      stubbed  kP2L8t3j-aM  sceVideoOutAddVrrStatusFlagsPrivilege  (GOT 0x55df688)
    libc:
       patched  4bp9gcNLwMI  _ZNSt8__sce_v211_Mtx_unlockEPP13pthread_mutex  (GOT 0x55df0a8)
       patched  5qXct3c1skg  _ZNSt8__sce_v29_Mtx_lockEPP13pthread_mutex  (GOT 0x55df0a0)
    libkernel:
-      stubbed  La9uyZv4Kvw  La9uyZv4Kvw  (GOT 0x55e0d48)
+      stubbed  La9uyZv4Kvw  sceKernelGetAvailableCpumask  (GOT 0x55e0d48)
       stubbed  NH6xARDOVv8  sceKernelGetOperationMode  (GOT 0x55df470)
 == libSieRdNNabla.prx
 lower bb4901df6313307b2bcd2d5653eccbbcfb6fac624007533d16f1d0d1d0916e5a
@@ -147,13 +147,13 @@ refs +BzXYkqYeLE=1 +L98PIbGttk=2 -YTW+qXc3CQ=2 -o5uEDpN+oY=5 04AjkP0jO9U=2 0Cq8i
    build: W:/Build/J03848509/sys/internal/usermode/src/libc/Prospero_Release/libc.prx
    reference=111, provided=0, stubbed=1, patched=0, data=2, missing=0, unknown=5
    libSceLibcInternalExt:
-      unknown  OQ-dzhlnM28  OQ-dzhlnM28  (GOT 0x18e288)
-      unknown  qBS714-Jr3g  qBS714-Jr3g  (GOT 0x18e330)
-      unknown  tB59hFLH3SA  tB59hFLH3SA  (GOT 0x18e268)
+      unknown  tB59hFLH3SA  _sceLibcInternalForceTlsDestructor  (GOT 0x18e268)
+      unknown  qBS714-Jr3g  _sceLibcInternalThreadAtexit  (GOT 0x18e330)
+      unknown  OQ-dzhlnM28  _sceLibcInternalThreadDtors  (GOT 0x18e288)
    libkernel:
       stubbed  04AjkP0jO9U  _umtx_op  (GOT 0x18e4f8)
-      unknown  XgVs4jRehcY  XgVs4jRehcY  (GOT 0x18e4f0)
-      unknown  dFym5b41JLU  dFym5b41JLU  (GOT 0x18e4e8)
+      unknown  XgVs4jRehcY  sceKernelSyncOnAddressWait16  (GOT 0x18e4f0)
+      unknown  dFym5b41JLU  sceKernelSyncOnAddressWait8  (GOT 0x18e4e8)
 == sce_sys/about/right.sprx
 lower 4aa7083b012069c2f1c896060c21cfe66e177ebe35fff6c512873546ec9cbe4a
 exact 4aa7083b012069c2f1c896060c21cfe66e177ebe35fff6c512873546ec9cbe4a

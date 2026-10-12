@@ -3,6 +3,37 @@ using Ps5Backport.Core;
 
 namespace Ps5Backport.App.ViewModels;
 
+/// <summary>A concise warning explanation with the original engine message available as details.</summary>
+public sealed class WarningRow(string detail)
+{
+    public string Detail => detail;
+    public string Summary => detail switch
+    {
+        _ when detail.StartsWith("param.json ", StringComparison.Ordinal) && detail.Contains("is above the target FW", StringComparison.Ordinal)
+            => "The game's declared firmware or SDK is newer than the target. Its version fields are being left unchanged; review the details.",
+        _ when detail.StartsWith("param.json ", StringComparison.Ordinal) && detail.Contains("lowered to", StringComparison.Ordinal)
+            => "Version lowering is included in this result. Changing these fields does not establish compatibility.",
+        "sce_sys/param.json not found" => "Game metadata is missing. Check that you opened the game root folder.",
+        _ when detail.StartsWith("uses PS VR2", StringComparison.Ordinal)
+            => "This game uses PS VR2. Check whether VR is required and whether the target firmware supports it.",
+        _ when detail.StartsWith("AMPR debug logging enabled", StringComparison.Ordinal)
+            => "AMPR diagnostic logging is enabled. Collect the log after testing and use a build without logging for release.",
+        _ when detail.StartsWith("no fakelib/libSceAmpr", StringComparison.Ordinal)
+            => "The dump has no AMPR or PlayGo replacement library. Under ShadowMountPlus, it would depend on the console's library setup; review the details.",
+        _ when detail.StartsWith("plain ELF module(s)", StringComparison.Ordinal)
+            => "Some plain ELF modules were left unchanged and are excluded from the output. Review the affected files.",
+        _ when detail.StartsWith("possible dynamic Psml dependency", StringComparison.Ordinal)
+            => "A possible dynamic Psml dependency was found. Review the included data; static evidence does not prove runtime use.",
+        _ when detail.StartsWith("option ", StringComparison.Ordinal)
+            => "An optional patch has a warning or library selection to review. Read its details before testing.",
+        _ when detail.Contains("known-broken build", StringComparison.Ordinal)
+            => "A module matches a known-broken library build. Review the affected module and the documented issue.",
+        _ when detail.Contains("could not be read", StringComparison.Ordinal)
+            => "A module could not be read and was left out of the backport. Check the source file and error details.",
+        _ => detail,
+    };
+}
+
 /// <summary>One optional patch on the Overview tab (data/fixes.json "options"); chosen per game, never saved.</summary>
 public sealed partial class OptionRow(FixOption o) : ObservableObject
 {
@@ -28,6 +59,10 @@ public sealed class ModuleRow(ModuleResult m)
     public string State => m.Error.Length > 0 ? "error" : m.Written ? "written" : Fixed > 0 || m.SdkPatched || m.Patterns.Count > 0 ? "will change" : "unchanged";
     /// <summary>Status key for coloring: ok / warn / error / muted.</summary>
     public string Tone => m.Error.Length > 0 ? "error" : State is "written" or "will change" ? "ok" : "muted";
+    public bool HasError => m.Error.Length > 0;
+    public bool HasChanges => Tone == "ok";
+    public string StateDisplay => State switch { "error" => "Error", "written" => "Written", "will change" => "Will change", _ => "Unchanged" };
+    public string StateDescription => HasError ? m.Error : StateDisplay;
 
     /// <summary>"0x10000040/0x12090001" (PS5/PS4 SDK) -> "10.00": the PS5 SDK's BCD major.minor.</summary>
     static string Version(string pair) =>
@@ -71,5 +106,23 @@ public sealed class ImportRow
         Imports.Patched => "patched",
         Imports.Missing or Imports.Unknown => "warn",
         _ => "muted",
+    };
+    public bool IsResolved => Tone is "ok" or "patched";
+    public bool IsUnresolved => Imports.IsUnresolved(Status);
+    public string StatusDisplay => Status switch
+    {
+        Imports.Reference => "On firmware", Imports.Provided => "Game library", Imports.Stubbed => "Stubbed",
+        Imports.Patched => "Patched", Imports.Data => "Data · unchecked", Imports.Missing => "Missing", Imports.Unknown => "Unknown", _ => Status,
+    };
+    public string StatusDescription => Status switch
+    {
+        Imports.Reference => "Exported by the reference firmware.",
+        Imports.Provided => "Provided by a library shipped with the game or backport.",
+        Imports.Stubbed => "Neutralized with a local stub; this alone does not establish compatibility.",
+        Imports.Patched => "Redirected or adapted by a patch.",
+        Imports.Data => "Data import: function export lists do not verify it.",
+        Imports.Missing => "Not exported by the exact target firmware reference; needs a fix.",
+        Imports.Unknown => "Not found in a lower-bound reference; availability on the target is uncertain.",
+        _ => Status,
     };
 }

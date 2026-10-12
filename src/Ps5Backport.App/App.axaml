@@ -1,13 +1,12 @@
 <Application xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              x:Class="Ps5Backport.App.App"
-             RequestedThemeVariant="Default">
-  <!-- Default = follow the operating system's light/dark setting; the Fluent accent is the system accent -->
+             RequestedThemeVariant="Dark">
+  <!-- The pixel BP identity uses a dark terminal palette with magenta and cyan accents. -->
 
   <Application.Resources>
     <ResourceDictionary>
       <ResourceDictionary.ThemeDictionaries>
-        <!-- color carries meaning only: status of an import / log level -->
         <ResourceDictionary x:Key="Light">
           <SolidColorBrush x:Key="StatusOk" Color="#3B6D11" />
           <SolidColorBrush x:Key="StatusPatched" Color="#185FA5" />
@@ -18,26 +17,44 @@
           <SolidColorBrush x:Key="CardBrush" Color="#FFFFFF" />
           <SolidColorBrush x:Key="HairlineBrush" Color="#1F000000" />
           <SolidColorBrush x:Key="GapBrush" Color="#FAEEDA" />
+          <SolidColorBrush x:Key="CanvasBrush" Color="#F5F2FA" />
+          <SolidColorBrush x:Key="InkBrush" Color="#21192D" />
+          <SolidColorBrush x:Key="CyanBrush" Color="#007C8B" />
+          <SolidColorBrush x:Key="MagentaBrush" Color="#AC167F" />
         </ResourceDictionary>
         <ResourceDictionary x:Key="Dark">
-          <SolidColorBrush x:Key="StatusOk" Color="#97C459" />
-          <SolidColorBrush x:Key="StatusPatched" Color="#85B7EB" />
-          <SolidColorBrush x:Key="StatusWarn" Color="#EF9F27" />
-          <SolidColorBrush x:Key="StatusError" Color="#F09595" />
-          <SolidColorBrush x:Key="StatusMuted" Color="#B4B2A9" />
-          <SolidColorBrush x:Key="PanelBrush" Color="#1F1F1E" />
-          <SolidColorBrush x:Key="CardBrush" Color="#262625" />
-          <SolidColorBrush x:Key="HairlineBrush" Color="#26FFFFFF" />
-          <SolidColorBrush x:Key="GapBrush" Color="#633806" />
+          <SolidColorBrush x:Key="StatusOk" Color="#91E9A5" />
+          <SolidColorBrush x:Key="StatusPatched" Color="#5DE9F5" />
+          <SolidColorBrush x:Key="StatusWarn" Color="#F6C56B" />
+          <SolidColorBrush x:Key="StatusError" Color="#FF8C9E" />
+          <SolidColorBrush x:Key="StatusMuted" Color="#ADA8BD" />
+          <SolidColorBrush x:Key="PanelBrush" Color="#0E0D16" />
+          <SolidColorBrush x:Key="CardBrush" Color="#151320" />
+          <SolidColorBrush x:Key="HairlineBrush" Color="#3E344E" />
+          <SolidColorBrush x:Key="GapBrush" Color="#4B361B" />
+          <SolidColorBrush x:Key="CanvasBrush" Color="#090910" />
+          <SolidColorBrush x:Key="InkBrush" Color="#F2EEF8" />
+          <SolidColorBrush x:Key="CyanBrush" Color="#5DE9F5" />
+          <SolidColorBrush x:Key="MagentaBrush" Color="#EE53BE" />
         </ResourceDictionary>
       </ResourceDictionary.ThemeDictionaries>
       <FontFamily x:Key="MonoFont">Cascadia Mono, Consolas, Menlo, monospace</FontFamily>
+      <FontFamily x:Key="UiFont">Segoe UI, Inter, sans-serif</FontFamily>
       <FontFamily x:Key="IconFont">Segoe Fluent Icons, Segoe MDL2 Assets</FontFamily>
+      <CornerRadius x:Key="ControlCornerRadius">0</CornerRadius>
+      <CornerRadius x:Key="OverlayCornerRadius">0</CornerRadius>
     </ResourceDictionary>
   </Application.Resources>
 
   <Application.Styles>
-    <FluentTheme />
+    <FluentTheme>
+      <FluentTheme.Palettes>
+        <ColorPaletteResources x:Key="Dark" Accent="#EE53BE" RegionColor="#090910"
+                               ChromeLow="#151320" ChromeMediumLow="#1D1929" ChromeMedium="#3E344E"
+                               ChromeHigh="#ADA8BD" BaseHigh="#F2EEF8" />
+        <ColorPaletteResources x:Key="Light" Accent="#AC167F" />
+      </FluentTheme.Palettes>
+    </FluentTheme>
     <StyleInclude Source="avares://Ps5BackportStudio/Styles.axaml" />
   </Application.Styles>
 </Application>

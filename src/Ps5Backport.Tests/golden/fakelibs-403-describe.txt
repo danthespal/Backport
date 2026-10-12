@@ -1,5 +1,5 @@
 libSceAgc.sprx: {
-  "container": "PS5-style SELF",
+  "container": "PS4-style fake SELF (make_fself.py)",
   "module": "libSceAgc",
   "ps5_sdk": "0x04000031",
   "ps4_sdk": "0x09040001",

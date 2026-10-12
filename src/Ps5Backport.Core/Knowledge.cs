@@ -229,8 +229,11 @@ public sealed class Knowledge
     /// <summary>The fix table for one backport: <see cref="Fixes"/> with the selected options' fixes on top.</summary>
     public IReadOnlyDictionary<string, Fix> FixTable(IEnumerable<string> options)
     {
+        var selected = options.ToList();
+        if (selected.Contains("auto_pro", StringComparer.Ordinal) && selected.Contains("force_pro", StringComparer.Ordinal))
+            throw new ArgumentException("Automatic Pro mode cannot be combined with Force PS5 Pro mode. Select one console mode.");
         var table = new Dictionary<string, Fix>(Fixes, StringComparer.Ordinal);
-        foreach (string key in options)
+        foreach (string key in selected)
         {
             if (!Options.TryGetValue(key, out var option))
                 throw new ArgumentException($"unknown option '{key}' (known: {string.Join(", ", Options.Keys)})");

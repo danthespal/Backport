@@ -74,7 +74,7 @@
     },
     "La9uyZv4Kvw": {
       "kind": "stub",
-      "name": "libkernel La9uyZv4Kvw",
+      "name": "sceKernelGetAvailableCpumask",
       "area": "libkernel",
       "sources": [
         "GT7",
@@ -384,7 +384,7 @@
     },
     "OQ-dzhlnM28": {
       "kind": "stub",
-      "name": "libSceLibcInternalExt OQ-dzhlnM28",
+      "name": "_sceLibcInternalThreadDtors",
       "area": "libSceLibcInternalExt (game libc.prx)",
       "sources": [
         "CONTROL",
@@ -394,7 +394,7 @@
     },
     "tB59hFLH3SA": {
       "kind": "stub",
-      "name": "libSceLibcInternalExt tB59hFLH3SA",
+      "name": "_sceLibcInternalForceTlsDestructor",
       "area": "libSceLibcInternalExt (game libc.prx)",
       "sources": [
         "CONTROL",
@@ -404,7 +404,7 @@
     },
     "qBS714-Jr3g": {
       "kind": "redirect",
-      "name": "libSceLibcInternalExt qBS714-Jr3g (used by __cxa_thread_atexit)",
+      "name": "_sceLibcInternalThreadAtexit (used by __cxa_thread_atexit)",
       "area": "libSceLibcInternalExt (game libc.prx)",
       "sources": [
         "GT7",
@@ -523,73 +523,6 @@
       "proven": false,
       "rationale": "AnyPS5 shows the generic Wait has Wait32's signature (u32* addr, u32 expected, KernelUseconds* timeout, name), so it gets Wait32's translation (the console-proven Wait32 path, op 11 WAIT_UINT). GT7's own patch passed `expected` as the _umtx_op op code (spins instead of sleeping)."
     },
-    "ZP4e7rlzOUk": {
-      "kind": "adapter",
-      "name": "sceSaveDataMount3",
-      "area": "save data, entitlements, HTTP2",
-      "sources": [
-        "GT7",
-        "CONTROL",
-        "AC",
-        "BL4",
-        "UFC6",
-        "HADES2",
-        "HKSS"
-      ],
-      "insns": [
-        "488b4718  ; mov rax, [rdi+0x18]",
-        "4c8d5801  ; lea r11, [rax+1]",
-        "4d85db  ; test r11, r11",
-        "490f44c3  ; cmove rax, r11",
-        "48894718  ; mov [rdi+0x18], rax"
-      ],
-      "when": "always",
-      "below": "5.00",
-      "proven": false,
-      "note": "SaveDataMount3.systemBlocks (+0x18) -1 -> 0",
-      "rationale": "Argument fix: the function exists on old firmware but rejects values newer SDKs pass (AC README: ShellCore rejects -1 when the game SDK is below 5.00, hence below 5.00). All three games patched this at the call site in their own code; doing it at the import boundary covers every game. rax = [rdi+0x18]; r11 = rax+1; if r11 == 0 (value was -1): rax = 0; [rdi+0x18] = rax."
-    },
-    "sDCBrmc61XU": {
-      "kind": "adapter",
-      "name": "sceSaveDataPrepare",
-      "area": "save data, entitlements, HTTP2",
-      "sources": [
-        "CONTROL"
-      ],
-      "insns": [
-        "8b4604  ; mov eax, [rsi+4]",
-        "83f802  ; cmp eax, 2",
-        "41bb01000000  ; mov r11d, 1",
-        "410f44c3  ; cmove eax, r11d",
-        "894604  ; mov [rsi+4], eax"
-      ],
-      "when": "always",
-      "proven": false,
-      "note": "SaveDataPrepareParam.prepareMode (+0x04) 2 -> 1",
-      "rationale": "Argument fix (CONTROL patched the call site). eax = [rsi+4]; if eax == 2: eax = 1; [rsi+4] = eax (r11 scratch)."
-    },
-    "DImz2Ft9E2g": {
-      "kind": "adapter",
-      "name": "sceAudioOut2GetSpeakerInfo",
-      "area": "audio / ACM",
-      "sources": [
-        "CONTROL README + eboot analysis",
-        "AnyPS5 struct"
-      ],
-      "insns": [
-        "57  ; push rdi (SpeakerInfo*; also aligns the stack)",
-        "call_got  ; call the real function through its GOT slot",
-        "5f  ; pop rdi",
-        "836708fe  ; and dword [rdi+8], ~1   flags: no 3D audio",
-        "816704ff000000  ; and dword [rdi+4], 0xff   <= 8 speakers",
-        "c3  ; ret (eax = the real result)"
-      ],
-      "when": "always",
-      "post_call": true,
-      "proven": false,
-      "note": "SpeakerInfo.flags bit 0 cleared, available_bits & 0xff",
-      "rationale": "On newer firmware the OS reports 3D audio / 7.1.4 speakers, the game then opens a 12-channel AudioOut2 port, and an old-SDK binary is refused: no sound (CONTROL README; CONTROL fixed it inside Wwise). The game decides from GetSpeakerInfo (CONTROL eboot 0x3ca27f1: flags & 1 = 3D audio, popcnt(available_bits) > 8 = height speakers; struct layout from AnyPS5). Post-call fix: run the real function, then clear the 3D flag and cap the report at 8 speakers. Derived from references, not console-tested."
-    },
     "-sD02mFDBh4": {
       "kind": "adapter",
       "name": "sceUserServiceGetGamePresets",
@@ -624,7 +557,7 @@
     },
     "gWT7X8H0bYs": {
       "kind": "stub",
-      "name": "libSceVideoOutVrrStatus gWT7X8H0bYs",
+      "name": "sceVideoOutGetOutputStatusWithVrr",
       "area": "VRR",
       "sources": [
         "FW 10.01 libSceVideoOut"
@@ -649,6 +582,142 @@
       "warning": "Opt-in. Console-tested on The Rogue Prince of Persia 01.006.000 (PPSA28155); other games require testing. Unrecognized or ambiguous code is left unchanged. Online-service warnings may still appear.",
       "sources": ["The Rogue Prince of Persia 01.006.000 PPSA28155, user console-tested guarded NotSet fallback"],
       "fixes": {}
+    },
+    "save_mount_compat": {
+      "name": "Save mount compatibility",
+      "description": "Changes sceSaveDataMount3 systemBlocks from -1 to 0 on target firmware below 5.00. Requires Known fixes enabled.",
+      "warning": "Disabled by default. Derived adapter, not console-tested. Without it, old firmware may reject a save-mount request using -1. Disabling does not undo patches already present in the input.",
+      "sources": ["Existing save-data argument adapter; console testing pending"],
+      "fixes": {
+        "ZP4e7rlzOUk": {
+          "kind": "adapter",
+          "name": "sceSaveDataMount3",
+          "area": "save data, entitlements, HTTP2",
+          "sources": [
+            "GT7",
+            "CONTROL",
+            "AC",
+            "BL4",
+            "UFC6",
+            "HADES2",
+            "HKSS"
+          ],
+          "insns": [
+            "488b4718  ; mov rax, [rdi+0x18]",
+            "4c8d5801  ; lea r11, [rax+1]",
+            "4d85db  ; test r11, r11",
+            "490f44c3  ; cmove rax, r11",
+            "48894718  ; mov [rdi+0x18], rax"
+          ],
+          "when": "always",
+          "below": "5.00",
+          "proven": false,
+          "note": "SaveDataMount3.systemBlocks (+0x18) -1 -> 0",
+          "rationale": "Argument fix: the function exists on old firmware but rejects values newer SDKs pass (AC README: ShellCore rejects -1 when the game SDK is below 5.00, hence below 5.00). All three games patched this at the call site in their own code; doing it at the import boundary covers every game. rax = [rdi+0x18]; r11 = rax+1; if r11 == 0 (value was -1): rax = 0; [rdi+0x18] = rax."
+        }
+      }
+    },
+    "save_prepare_compat": {
+      "name": "Save preparation compatibility",
+      "description": "Changes sceSaveDataPrepare preparation mode 2 to 1 before the native call. Requires Known fixes enabled.",
+      "warning": "Disabled by default. Derived adapter, not console-tested. Without it, the native save-preparation call may reject mode 2. Disabling does not undo patches already present in the input.",
+      "sources": ["Existing save-data argument adapter; console testing pending"],
+      "fixes": {
+        "sDCBrmc61XU": {
+          "kind": "adapter",
+          "name": "sceSaveDataPrepare",
+          "area": "save data, entitlements, HTTP2",
+          "sources": [
+            "CONTROL"
+          ],
+          "insns": [
+            "8b4604  ; mov eax, [rsi+4]",
+            "83f802  ; cmp eax, 2",
+            "41bb01000000  ; mov r11d, 1",
+            "410f44c3  ; cmove eax, r11d",
+            "894604  ; mov [rsi+4], eax"
+          ],
+          "when": "always",
+          "proven": false,
+          "note": "SaveDataPrepareParam.prepareMode (+0x04) 2 -> 1",
+          "rationale": "Argument fix (CONTROL patched the call site). eax = [rsi+4]; if eax == 2: eax = 1; [rsi+4] = eax (r11 scratch)."
+        }
+      }
+    },
+    "audio_speaker_compat": {
+      "name": "Audio speaker compatibility",
+      "description": "Limits the reported speaker configuration to eight speakers and clears the 3D-audio flag after sceAudioOut2GetSpeakerInfo. Optional so dialogue issues can be compared with this adapter enabled or disabled. Requires Known fixes enabled.",
+      "warning": "Experimental; this adapter is derived and not console-tested. Disabled by default. Without it, some old-SDK games may select an unsupported audio layout and lose sound. Required missing audio API stubs and other existing audio fixes remain active. Re-cook from the same source for each test; disabling does not undo patches already present in the input.",
+      "sources": ["CONTROL README + eboot analysis", "AnyPS5 struct"],
+      "fixes": {
+        "DImz2Ft9E2g": {
+          "kind": "adapter",
+          "name": "sceAudioOut2GetSpeakerInfo",
+          "area": "audio / ACM",
+          "sources": [
+            "CONTROL README + eboot analysis",
+            "AnyPS5 struct"
+          ],
+          "insns": [
+            "57  ; push rdi (SpeakerInfo*; also aligns the stack)",
+            "call_got  ; call the real function through its GOT slot",
+            "5f  ; pop rdi",
+            "836708fe  ; and dword [rdi+8], ~1   flags: no 3D audio",
+            "816704ff000000  ; and dword [rdi+4], 0xff   <= 8 speakers",
+            "c3  ; ret (eax = the real result)"
+          ],
+          "when": "always",
+          "post_call": true,
+          "proven": false,
+          "note": "SpeakerInfo.flags bit 0 cleared, available_bits & 0xff",
+          "rationale": "On newer firmware the OS reports 3D audio / 7.1.4 speakers, the game then opens a 12-channel AudioOut2 port, and an old-SDK binary is refused: no sound (CONTROL README; CONTROL fixed it inside Wwise). The game decides from GetSpeakerInfo (CONTROL eboot 0x3ca27f1: flags & 1 = 3D audio, popcnt(available_bits) > 8 = height speakers; struct layout from AnyPS5). Post-call fix: run the real function, then clear the 3D flag and cap the report at 8 speakers. Derived from references, not console-tested."
+        }
+      }
+    },
+    "auto_pro": {
+      "name": "Automatic Pro mode",
+      "description": "Keeps native console-mode queries when available, so the game can choose its base PS5 or PS5 Pro path at runtime. Missing queries fall back to base-console values. Keeps the default Psml initialization guard below firmware 9.00. Requires Known fixes enabled.",
+      "warning": "Experimental; test on both console types. Queries missing from the selected target fall back to fixed base-console answers, even if this cook later runs on a Pro with newer firmware. Preserves automatic selection only for queries the target supports. Replacement libraries must report the actual console correctly. Cannot be combined with Force PS5 Pro mode.",
+      "sources": ["Native hardware queries with base-console fallback; console testing pending"],
+      "fixes": {
+        "NH6xARDOVv8": {
+          "kind": "stub",
+          "name": "sceKernelGetOperationMode",
+          "area": "PS5 Pro",
+          "sources": ["GT7"],
+          "stub": "opmode_normal",
+          "when": "missing",
+          "note": "Only missing queries return normal mode; native queries are unchanged."
+        },
+        "tU5e3f9gSiU": {
+          "kind": "stub",
+          "name": "sceKernelIsTrinityMode",
+          "area": "PS5 Pro",
+          "sources": ["GT7"],
+          "stub": "ret0",
+          "when": "missing",
+          "note": "Only missing queries return not Pro; native queries are unchanged."
+        },
+        "yu17wG8L5FI": {
+          "kind": "stub",
+          "name": "sceKernelHasTrinityMode",
+          "area": "PS5 Pro",
+          "sources": ["GT7"],
+          "stub": "ret0",
+          "when": "missing",
+          "note": "Only missing queries return not Pro; native queries are unchanged."
+        },
+        "BfBDZGbti7A": {
+          "kind": "stub",
+          "name": "sceAgcGetIsTrinityMode",
+          "area": "PS5 Pro",
+          "sources": ["AC"],
+          "stub": "byte0",
+          "when": "missing",
+          "proven": false,
+          "note": "Only missing queries write a one-byte false flag; native queries are unchanged."
+        }
+      }
     },
     "force_pro": {
       "name": "Force PS5 Pro mode",
@@ -723,6 +792,22 @@
           ]
         }
       ]
+    },
+    "playgo_0_6": {
+      "name": "PlayGo 0.6 (experimental)",
+      "description": "Replaces libScePlayGo.sprx with the official 0.6 build, adding synchronized lifecycle handling and empty-list compatibility. Keeps the current library unless selected.",
+      "warning": "Console compatibility is unverified. Available in the 4, 4.03, 7, 9.60, 10 and 11 store sets. Select either this option or PlayGo 0.6 logging. Uses an existing /app0/playgo_stub.dat when present; no config is generated.",
+      "sources": ["https://github.com/drakmor/pgo_stub/releases/tag/0.6"],
+      "fixes": {},
+      "fakelib_variant": "playgo_0_6"
+    },
+    "playgo_0_6_log": {
+      "name": "PlayGo 0.6 logging (experimental)",
+      "description": "Uses the official 0.6 logging build under the runtime name libScePlayGo.sprx. Writes /app0/playlgo.log (upstream spelling) for one diagnostic run.",
+      "warning": "Console compatibility is unverified. Logging changes timing and writes /app0/playlgo.log (upstream spelling). Available in the 4, 4.03, 7, 9.60, 10 and 11 store sets. Select either this option or normal PlayGo 0.6; collect the log and disable this option after testing. No config is generated.",
+      "sources": ["https://github.com/drakmor/pgo_stub/releases/tag/0.6"],
+      "fixes": {},
+      "fakelib_variant": "playgo_0_6_log"
     }
   },
   "patterns": [

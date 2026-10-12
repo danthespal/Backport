@@ -10,19 +10,19 @@ o.elf 82936c5b825cc53403996a9e944bb058445e16b368e0316c6e5aa20bdef26141
 
 $ stub <repo>\work\NOT_BACKPORT_elf\sce_module\libc.elf <tmp>\o.elf --nid dFym5b41JLU --nid XgVs4jRehcY
 exit 0
-   GOT 0x18e4e8 -> ret0 @ 0x137   dFym5b41JLU
-   GOT 0x18e4f0 -> ret0 @ 0x137   XgVs4jRehcY
+   GOT 0x18e4e8 -> ret0 @ 0x137   sceKernelSyncOnAddressWait8
+   GOT 0x18e4f0 -> ret0 @ 0x137   sceKernelSyncOnAddressWait16
 2 imports stubbed: <tmp>\o.elf
 o.elf b73b25dd8da127980417a3a07658b8227efd94b05b11eca1da076a161d000be9
 
 $ stub <repo>\work\NOT_BACKPORT_elf\sce_module\libc.elf <tmp>\o.elf --unknown --firmware 4
 exit 0
    GOT 0x18e1f8 -> ret0 @ 0x137   sceKernelMapNamedFlexibleMemoryInternal
-   GOT 0x18e268 -> ret0 @ 0x137   tB59hFLH3SA
-   GOT 0x18e288 -> ret0 @ 0x137   OQ-dzhlnM28
-   GOT 0x18e330 -> ret0 @ 0x137   qBS714-Jr3g
-   GOT 0x18e4e8 -> ret0 @ 0x137   dFym5b41JLU
-   GOT 0x18e4f0 -> ret0 @ 0x137   XgVs4jRehcY
+   GOT 0x18e268 -> ret0 @ 0x137   _sceLibcInternalForceTlsDestructor
+   GOT 0x18e288 -> ret0 @ 0x137   _sceLibcInternalThreadDtors
+   GOT 0x18e330 -> ret0 @ 0x137   _sceLibcInternalThreadAtexit
+   GOT 0x18e4e8 -> ret0 @ 0x137   sceKernelSyncOnAddressWait8
+   GOT 0x18e4f0 -> ret0 @ 0x137   sceKernelSyncOnAddressWait16
    GOT 0x18e4f8 -> ret0 @ 0x137   sceKernelSyncOnAddressWait32
    GOT 0x18e500 -> ret0 @ 0x137   sceKernelSyncOnAddressWait64
    GOT 0x18e508 -> ret0 @ 0x137   sceKernelSyncOnAddressWake

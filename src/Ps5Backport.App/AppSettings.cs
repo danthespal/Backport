@@ -15,7 +15,7 @@ public sealed class AppSettings
     public int? WindowX { get; set; }
     public int? WindowY { get; set; }
     public bool Maximized { get; set; }
-    public double LogHeight { get; set; } = 200;
+    public double LogHeight { get; set; } = 140;
 
     public string Firmware { get; set; } = "4";
     public bool KnownFixes { get; set; } = true;

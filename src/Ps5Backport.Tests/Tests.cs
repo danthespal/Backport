@@ -79,7 +79,7 @@ namespace Ps5Backport.Tests
         {
             var s = AppSettings.Load(TempFile(), out string? problem);
             Assert.Null(problem);
-            Assert.Equal(("4", true, 200.0), (s.Firmware, s.KnownFixes, s.LogHeight));
+            Assert.Equal(("4", true, 140.0), (s.Firmware, s.KnownFixes, s.LogHeight));
         }
 
         [Fact]
@@ -185,7 +185,7 @@ namespace Ps5Backport.Tests
             var vm = new MainViewModel(new AppSettings { FirmwareDbDir = missing, FakelibStoreDir = missing, AerolibPath = missing }) { Page = AppPage.Settings };
             Assert.Equal(3, vm.PathSettings.Count);
             Assert.All(vm.PathSettings, p => Assert.Equal(("warn", true), (p.Tone, p.IsCustom)));
-            Assert.Equal("No fakelib set for FW 4", vm.FakelibText);
+            Assert.Equal("No compatibility libraries for FW 4", vm.FakelibText);
         }
 
         [Fact]
@@ -1163,6 +1163,128 @@ namespace Ps5Backport.Tests
             finally { Directory.Delete(root, true); }
         }
 
+        /// <summary>Names and their NUL must fit inside the declared dynamic string table.</summary>
+        [Theory]
+        [Trait("Phase", "AnyPs5Phase2")]
+        [InlineData(0, 1)]
+        [InlineData(1, 1)]   // Symbol offset equals the declared table size.
+        [InlineData(16, 1)]  // NUL is immediately outside the declared table.
+        [InlineData(17, 17)]
+        [InlineData(17, 18)]
+        public void StringTableBoundary_RejectsInvalidSymbolNames(int stringSize, uint nameOffset)
+        {
+            byte[] data = SyntheticBinary.Elf();
+            SyntheticBinary.W64(data, 0x160, 10); // DT_STRSZ, replacing the old DT_NULL.
+            SyntheticBinary.W64(data, 0x168, (ulong)stringSize);
+            SyntheticBinary.W64(data, 0x170, 0);  // Retain a terminated dynamic table.
+            SyntheticBinary.W32(data, 0x298, nameOffset);
+            Assert.Throws<InvalidDataException>(() => new SceElf(data).Symbols());
+        }
+
+        [Theory]
+        [Trait("Phase", "AnyPs5Phase2")]
+        [InlineData(17UL)] // NUL is the last byte inside the declared table.
+        [InlineData(0x300UL)] // Table ends exactly at EOF.
+        [InlineData(null)] // Retain support for inputs without DT_STRSZ.
+        public void StringTableBoundary_AcceptsValidAndLegacyTables(ulong? stringSize)
+        {
+            byte[] data = SyntheticBinary.Elf();
+            if (stringSize is { } size)
+            {
+                SyntheticBinary.W64(data, 0x160, 10);
+                SyntheticBinary.W64(data, 0x168, size);
+                SyntheticBinary.W64(data, 0x170, 0);
+            }
+            Assert.Equal(SyntheticBinary.Nid + "#A#A", new SceElf(data).Symbols()[1].Name);
+        }
+
+        [Theory]
+        [Trait("Phase", "AnyPs5Phase2")]
+        [InlineData(0x301UL)]
+        [InlineData(ulong.MaxValue)]
+        public void StringTableBoundary_RejectsDeclaredRangeOutsideFile(ulong stringSize)
+        {
+            byte[] data = SyntheticBinary.Elf();
+            SyntheticBinary.W64(data, 0x160, 10);
+            SyntheticBinary.W64(data, 0x168, stringSize);
+            SyntheticBinary.W64(data, 0x170, 0);
+            Assert.Throws<InvalidDataException>(() => new SceElf(data).Symbols());
+        }
+
+        [Theory]
+        [Trait("Phase", "AnyPs5Phase2")]
+        [InlineData(SceElf.DtSceModuleName, 16, false)]
+        [InlineData(SceElf.DtSceModuleName, 17, true)]
+        [InlineData(SceElf.DtSceModuleInfoPath, 16, false)]
+        [InlineData(SceElf.DtSceModuleInfoPath, 17, true)]
+        [InlineData(SceElf.DtSceImportLib, 16, false)]
+        [InlineData(SceElf.DtSceImportLib, 17, true)]
+        public void StringTableBoundary_AppliesToDynamicNames(ulong tag, int stringSize, bool valid)
+        {
+            byte[] data = SyntheticBinary.Elf();
+            SyntheticBinary.W64(data, 0x150, tag);
+            SyntheticBinary.W64(data, 0x158, 1);
+            SyntheticBinary.W64(data, 0x160, 10);
+            SyntheticBinary.W64(data, 0x168, (ulong)stringSize);
+            SyntheticBinary.W64(data, 0x170, 0);
+            var elf = new SceElf(data);
+            string? ReadName() => tag == SceElf.DtSceModuleName ? elf.ModuleName
+                : tag == SceElf.DtSceModuleInfoPath ? elf.BuildPath : elf.ImportLibraries()[0];
+            if (valid)
+                Assert.Equal(SyntheticBinary.Nid + "#A#A", ReadName());
+            else
+                Assert.Throws<InvalidDataException>(() => ReadName());
+        }
+
+        /// <summary>Explicit function labels restrict selection; library links preserve their existing scope.</summary>
+        [Theory]
+        [Trait("Phase", "AnyPs5Phase3")]
+        [InlineData("sceTarget", "sceTarget", "")]
+        [InlineData("`sceTarget`", "sceTarget", "")]
+        [InlineData("sceMissing", "", "")]
+        [InlineData("`sceMissing`", "", "")]
+        [InlineData("sceTarget, sceOther", "sceOther,sceTarget", "")]
+        [InlineData("`sceTarget`, sceMissing, sceTarget", "sceTarget", "")]
+        [InlineData("sceTarget", "sceTarget", " - also mentions `sceOther`")]
+        [InlineData("libSynthetic", "sceOther,sceTarget", "")]
+        [InlineData("libSynthetic", "sceTarget", " - `sceTarget`")]
+        [InlineData("libSynthetic", "sceOther,sceTarget", " - status `NOT_RUNNING`")]
+        [InlineData("Descriptive label", "sceOther,sceTarget", "")]
+        public void CandidateBulletScope_SelectsOnlyDocumentedFunctions(string label, string expectedNames, string prose)
+        {
+            string root = TempRoot();
+            try
+            {
+                string library = Directory.CreateDirectory(Path.Combine(root, "core", "libs", "prx", "libSynthetic")).FullName;
+                string docs = Directory.CreateDirectory(Path.Combine(root, "docs", "dev")).FullName;
+                File.WriteAllText(Path.Combine(library, "Export.cpp"),
+                    "int APS5_VABI sceTarget() { return 0; }\nint APS5_VABI sceOther() { return 1; }\n");
+                string bullet = "- [" + label + "](../../core/libs/prx/libSynthetic/Export.cpp)" + prose + "\n";
+                File.WriteAllText(Path.Combine(docs, "TechnicalDebt.md"),
+                    "### Silent stubs\n" + bullet + bullet + "### Other\n- [sceOther](../../core/libs/prx/libSynthetic/Export.cpp)\n");
+                var candidates = DataGenerators.ScanCandidates(root);
+                Assert.Equal(expectedNames.Split(',', StringSplitOptions.RemoveEmptyEntries), candidates.Select(c => c.Name));
+                Assert.All(candidates, c =>
+                {
+                    Assert.Equal(Nid.Compute(c.Name), c.Nid);
+                    Assert.Equal(c.Name == "sceTarget" ? 0u : 1u, c.Value);
+                });
+                string output = Path.Combine(root, "candidates.json");
+                Assert.Equal(candidates, DataGenerators.WriteCandidates(root, output));
+                using var generated = System.Text.Json.JsonDocument.Parse(File.ReadAllBytes(output));
+                var entries = generated.RootElement.GetProperty("candidates");
+                Assert.Equal(candidates.Count, entries.EnumerateObject().Count());
+                Assert.All(candidates, c =>
+                {
+                    var entry = entries.GetProperty(c.Nid);
+                    Assert.Equal(c.Name, entry.GetProperty("name").GetString());
+                    Assert.Equal($"0x{c.Value:x8}", entry.GetProperty("value").GetString());
+                    Assert.Equal(c.Source, entry.GetProperty("source").GetString());
+                });
+            }
+            finally { Directory.Delete(root, true); }
+        }
+
         static string TempRoot()
         {
             string root = Path.Combine(Path.GetTempPath(), "ps5backport-audit-" + Guid.NewGuid().ToString("N"));
@@ -1812,7 +1934,7 @@ namespace Ps5Backport.Tests
             try
             {
                 // no --stub-nid: GT7's eboot stubs and libc fixes come from data/fixes.json
-                var result = Samples.Backport(game, output, "4", Samples.RefStubs, extraFakelib: fakelib);
+                var result = Samples.Backport(game, output, "4", Samples.RefStubs, extraFakelib: fakelib, options: ["save_mount_compat"]);
                 var mods = result.Modules.ToDictionary(m => m.Path);
                 Assert.DoesNotContain(result.Modules, m => m.Error.Length > 0);
                 Assert.Equal("PPSA01317", result.TitleId);
@@ -1907,10 +2029,11 @@ namespace Ps5Backport.Tests
             var elf = SceElf.Load(Samples.Work("NOT_BACKPORT_elf", "eboot.elf"));
             const string nid = "ZP4e7rlzOUk";   // sceSaveDataMount3
             var imp = elf.Imports().First(i => i.Nid == nid && i.Plt);
-            FixApplier.Apply(elf, [nid], k);
-            var (executed, _, jumped) = Samples.Trace(elf, imp, k.Fixes[nid]);
+            var table = k.FixTable(["save_mount_compat"]);
+            FixApplier.Apply(elf, [nid], k, table);
+            var (executed, _, jumped) = Samples.Trace(elf, imp, table[nid]);
             Assert.Equal(imp.GotVaddr, jumped);
-            Assert.Equal(k.Fixes[nid].Insns.Select(i => i.Hex), executed);
+            Assert.Equal(table[nid].Insns.Select(i => i.Hex), executed);
         }
 
         /// <summary>GT7 imports sceTextToSpeech2Initialize (missing on 3.20); AnyPS5: GT7 skips narration when it fails.</summary>
@@ -1997,10 +2120,11 @@ namespace Ps5Backport.Tests
             var elf = SceElf.Load(Samples.Work("CONTROL_elf", "eboot.elf"));
             const string nid = "DImz2Ft9E2g";   // sceAudioOut2GetSpeakerInfo
             var imp = elf.Imports().First(i => i.Nid == nid && i.Plt);
-            FixApplier.Apply(elf, [nid], k);
-            var (executed, called, _) = Samples.Trace(elf, imp, k.Fixes[nid]);
+            var table = k.FixTable(["audio_speaker_compat"]);
+            FixApplier.Apply(elf, [nid], k, table);
+            var (executed, called, _) = Samples.Trace(elf, imp, table[nid]);
             Assert.Equal(imp.GotVaddr, called);
-            Assert.Equal(k.Fixes[nid].Insns.Select(i => i.Hex), executed);
+            Assert.Equal(table[nid].Insns.Select(i => i.Hex), executed);
         }
 
         /// <summary>The imports GT7's and CONTROL's tested backports left unresolved are exactly data/left_unpatched.json's.</summary>
@@ -2157,13 +2281,13 @@ namespace Ps5Backport.Tests
             try
             {
                 var result = Samples.Backport(Path.Combine(ac, "default"), output, "4.50", Repo.Need("firmware_db"),
-                                              store: Path.Combine(Repo.Root, "fakelibs"), options: ["force_pro", "gpu_scratch"]);
+                                              store: Path.Combine(Repo.Root, "fakelibs"), options: ["force_pro", "gpu_scratch", "save_mount_compat", "save_prepare_compat"]);
                 // gpu_scratch reproduces AC's own files: ShaderData.bin of 4xx+, the hooked AgcDriver of 10xx+
                 Assert.Equal(File.ReadAllBytes(Path.Combine(ac, "4xx+", "ShaderData.bin")), File.ReadAllBytes(Path.Combine(output, "ShaderData.bin")));
                 Assert.Equal(File.ReadAllBytes(Path.Combine(ac, "10xx+", "fakelib", "libSceAgcDriver.sprx")),
                              File.ReadAllBytes(Path.Combine(output, "fakelib", "libSceAgcDriver.sprx")));
                 var mods = result.Modules.ToDictionary(m => m.Path);
-                Assert.Equal(["force_pro", "gpu_scratch"], result.Options);
+                Assert.Equal(["force_pro", "gpu_scratch", "save_mount_compat", "save_prepare_compat"], result.Options);
                 var data = Assert.Single(result.DataFiles);
                 Assert.Equal(("ShaderData.bin", "s_trap 1 -> s_nop", 168, true), (data.Path, data.Pattern, data.Count, data.Written));
                 var pattern = Assert.Single(mods["eboot.bin"].Patterns);
@@ -3468,10 +3592,10 @@ namespace Ps5Backport.Tests
             Assert.Equal(Fix.KindPltStub, table["NH6xARDOVv8"].Kind);           // sceKernelGetOperationMode -> mode 3
             Assert.Equal(Fix.KindStub, k.Fixes["NH6xARDOVv8"].Kind);            // default untouched
             Assert.Throws<ArgumentException>(() => k.FixTable(["no_such_option"]));
-            var mount3 = k.Fixes["ZP4e7rlzOUk"];                                 // systemBlocks -1 -> 0: SDK < 5.00 only
+            var mount3 = k.Options["save_mount_compat"].Fixes["ZP4e7rlzOUk"];                                 // systemBlocks -1 -> 0: SDK < 5.00 only
             Assert.True(mount3.Due("4") && mount3.Due("4.50"));
             Assert.False(mount3.Due("5") || mount3.Due("5.02") || mount3.Due("10.01"));
-            Assert.True(k.Fixes["sDCBrmc61XU"].Due("12.00"));                   // no limit
+            Assert.True(k.Options["save_prepare_compat"].Fixes["sDCBrmc61XU"].Due("12.00"));                   // no limit
             var mfsr = k.Fixes["3WVD91e12ZQ"];                                   // scePsmlMfsrInit: skipped below 9.00
             Assert.True(mfsr.Kind == Fix.KindPltStub && mfsr.When == Fix.WhenAlways && mfsr.Due("4") && !mfsr.Due("9.00"));
             Assert.False(table.ContainsKey("3WVD91e12ZQ"));                      // force_pro lifts it (kind "none")
@@ -3515,9 +3639,8 @@ namespace Ps5Backport.Tests
         public void DerivedFixes_AreFlagged()
         {
             var k = K;
-            Assert.Equal(["libSceVideoOutVrrStatus gWT7X8H0bYs", "sceAudioOut2GetSpeakerInfo", "sceHmd2ReprojectionSetAllowPositionalReprojection",
-                          "sceHttp2SetRequestNoContentLength", "sceKernelSyncOnAddressWait", "scePsmlMfsrInit", "sceSaveDataMount3",
-                          "sceSaveDataPrepare", "sceUserServiceGetGamePresets"],
+            Assert.Equal(["sceHmd2ReprojectionSetAllowPositionalReprojection", "sceHttp2SetRequestNoContentLength",
+                          "sceKernelSyncOnAddressWait", "scePsmlMfsrInit", "sceUserServiceGetGamePresets", "sceVideoOutGetOutputStatusWithVrr"],
                          k.FixList.Where(f => !f.Proven).Select(f => f.Name).Order(StringComparer.Ordinal));
             Assert.True(k.Fixes["NH6xARDOVv8"].Proven);   // GetOperationMode stub: proven by both games
         }
@@ -4013,7 +4136,7 @@ namespace Ps5Backport.Tests
                 applied += result.Applied.Length + result.Stubs.Length;
             }
             Golden.Match(Path.Combine("patch", "all-known-fixes.txt"), sb.ToString());
-            Assert.True(applied >= 19, $"only {applied} fixes applied");   // eboot 3 + 6, libc 6 + 4
+            Assert.True(applied >= 17, $"only {applied} fixes applied");   // optional save-data adapters are excluded
         }
 
         [Fact]
@@ -4318,17 +4441,22 @@ namespace Ps5Backport.Tests
             Assert.NotNull(info.IconPath);
         }
 
-        [Fact]
-        public void DryRun_WritesNothing_ButReportsTheSame()
+        [Theory]
+        [InlineData(false, 18)]
+        [InlineData(true, 21)]
+        public void DryRun_WritesNothing_AndReportsOnlySelectedAdapters(bool optionalAdapters, int expectedFixes)
         {
             string game = Repo.Need(".original", "backports", "PPSA01317", "default");
             string output = Path.Combine(Path.GetTempPath(), "ps5backport-dry-" + Guid.NewGuid().ToString("N"));
             var k = new Knowledge(Repo.Need("data"));
-            var o = new BackportOptions { Firmware = "4", ReferenceDir = Repo.Need("firmware_db"), FakelibStore = Path.Combine(Repo.Root, "fakelibs"), DryRun = true };
+            var o = new BackportOptions { Firmware = "4", ReferenceDir = Repo.Need("firmware_db"), FakelibStore = Path.Combine(Repo.Root, "fakelibs"), DryRun = true,
+                Options = optionalAdapters ? ["save_mount_compat", "save_prepare_compat", "audio_speaker_compat"] : [] };
             var dry = Pipeline.Backport(game, output, o, k, cancel: TestContext.Current.CancellationToken);
             Assert.False(Directory.Exists(output));
             Assert.All(dry.Modules, m => Assert.False(m.Written));
-            Assert.Equal(21, dry.Modules.Sum(m => m.Fixed.Count + m.StubbedNow.Count));   // incl. the PS VR2 reprojection setter stub and scePsmlMfsrInit
+            Assert.Equal(expectedFixes, dry.Modules.Sum(m => m.Fixed.Count + m.StubbedNow.Count));
+            foreach (string nid in new[] { "ZP4e7rlzOUk", "sDCBrmc61XU", "DImz2Ft9E2g" })
+                Assert.Equal(optionalAdapters, dry.Modules.Any(m => m.Fixed.Any(f => f.Nid == nid)));
             // with the exact 4.00 export list only one PSVR2 function is really missing (behind the sceHmd2Initialize check);
             // SetAllowPositionalReprojection is stubbed by its rule
             Assert.Equal(["sceHmd2ReprojectionSetParamWithBuffer"],
@@ -5145,6 +5273,39 @@ namespace Ps5Backport.Tests
             Assert.True(File.Exists(Path.Combine(result.DiagnosticDirectory, Pipeline.ReportJson)));
             Assert.False(File.Exists(Path.Combine(result.DiagnosticDirectory, Publication.ManifestName)));
             Assert.Equal("previous", File.ReadAllText(Path.Combine(Output, "old.bin")));
+        }
+
+        [Fact]
+        [Trait("Phase", "AnyPs5Phase4")]
+        public void InvalidDynamicStrings_PreserveOutputAndAllowSubsequentCook()
+        {
+            Previous();
+            var fixture = RunFixture();
+            var options = new BackportOptions { Firmware = "4", ReferenceDir = fixture.Reference, ExtendText = false };
+            byte[] data = SyntheticBinary.Elf();
+            SyntheticBinary.W64(data, 0x160, 10); // DT_STRSZ excludes the symbol's terminating NUL.
+            SyntheticBinary.W64(data, 0x168, 16);
+            SyntheticBinary.W64(data, 0x170, 0);
+            string module = Path.Combine(fixture.Game, "eboot.bin");
+            File.WriteAllBytes(module, data);
+            Assert.Throws<InvalidDataException>(() => Pipeline.Backport(fixture.Game, Output, options, fixture.Knowledge,
+                cancel: TestContext.Current.CancellationToken));
+            Assert.Equal(data, File.ReadAllBytes(module));
+            Assert.Equal(new byte[] { 1, 2 }, File.ReadAllBytes(Path.Combine(fixture.Game, "data.bin")));
+            Assert.Equal("previous", File.ReadAllText(Path.Combine(Output, "old.bin")));
+            Assert.Single(Directory.EnumerateFiles(Output, "*", SearchOption.AllDirectories));
+            Assert.Empty(Directory.GetDirectories(_root, "*.stage"));
+            Assert.Empty(Directory.GetFiles(_root, "*.journal.json"));
+
+            SyntheticBinary.W64(data, 0x168, 17);
+            File.WriteAllBytes(module, data);
+            var result = Pipeline.Backport(fixture.Game, Output, options, fixture.Knowledge,
+                cancel: TestContext.Current.CancellationToken);
+            Assert.True(result.Published);
+            Assert.Equal(new byte[] { 3, 4 }, File.ReadAllBytes(Path.Combine(Output, "data.bin")));
+            Assert.Equal(data, File.ReadAllBytes(module));
+            Assert.Equal("previous", File.ReadAllText(Path.Combine(result.PreviousOutputBackup, "old.bin")));
+            Publication.Verify(Output);
         }
 
         [Theory]

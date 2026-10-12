@@ -33,6 +33,8 @@ public static partial class Pipeline
             .Order(StringComparer.Ordinal).ToList();
         if (derived.Count > 0)
             lines.Add($"  NOTE: {derived.Count} derived fix(es) applied, not yet console-tested: {string.Join(", ", derived)}");
+        foreach (var note in (JsonArray)DeploymentReport(r)["notes"]!)
+            lines.Add("  deployment: " + note!.GetValue<string>());
         foreach (var m in r.Modules)
         {
             lines.Add("");
@@ -72,6 +74,7 @@ public static partial class Pipeline
         ["title_id"] = r.TitleId, ["content_version"] = r.ContentVersion,
         ["param_warnings"] = new JsonArray(r.ParamWarnings.Select(w => (JsonNode)w).ToArray()),
         ["fakelib_source"] = r.FakelibSource, ["reference"] = r.Reference,
+        ["deployment"] = DeploymentReport(r),
         ["psvr2"] = new JsonArray(r.Psvr2.Select(p => (JsonNode)new JsonObject
         {
             ["module"] = p.Module, ["library"] = p.Library, ["imports"] = p.Imports,

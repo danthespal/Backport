@@ -16,7 +16,8 @@ public static class Cli
           sign ELF SELF                            ELF -> fake-signed SELF (make_fself defaults)
           sdk ELF OUT (--firmware FW | --ps5 V --ps4 V)
           nid NAME...                              NID of each symbol name
-          report ELF... [--reference DIR] [--firmware FW] [--provider ELF]... [--all]
+          crash-log LOG [--report JSON] [--json]    local fatal-signal analysis; inputs are read-only
+          report ELF... [--reference DIR] [--firmware FW] [--provider ELF]... [--all] [--provider-audit]
           stub ELF OUT [--nid NID]... [--unknown] [--firmware FW] [--define-symbol] [--reference DIR] [--provider ELF]...
           backport GAME OUT --firmware FW [--patch-param] [--fakelib DIR] [--fakelib-store DIR] [--no-fakelib-store]
                    [--stub-nid NID]... [--stub-unknown] [--define-symbol] [--no-known-fixes] [--candidate-fixes]
@@ -34,7 +35,7 @@ public static class Cli
     static readonly HashSet<string> Flags =
     [
         "--all", "--unknown", "--define-symbol", "--patch-param", "--no-fakelib-store", "--stub-unknown",
-        "--no-known-fixes", "--candidate-fixes", "--extend-text", "--no-extend-text", "--sign",
+        "--no-known-fixes", "--candidate-fixes", "--extend-text", "--no-extend-text", "--sign", "--provider-audit", "--json",
     ];
 
     /// <summary>Positionals plus options (`--name value`, `--name=value`, repeatable; flags take no value).</summary>
@@ -116,6 +117,7 @@ public static class Cli
                         output.WriteLine($"{Nid.Compute(name)}  {name}");
                     return 0;
                 case "report" when p.Count > 0: return Report(a, p, output);
+                case "crash-log" when p.Count == 1: return CrashLogCommand(a, p[0], output);
                 case "stub" when p.Count == 2: return Stub(a, p, output);
                 case "backport" when p.Count == 2: return Backport(a, p, output, diagnostics);
                 case "fwdb" when p.Count > 0: return FwdbCommand(a, p, output);
@@ -136,6 +138,35 @@ public static class Cli
             error.WriteLine($"error: {e.Message}");
             return 1;
         }
+    }
+
+    static int CrashLogCommand(Args a, string path, TextWriter output)
+    {
+        var result = CrashLog.AnalyzeFiles(path, a.Get("--report"));
+        if (a.Has("--json")) output.WriteLine(result.ToJsonString(new System.Text.Json.JsonSerializerOptions { WriteIndented = true }));
+        else
+        {
+            output.WriteLine($"log: {result["logPath"]} (SHA256 {result["logSha256"]})");
+            if (result["reportPath"] is not null) output.WriteLine($"report: {result["reportPath"]} (SHA256 {result["reportSha256"]}; identity unverified)");
+            output.WriteLine($"parsing: {result["nulBytesIgnoredForParsing"]} NUL bytes ignored; {result["decodeReplacementCharacters"]} replacement characters");
+            foreach (var ev in result["events"]!.AsArray())
+            {
+                output.WriteLine($"fatal event at line {ev!["line"]}: pid={ev["pid"]}, signal={ev["signal"]}, reason={ev["reason"]}");
+                foreach (var item in ev["addresses"]!.AsArray())
+                {
+                    output.WriteLine($"  {item!["kind"]} {item["runtimeAddress"]}: {item["resolution"]}" +
+                        (item["runtimeModule"] is null ? "" : $"; {item["runtimeModule"]} + {item["textRelativeOffset"]}"));
+                    if (item["reportModuleCandidates"] is { } candidates)
+                        foreach (var candidate in candidates.AsArray()) output.WriteLine($"    unverified report candidate: {candidate!["path"]}");
+                }
+            }
+            if (result["events"]!.AsArray().Count == 0) output.WriteLine("No recognized fatal events.");
+            foreach (var warning in result["warnings"]!.AsArray()) output.WriteLine($"warning at line {warning!["line"]}: {warning["warning"]}");
+            output.WriteLine(result["coordinateNote"]);
+            output.WriteLine(result["reportIdentity"]);
+            output.WriteLine(result["cause"]);
+        }
+        return 0;
     }
 
     static void Info(List<string> files, TextWriter o)
@@ -186,6 +217,9 @@ public static class Cli
         o.WriteLine($"reference: {reference.Label}");
         o.WriteLine();
         var provided = Imports.LoadProviderExports(a.All("--provider"));
+        var auditProviders = a.Has("--provider-audit")
+            ? a.All("--provider").Select(path => (Module: Path.GetFullPath(path), Elf: SceElf.Load(path))).ToList()
+            : [];
         string[] show = a.Has("--all")
             ? [Imports.Missing, Imports.Unknown, Imports.Stubbed, Imports.Patched, Imports.Provided, Imports.Data]
             : [Imports.Missing, Imports.Unknown, Imports.Stubbed, Imports.Patched];
@@ -193,6 +227,8 @@ public static class Cli
         {
             var elf = SceElf.Load(path);
             o.WriteLine(Imports.Report(Path.GetFileName(path), elf, Imports.Classify(elf, reference.Nids, provided, reference.Exact), names, show));
+            if (a.Has("--provider-audit"))
+                o.WriteLine(Imports.ProviderReport(Imports.AuditProviders(Path.GetFullPath(path), elf, auditProviders)));
             o.WriteLine();
         }
         return 0;
@@ -312,19 +348,24 @@ public static class Cli
         return 0;
     }
 
+    /// <summary>A file in the repository's data/, not the copy bundled beside the executable.</summary>
+    static string RepoDataFile(string command, string name) => Paths.FindUp("Ps5Backport.slnx") is { } solution
+        ? Path.Combine(Path.GetDirectoryName(solution)!, "data", name)
+        : throw new DirectoryNotFoundException($"data {command} must run inside the repository (Ps5Backport.slnx not found above the app folder)");
+
     static int DataCommand(Args a, string what, TextWriter o)
     {
         switch (what)
         {
             case "sony-builds":
             {
-                string path = Path.Combine(Paths.DataDir, "sony_builds.json");
+                string path = RepoDataFile(what, "sony_builds.json");
                 o.WriteLine($"{DataGenerators.WriteSonyBuilds(a.Get("--dumps", DefaultDumps), path)} build ids -> {path}");
                 return 0;
             }
             case "candidates":
             {
-                string path = Path.Combine(Paths.DataDir, "candidates.json");
+                string path = RepoDataFile(what, "candidates.json");
                 var found = DataGenerators.WriteCandidates(a.Get("--anyps5", RepoPath(".original", "reference", "AnyPS5")), path);
                 o.WriteLine($"{found.Count} candidates written to {path}");
                 foreach (var c in found)

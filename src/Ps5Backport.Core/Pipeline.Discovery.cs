@@ -6,6 +6,8 @@ public static partial class Pipeline
 
     static Discovery DiscoverModules(string source, IReadOnlyList<string> sourceModules, BackportOptions o, Knowledge knowledge, GameResult result)
     {
+        if (result.Options.Contains("playgo_0_6") && result.Options.Contains("playgo_0_6_log"))
+            throw new ArgumentException("Select only one PlayGo 0.6 variant (normal or logging).");
         // fakelibs: an explicit folder wins; otherwise the per-firmware store (fakelibs/<FW>/)
         string? extra = o.ExtraFakelib;
         if (extra is null && o.FakelibStore is not null)

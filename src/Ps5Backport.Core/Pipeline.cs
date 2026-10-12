@@ -232,6 +232,14 @@ public static partial class Pipeline
         var newerDbs = firmwareDbs.Where(d => FirmwareDb.Key(d.Firmware).CompareTo(target) > 0).ToList();
 
         var (loaded, provided) = LoadProviders(modules, result, o, knowledge, progress, cancel, trace);
+        // Capture dependency evidence before patches can rewrite imports or string data.
+        var gameImports = loaded.Where(l => !l.Mod.Added).SelectMany(l => l.Elf.Imports()).Select(i => i.Nid).ToHashSet(StringComparer.Ordinal);
+        bool directPsml = loaded.Any(l => l.Mod.Added &&
+            string.Equals(Path.GetFileNameWithoutExtension(l.Mod.Path), "libScePsml", StringComparison.Ordinal) && l.Elf.Exports().Overlaps(gameImports));
+        var dynamicPsml = loaded.Where(l => !l.Mod.Added && !directPsml)
+            .Select(l => (l.Mod.Path, Evidence: DynamicPsmlEvidence(l.Elf))).Where(l => l.Evidence is not null).ToList();
+        foreach (var (path, evidenceText) in dynamicPsml)
+            result.ParamWarnings.Add($"possible dynamic Psml dependency in {path}: {evidenceText}; including the selected Psml library's app0 data when available (static evidence does not prove runtime use)");
         var sourceFiles = evidence.CaptureInventory(src);
         var pathCase = FilePathCase.Resolve(sourceFiles.Select(f => Path.GetRelativePath(src, f).Replace('\\', '/')),
             loaded.Where(m => !m.Mod.Added).Select(m => m.Elf.Data), result.ParamWarnings, cancel);
@@ -328,13 +336,14 @@ public static partial class Pipeline
         }
 
         // the fakelib set's app0/ folder: data files its libraries read from the game folder (k9.psp, the PSSR
-        // model an app0-patched libScePsml loads on a PS5 Pro). Added only when a fakelib the game uses (one that
-        // exports a function a game module imports) names the file as "/app0/<file>"; the game's own file wins.
+        // model an app0-patched libScePsml loads on a PS5 Pro). Direct imports or explicit dynamic Psml
+        // evidence select the library; it must name the file as "/app0/<file>". The game's own file wins.
         string? app0 = extra is null ? null : System.IO.Path.Combine(extra, "app0");
         if (app0 is not null && Directory.Exists(app0))
         {
-            var gameImports = loaded.Where(l => !l.Mod.Added).SelectMany(l => l.Elf.Imports()).Select(i => i.Nid).ToHashSet(StringComparer.Ordinal);
-            var used = loaded.Where(l => l.Mod.Added && l.Elf.Exports().Overlaps(gameImports)).Select(l => l.Elf).ToList();
+            var used = loaded.Where(l => l.Mod.Added && (l.Elf.Exports().Overlaps(gameImports) ||
+                dynamicPsml.Count > 0 && string.Equals(Path.GetFileNameWithoutExtension(l.Mod.Path), "libScePsml", StringComparison.Ordinal)))
+                .Select(l => l.Elf).ToList();
             foreach (string file in GameScan.WalkFiles(app0, cancel))
             {
                 cancel.ThrowIfCancellationRequested();

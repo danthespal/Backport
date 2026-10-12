@@ -6,6 +6,8 @@ PS5 Backport Studio is a private Windows desktop/CLI tool for inspecting decrypt
 
 This is the single root documentation file. It retains the useful implementation contracts, verification instructions, measured results and binary/reference findings from the former documents. Obsolete planning checklists and unimplemented architecture proposals were removed; implemented decisions and meaningful limitations remain. Detailed sections retain their original historical dates/test counts. Newer implementation contracts supersede earlier audit limitations; old reports are not new tests of the current code. The current audit below records the completed local review and its verification limits; it does not establish console compatibility or the absence of every defect.
 
+Game, console and diagnostic investigations (crashes, save failures, AGC/Psml experiments, rejected hypotheses and open items) are kept in [FINDINGS.md](FINDINGS.md). The `tmp/…` and `work/…` evidence paths cited below were consolidated there and deleted on 12 October 2026, except for the `work/*_elf` fixtures, `work/agc-4.03-patch/` and `work/fakelib-backups/`.
+
 ## Contents
 
 - [Current software audit and confirmed fixes](#current-audit)
@@ -159,6 +161,8 @@ The sharing package includes the local fakelib store's `.sprx`, `.prx`, `.psp` c
 **Symbol catalog relocation — 10 October 2026.** The maintained catalog is `data/aerolib.csv`, copied byte for byte from `sce_symbols_new` at upstream commit `fe2cc2948e014f62c878a98c4dc7a53ecf4c6f75` ([zecoxao/sce_symbols](https://github.com/zecoxao/sce_symbols)). The 13,064,239-byte copy has SHA-256 `977e697acaa6637c75d0f16d282bbc343ee18be5643c7e77bda4969d39d284b4`. Build/publish inputs, default GUI/CLI lookup, tests and game-analysis profiles now use the maintained copy. Explicit user path overrides remain available. Future reference updates require deliberately refreshing this copy and validating the catalog; changing a reference checkout alone no longer changes Backport's symbols. This supersedes historical reference-path instructions below.
 
 Validation: Debug and Release each build with zero warnings/errors and pass all **311 public tests**, with zero failures/skips. The two existing symbol-catalog checks now run publicly without reference fixtures. Runtime-asset checks verify unchanged catalog hashes in both executable outputs; the isolated portable CLI test resolves symbols from `data/aerolib.csv` outside the repository. A Release CLI publish also preserves the catalog hash under `data/aerolib.csv`. Both analysis-profile paths were resolved and verified. Catalog golden expectations were unchanged by this relocation.
+
+**Verified name additions — 12 October 2026.** `data/aerolib.csv` is no longer a pure upstream copy. Its last 28 lines were added from a reference-repository sweep. Every identifier in `.original/reference` (AnyPS5 at `2a5eca11c`, sce_symbols `ps4_names.txt`) and `fakelib_source` was hashed with the NID algorithm, and a name was kept only when its NID is exported by a real firmware in `firmware_db` and was unnamed before. The new names cover libScePsml (`scePsmlMfsr2*` ×9, `scePsmlMfsrCreateContext1300`, `scePsmlMfsrGetDispatchMfsrPacket1300`), libkernel (`sceKernelGetAvailableCpumask`, `sceKernelSyncOnAddressWait8/16`), libSceLibcInternal (`_sceLibcInternalThreadAtexit`, `_sceLibcInternalThreadDtors`, `_sceLibcInternalForceTlsDestructor`, `__std_atomic_wait_direct_8`), ulobjmgr ×2, `sceVideoOutGetOutputStatusWithVrr`, `sceHttp2GetMaxConcurrentRequest` and libSceNpPartnerSubscription ×6. Each name agrees with the existing fix notes; for example, the `La9uyZv4Kvw` "CPU affinity mask (FW 12.40+)" stub is `sceKernelGetAvailableCpumask`. The catalog is now 13,065,514 bytes with SHA-256 `541fa85b1d59b5d48c725554b8ce8e6035d5d90873793fd3b7f45ccca87de000`. Five placeholder rule labels in `data/fixes.json` now use these names; NIDs and behaviour are unchanged. Refreshed goldens differ from a baseline recorded with the old catalog only by NID → name substitutions and report hashes. Patched binaries are byte-identical. All 647 tests pass with zero skips. When refreshing from upstream, re-append these lines (or drop any that upstream now carries).
 
 Ordinary builds tolerate absent local fakelibs; the symbol catalog is included in the source tree under `data/`. Function-name lookup falls back to NIDs if the runtime symbol database is unavailable. The sharing script requires the symbol file and local fakelib binaries and stops if they are missing. Some backport options need a matching fakelib set; the included sets do not establish compatibility for every target.
 
@@ -670,11 +674,13 @@ If the game crashes after playing for a while, collect the logs and record how l
 
 *COLLECT THESE FILES*
 
-Copy them immediately after testing, before launching anything else:
+Copy them immediately after testing, before launching anything else. If the system crashes the game, first copy the entire crash folder inside `/devlog/system/sce_coredumps.0/` to your PC, including all files and subfolders. Move quickly: the system will delete it.
 
 • `/data/shadowmount/debug.log`
 • `/data/shadowmount/debug.log.1` — send this too if the console crashed/rebooted and you jailbroke again.
 • `ampr_emu.log`, if it exists in the game folder.
+• The entire crash folder from `/devlog/system/sce_coredumps.0/`, if the system crashes the game — copy it immediately before the system deletes it.
+• Kernel logs from the test, including the launch and crash (if any).
 • The on-screen crash code, for example `CE-xxxxxx-x`; a photo or video is welcome.
 
 *ARCHIVE AND SEND*
@@ -706,7 +712,7 @@ Global fakelib excluded for this title: yes / no
 Crash code (if any):
 What happened:
 Time from launch to error / crash:
-Files attached: debug.log, debug.log.1, ampr_emu.log, photo/video
+Files attached: debug.log, debug.log.1, ampr_emu.log, crash folder from sce_coredumps.0, kernel logs, photo/video
 Archive sent to this game's Telegram channel: yes / no
 ```
 
@@ -2474,6 +2480,9 @@ Three variants. All SELFs in `default` are decrypted (PS5-style SELF, unwrap wor
 - `data/fixes.json` `"options"`: opt-in groups, never applied by default; a selected option's fixes replace the default fix for the same NID. CLI `--option KEY` (both engines), report line `options:` plus a WARNING with the option's warning text, JSON `options`.
 - New fix kind **`plt_stub`**: stub body in a cave, the PLT entry jumps to it, the GOT slot is left alone. This is how AC and Yōtei force values, and it works even where the target firmware has the function (a GOT-only stub could be overwritten if the loader binds the slot).
 - First option **`force_pro`**: `sceKernelGetOperationMode` → `opmode_pro` (mode 3), `sceKernelIsTrinityMode` → `ret:1`, `sceAgcGetIsTrinityMode` → `byte1`. Both engines produce byte-identical AC output with it.
+- Experimental C# option **`auto_pro`** (Automatic Pro mode) preserves native console queries supported by the selected target; missing operation-mode/Trinity queries fall back to base-console values, including a one-byte false output for `sceAgcGetIsTrinityMode`. Keeps the default Psml-init guard below FW 9.00. Requires Known fixes. Mutually exclusive with `force_pro` in the GUI and rejected together by the pipeline. A FW 4 cook can retain fixed base answers even on a newer Pro console; this is not a runtime resolver for APIs missing from the target. Replacement-library query behavior and both console paths require console testing. Already patched inputs are not restored to their original queries.
+- **`audio_speaker_compat`** (Audio speaker compatibility) makes the previously automatic `sceAudioOut2GetSpeakerInfo` adapter opt-in, disabled by default. It clears the 3D-audio flag and caps the speaker mask at eight speakers. Enable it to reproduce the previous adapter; disable it to test native speaker reporting. Requires Known fixes. Required missing audio API stubs (including `sceAudioOut2Set3DLatency`) and existing Wwise patterns remain independent. Re-cook both variants from the same source: this option cannot undo input patches. Console compatibility and dialogue loss require A/B testing.
+- **`save_mount_compat`** (Save mount compatibility) and **`save_prepare_compat`** (Save preparation compatibility) make the two derived save-data adapters independently opt-in, disabled by default. Mount changes `systemBlocks = -1` to `0` only below target FW 5.00; preparation changes mode `2` to `1`. Requires Known fixes. Enable both to restore their previous automatic behavior. Leaving them off preserves native arguments, which old firmware may reject; neither toggle undoes patches already present in the source. GUI options and Analyze/Cook use the same fix table.
 
 ##### The shader `s_trap` fix and the AgcDriver scratch hook (investigated 2026-10-09)
 - **AC replaced every `01 00 92 BF` (`s_trap 1`) with `00 00 80 BF` (`s_nop 0`)**: all 164 in the eboot (all 4-aligned, all in the RW segment 7) and all 168 in `ShaderData.bin` (only 20 of them 4-aligned in the file). It's a blind byte-pattern replace; nothing else in `ShaderData.bin` changed.
@@ -2905,6 +2914,329 @@ At FW 4 (`fakelibs/4`) and FW 4.03 (`fakelibs/4.03`), every import resolves, 0 e
 ---
 
 ---
+
+## AnyPS5 improvement plan and Phase 1 evidence (2026-10-11)
+
+This is a new, bounded plan, separate from the historical engineering phases below. The reference inspected is `.original/reference/AnyPS5` at commit `9a1f6f44ac75ac42aea6fa0d60f99fad1cde7bc4`; its checkout is clean. The purpose is to correct reproduced defects while preserving accepted cook behavior. No phase can establish that software has no possible leak, exception, deadlock, compatibility issue, or other defect. Acceptance is limited to the inputs and behaviors actually checked. Console runtime compatibility requires console evidence.
+
+### Recommended order and progression rules
+
+1. **Phase 1 — baseline and defect evidence.** Execute the existing public verification in Debug and Release before production changes; record string-table and candidate-selection defects with synthetic fixtures and valid controls; run the available existing cook goldens without recording replacements. Finish with an explicit pass/fail gate. This phase changes tests and documentation only. An unexplained baseline mismatch blocks Phase 2.
+2. **Phase 2 — bound ELF strings by their declared table.** First resolve the baseline blocker with an evidence-backed explanation; do not treat replacing a golden as proof. Change the malformed-string characterization assertions to require rejection and demonstrate that the current parser fails those expectations. Add boundary, truncation, overflowing declared-size and missing-terminator cases with valid controls. Only then make the smallest parser correction supported by the format contract. Require public verification and unchanged valid cook outputs before accepting it.
+3. **Phase 3 — keep candidate generation within the documented function scope.** First change the link-label case to expect only the named function, and the unmatched explicit-name case to require no broadening; demonstrate those tests fail before editing the generator. Cover repeated names, mixed formatting, explicitly library-wide bullets and missing functions. Then make the smallest extraction/filtering correction. Validate against the pinned AnyPS5 checkout and review every candidate difference before considering a separate catalog change. Keep the live catalog unchanged in this phase. Require public verification and cook equivalence.
+4. **Phase 4 — integration and release gate.** Repeat locked restore, Debug/Release builds and tests, plus available cook goldens, against the final combined changes. Restore the missing fixtures before claiming the full Private/All lane passes. Review rejected-input diagnostics, cancellation, publication cleanup and candidate-generator API behavior. Run applicable native UI checks if UI behavior changes; obtain console evidence for any claimed improvement to console runtime behavior. Record remaining limits and release only after the gates pass.
+
+Other AnyPS5 proposals stay deferred: SCE-specific dynamic-table support, provider/reachability changes, synchronization adapters, AMPR changes and new automatic stubs. They need an affected Backport input, a reproduced defect and a failing test before receiving implementation priority. Reference code by itself does not establish a Backport improvement.
+
+### Phase 1 — executed; progression gate failed
+
+**Scope:** no production correction, catalog generation, rule change or golden replacement. Existing app/UI edits were present before this phase and were left untouched. Public verification covers the current workspace including those edits; it does not establish their native UI behavior.
+
+**Baseline commands:**
+
+```powershell
+pwsh -NoProfile -File scripts/verify.ps1 -Lane Public
+$env:PS5BP_REQUIRE_PRIVATE = '1'
+$env:PS5BP_RECORD = $null
+dotnet src/Ps5Backport.Tests/bin/Debug/net10.0/Ps5Backport.Tests.dll -class '*BackportParityTests' -failSkips -failWarns -result-xml work/verification/anyps5-phase1-cook-debug-unrestricted.xml
+dotnet src/Ps5Backport.Tests/bin/Release/net10.0/Ps5Backport.Tests.dll -class '*BackportParityTests' -failSkips -failWarns -result-xml work/verification/anyps5-phase1-cook-release-unrestricted.xml
+```
+
+The public runner and cook checks needed execution outside the filesystem sandbox: the initial sandbox attempts failed on the SDK environment check and temporary atomic file moves respectively. Those environment failures are retained separately and are not counted as product verification results. The successful-access cook runs below still failed their golden assertions.
+
+| Check executed | Debug | Release |
+| --- | --- | --- |
+| Public baseline before the six characterization cases | 338 passed, zero failed/skipped | 338 passed, zero failed/skipped |
+| Public verification after the six cases | 344 passed, zero failed/skipped | 344 passed, zero failed/skipped |
+| Builds through the public verification script | Zero warnings/errors | Zero warnings/errors |
+| Existing `BackportParityTests` | 7 executed: 4 passed, 3 failed, zero skipped | 7 executed: 4 passed, 3 failed, zero skipped |
+
+Public baseline XML is in `work/verification/20261011-125155-96353d1cff96448c8020695a5d11397b/`; post-test XML is in `work/verification/20261011-125317-8039d90c827e439197fa1ca89f64fa1f/`. Cook XML is at the paths in the commands above. These local verification artifacts are ignored working files, not portable fixtures committed to the repository.
+
+**Six added characterization cases** in `AuditTests`, tagged `Phase=AnyPs5Phase1`:
+
+- String-table size 17: the symbol name and its NUL fit exactly. This valid control is accepted.
+- String-table size 1: the symbol offset equals the declared size. The current parser accepts it, proving the missing declared-table boundary check.
+- String-table size 16: the NUL is immediately outside the declared table. The current parser accepts it too.
+- A Markdown function link labelled `sceTarget` selects both `sceTarget` and `sceOther` from the linked synthetic file, proving unwanted broadening.
+- A backtick-labelled `sceTarget` selects only that function. This control establishes existing restricted selection behavior.
+- An explicitly named but missing `sceMissing` selects both functions, proving the empty-intersection fallback broadens scope.
+
+These assertions intentionally record current behavior. Their passing status is evidence of reproduction, **not** evidence that malformed acceptance or candidate broadening is correct. The affected expectations must be replaced by desired-behavior assertions and observed failing before Phases 2 and 3 implement their fixes. Fixtures are synthetic; the tests create temporary candidate files and delete them in `finally`.
+
+**Cook baseline results:**
+
+| Existing configuration/check | Debug and Release result |
+| --- | --- |
+| `notbackport-4` | Fail: first difference is `backport_report.json` SHA-256 |
+| `notbackport-403-all-options` | Fail: first difference is `backport_report.json` SHA-256 |
+| `notbackport-4-no-store` | Fail: first difference is `backport_report.json` SHA-256 |
+| `control-403` | Pass: existing output record matches |
+| `ac-450-options` | Pass: existing output record matches |
+| Progress and cancellation | Pass |
+| Refuse output inside source game | Pass |
+
+The three failing configurations use the retained GT7 original. The equality assertion reports only the first difference. It does **not** prove that the remaining reports or payloads match. The cause of those mismatches has not been established; do not label them harmless, stale goldens, or runtime regressions without comparing the actual records and their provenance. Debug and Release report the same first actual hash for each failing configuration. `git diff` confirms no changes in `src/Ps5Backport.Core`, `data`, or `src/Ps5Backport.Tests/golden` during this phase.
+
+The complete Private/All lane was not established: its preflight requires deleted derived work fixtures, including `work/NOT_BACKPORT_elf`. Running the available parity class does not substitute for that lane. No console gameplay, exhaustive malformed-input proof, long-duration leak profiling or native UI validation was performed.
+
+**Stop decision:** Phase 1 evidence collection is complete, but its cook acceptance gate failed. Do not begin Phase 2 until the three baseline differences are explained and an agreed, reproducible cook baseline is established. Production changes cannot currently be certified as improving cook stability.
+
+### GT7 baseline follow-up — differences explained (2026-10-11)
+
+The follow-up captured all three GT7 configurations independently in Debug and Release, using the same inputs/options and the existing `BackportParityTests.OutputRecord` and `Golden.Portable` comparison functions. Production code, catalogs and the original goldens remain unchanged. The local capture harness is `work/verification/CookBaseline/`; outputs and complete records are retained in `work/verification/cook-baseline-debug/` and `work/verification/cook-baseline-release/`.
+
+**Result:** every payload file in the original golden comparison contract matches its stored SHA-256. Only `backport_report.json` and `backport_report.txt` differ. There are 13 matching payload files per store-backed configuration and seven in the no-store diagnostic output: 33 payload comparisons per build configuration. The complete portable current records match exactly between Debug and Release. The publication manifest and evidence file are excluded by the original comparison contract; this is not a claim that every metadata byte matches.
+
+The entire report discrepancy is explained by these catalog labels:
+
+| NID (the old report label) | Current report label | Affected configurations |
+| --- | --- | --- |
+| `kP2L8t3j-aM` | `sceVideoOutAddVrrStatusFlagsPrivilege` | All three |
+| `LibwuIonIBw` | `sceVideoOutAddVrrActiveStatusEvent` | All three |
+| `-KRzWekV120` | `sceAgcDcbSetIndexSize_0600` | No-store only |
+
+This was verified by reversing only those labels in the captured portable reports, recomputing their hashes, and comparing the complete resulting records to the original goldens. **All six comparisons (three Debug and three Release) are exact matches.** That establishes that these report differences contain no additional changes to counts, patch descriptions, unresolved imports or other report content. It is stronger than a comparison of selected fields. The name-to-NID computation was also checked for all three names and reproduces their catalog NIDs exactly.
+
+Provenance: the original goldens were introduced in `2274ba7a4f7c7ee2a0b89d4bdc06563b5e895cde` on 2026-10-10; its commit message records C#/Python parity at recording time. They have not changed since. `data/aerolib.csv` was first committed in `04e4079b6499fa107bb7ce6571bd9b92a3347711` on 2026-10-11 and contains all three mappings at lines 159045, 159056 and 159057. `NameDb.Name` returns the catalog name when found, otherwise the NID; `Pipeline.PatchModule` uses that lookup for stubbed and unresolved report entries. This accounts for the observed label changes. The earlier untracked catalog itself is not recoverable from that commit, so its complete contents are not claimed to be known.
+
+The current reproducible comparison baseline is pinned by `work/verification/cook-baseline-manifest.json`: repository HEAD, SDK, 100 input-file hashes, original golden hashes and current record hashes. Current complete record SHA-256 values (LF records, no BOM) are:
+
+| Configuration | Current complete portable record SHA-256 |
+| --- | --- |
+| `notbackport-4` | `c6e292a7d0871042910f8e4577c684272a11ff1237330cd6f6897c2dc4716744` |
+| `notbackport-403-all-options` | `639000c995d4bd2a820b677274d01e68597eb4da615790aba64b57a31a413726` |
+| `notbackport-4-no-store` | `640b9e3cc4be53bdfdf5d5c02487d2b3e30f4bdb5e75a1fb48c5fe142b808fc3` |
+
+To repeat with new destination directories (the existing captured outputs are preserved):
+
+```powershell
+dotnet run --project work/verification/CookBaseline/CookBaseline.csproj -c Debug -- E:\PS5_TOOLS\Backport E:\PS5_TOOLS\Backport\work\verification\cook-baseline-debug-repeat
+pwsh -NoProfile -File work/verification/CookBaseline/Compare-Reports.ps1 -Capture work/verification/cook-baseline-debug-repeat
+```
+
+The harness never calls `Golden.Match` or enables recording. The proof script operates on captured report copies, not on the published outputs or stored goldens. These are local ignored verification artifacts and must be retained if the evidence is needed after working-folder cleanup.
+
+**Gate at the end of that investigation:** the three unexplained GT7 mismatches were resolved as report-name baseline differences, with unchanged payloads under the existing golden contract. The original strict parity tests still failed those three cases because their expected report labels were deliberately preserved. The authorized migration below supersedes that test status. No parser/generator production fix or Phase 2 implementation has begun. The no-store configuration still yields incomplete diagnostic output rather than a published cook; the matching baseline does not make it a successful console backport. Missing Private/All fixtures and lack of console runtime evidence remain separate limits.
+
+### Report expectation migration — verified (2026-10-11)
+
+After explicit user authorization, the three GT7 golden records were updated surgically: six report SHA-256 lines and seven function-label lines across `notbackport-4.txt`, `notbackport-403-all-options.txt` and `notbackport-4-no-store.txt`. No golden recording command was used. Every payload filename and hash remains unchanged (13 + 13 + 7 expectations). Production code, rules, catalogs and the existing test comparison logic were left unchanged.
+
+Before editing, all 100 pinned input hashes, all three original golden hashes and both sets of captured records were rechecked. The report-name reversal proof still reconstructed the original goldens exactly. After editing, each complete updated golden matched its previously captured Debug record exactly; the Release captures had already been proven identical. The original expectations remain recoverable from Git and the retained `expected-record.txt` evidence copies. The preceding investigation describes the state before this authorized migration.
+
+| Fresh verification after migration | Debug | Release |
+| --- | --- | --- |
+| Locked restore and solution build via `scripts/verify.ps1 -Lane Public` | Pass; zero warnings/errors | Pass; zero warnings/errors |
+| Public tests | 344 passed; zero failures/skips | 344 passed; zero failures/skips |
+| Existing `BackportParityTests`, recording disabled | 7 passed; zero failures/skips | 7 passed; zero failures/skips |
+
+Public XML: `work/verification/20261011-130618-f18564b7890445d9b40893dcdbc6d9b1/Public-Debug.xml` and `Public-Release.xml`. Cook parity XML: `work/verification/anyps5-report-baseline-debug.xml` and `work/verification/anyps5-report-baseline-release.xml`. `git diff --check` passed. This closes the three report-expectation failures without weakening payload comparisons or suppressing report differences. The available public/cook baseline gate is green; the complete Private/All lane and console runtime remain unverified. Work stopped before Phase 2.
+
+### Phase 2 — dynamic string-table bounds delivered (2026-10-11)
+
+`SceElf` now honors `DT_STRSZ` for symbol names, module names, build paths and import-library names. It validates the complete declared table size against the remaining file bytes before narrowing it to an integer, rejects name offsets at or beyond that size, and searches for NUL only within the remaining declared table. The public file-bounded `CStr` behavior and support for inputs without `DT_STRSZ` are preserved. The symbol loop resolves the table once per `Symbols()` call. This is a correction to reads; no signing, patching, candidate selection, rule, catalog or golden change was made in Phase 2.
+
+**Test before implementation:** replaced the three Phase 1 string acceptance cases with 16 desired-behavior cases, tagged `Phase=AnyPs5Phase2`. Before the production edit, ten malformed cases failed because no `InvalidDataException` was thrown, while six valid controls passed. After the edit, all 16 passed. Cases cover zero-sized tables; name offsets at/beyond the end; NUL immediately outside the table; an oversized range; `ulong.MaxValue`; a NUL at the last valid byte; a table ending exactly at EOF; absent size metadata; and each dynamic-name consumer. The three Phase 1 candidate characterizations remain unchanged for Phase 3.
+
+| Phase 2 verification | Result |
+| --- | --- |
+| Desired-behavior tests before fix | 16 executed: ten failed, six passed; zero skips |
+| Desired-behavior tests after fix | 16 passed; zero failures/skips |
+| Public Debug and Release | 357 passed in each; zero failures/skips |
+| Locked restore and solution builds | Pass; zero warnings/errors |
+| Existing cook parity, Debug and Release | Seven passed in each; zero failures/skips; recording disabled |
+| Retained binary corpus, before/after | Exact same input hashes and parsed-string hashes/rejections for 667 selected files |
+
+The public verification includes the existing generated-parser checks and mutation workers with enforced time, allocation and managed-heap budgets. Those checks are bounded tests, not proof that every possible malformed input terminates or that all resource defects are absent.
+
+The corpus was selected by ELF/PS4 SELF/PS5 SELF magic across the retained `.original/backports` tree, including backup files. A saved pre-fix Core assembly and the fixed Debug assembly ran the identical capture harness. Both accepted 658 files and rejected nine; 152 nonmatching/short files were skipped. Every complete per-file record matches exactly, including parsed symbols, module/build names and import-library names. The nine existing rejections comprise seven invalid-segment backup ELFs, one out-of-file SELF entry and one encrypted/compressed SELF. They were not repaired or ignored in the comparison. Both corpus executions return a nonzero exit status when any rejection exists; acceptance here is the exact before/after comparison, not a claim that the entire corpus is loadable.
+
+Local evidence: `work/verification/anyps5-phase2-before.xml`, `anyps5-phase2-after.xml`, `anyps5-phase2-cook-debug.xml`, `anyps5-phase2-cook-release.xml`, and `anyps5-phase2-corpus-before.json`/`anyps5-phase2-corpus-after.json`. Public XML is under `work/verification/20261011-131032-b2f06e42cd1f4cf098dfa7b78722a09b/`. The ignored corpus harness is `work/verification/StringTableCorpus/`; it checks the file magic before reading a candidate fully and disposes its file streams. Pre-fix Core SHA-256: `ca68dd6c3b784d10fd69df2c944d40bfcc15a7e8d15da74764e3055eb829cc0a`; fixed Debug Core SHA-256: `87d7b741382d8674dd92bdaf284e3be6797b4b42c58ee8354e411494f5f48265`. The assembly copied into the final corpus harness was checked against the fixed assembly.
+
+**Stop decision:** the tested malformed-string reads are now rejected deliberately, and the accepted cook baseline remains unchanged. Phase 2's available verification gates pass. No candidate-generator edit or Phase 3 implementation has begun. Full Private/All verification still needs the deleted work fixtures; native UI, console gameplay and exhaustive leak/concurrency/compatibility claims remain unverified.
+
+### Phase 3 — candidate function scope delivered (2026-10-11)
+
+`DataGenerators.ScanCandidates` now treats an explicit function link label as the selection boundary. A label containing one identifier or a comma-separated identifier list, with optional backticks, selects only those functions from its linked source file. The linked library-directory name is treated as a library label; descriptive labels retain the previous library-wide behavior. For those library/descriptive bullets, existing backtick mentions still restrict selection when they match functions. Explicit function labels take precedence over prose mentions. A named function that is absent from the linked file produces no candidates for that bullet; it no longer falls back to every constant-return function. This is an empty-result contract, not a new exception or console compatibility claim.
+
+The production change is confined to link-label extraction and the existing candidate filter. Constant-return evaluation, NID computation, ordering, duplicate resolution, source handling and live cook rules remain unchanged. `data/candidates.json` remains at 26 entries; no catalog was regenerated. No automatic console stub was added.
+
+**Test before implementation:** replaced the three Phase 1 candidate characterizations with eleven desired-behavior cases (`Phase=AnyPs5Phase3`). Before the edit, four failed: a plain function label broadened selection, plain and backtick unmatched labels broadened selection, and a prose mention overrode the named label. Seven controls passed. All eleven pass after the fix. Cases also cover multiple names, mixed formatting, repeated names and bullets, library-wide selection, matching inline mentions, incidental constants, descriptive labels and ignoring the next documentation section. Assertions check exact selected names, NIDs and constant-return values.
+
+| Phase 3 verification | Debug | Release |
+| --- | --- | --- |
+| Public verification | 365 passed; zero failures/skips | 365 passed; zero failures/skips |
+| Locked restore and solution builds | Pass; zero warnings/errors | Pass; zero warnings/errors |
+| Existing cook parity, recording disabled | Seven passed; zero failures/skips | Seven passed; zero failures/skips |
+| Pinned AnyPS5 candidate capture | 38 entries | Exact same 38 entries |
+
+The pinned AnyPS5 checkout is still `9a1f6f44ac75ac42aea6fa0d60f99fad1cde7bc4`, clean. The pre-fix capture contains 41 entries. The corrected capture contains 38: four removals, one addition, and 37 entries identical in NID, name, value and source. Every changed entry was reviewed against the source and the Silent stubs bullet:
+
+| Difference | Function | NID | Constant value | Evidence |
+| --- | --- | --- | --- | --- |
+| Removed | `sceSystemServiceDisableNoticeScreenSkipFlagAutoSet` | `8Lo6Zv94aho` | 0 | Unrelated constant-return function included by the former web-browser bullet fallback |
+| Removed | `sceSystemServiceGetAppIdOfRunningBigApp` | `NwT2R5lo8P8` | 1 | Same fallback; its host return represents a running application ID |
+| Removed | `sceSystemServiceSetNoticeScreenSkipFlag` | `Q3utJvma4Mo` | 0 | Same fallback |
+| Removed | `sceSystemServiceHideSplashScreen` | `Vo5V8KAwCmk` | 0 | Same fallback |
+| Added to generated capture only | `sceAudioInInit` | `SxQprgjttKE` | 0 | Explicit function label previously lost because prose named different functions |
+
+All five NIDs are present under the matching library in the local 1.00, 3.20 and 4.00 firmware catalogs. None is in the live candidate catalog or default fixes. The reference selection correction therefore does not establish a need for a new cook stub. An emulator's constant-return implementation alone remains insufficient evidence for changing console behavior.
+
+The temporary comparison harness initially resolved the preserved pre-fix DLL before its configured reference path. Its hash check caught that stale assembly; the capture was discarded and repeated with explicit assembly search paths. Final pre-fix and fixed captures each used hash-verified Core assemblies. Repeating the pre-fix capture reproduced its 41 entries exactly; fixed Debug and Release captures matched exactly. This tooling issue required no production workaround.
+
+Local evidence: `work/verification/anyps5-phase3-before.xml`, `anyps5-phase3-after.xml`, `anyps5-phase3-cook-debug.xml`, `anyps5-phase3-cook-release.xml`, `anyps5-phase3-candidates-before.json`, `anyps5-phase3-candidates-before-confirmed.json`, `anyps5-phase3-candidates-after.json`, `anyps5-phase3-candidates-release.json` and `anyps5-phase3-candidate-differences.json`. Public XML is under `work/verification/20261011-131716-3cb3db9e4098446ab316795fdec16224/`. The ignored capture harness is `work/verification/CandidateScope/`. `git diff --check` passed.
+
+**Stop decision:** Phase 3's available verification gates pass. The accepted cook payload/report baseline and live catalog are unchanged. Phase 4 has not started. The full Private/All lane still lacks derived work fixtures; no native UI or console runtime result is claimed. The generator supports the tested documentation conventions and does not claim to be a general Markdown/C++ parser.
+
+### Phase 4 — combined integration checks and private fixture recovery (2026-10-11)
+
+No additional production behavior was changed. Added a pipeline integration regression for a symbol whose terminating NUL lies outside `DT_STRSZ`: the cook raises `InvalidDataException`, preserves the source bytes and previous output, and leaves no publication stage or journal. Correcting only the declared table size then permits a successful, manifest-verified cook to the same destination, preserving the previous result in its backup. This exercises refusal and subsequent recovery through the pipeline; it does not establish a structured per-module report for this preflight exception. The eleven candidate-scope cases now also call `WriteCandidates` and check the serialized entry count, names, NIDs, values and sources, including empty selections.
+
+| Phase 4 verification | Debug | Release |
+| --- | --- | --- |
+| Public verification | 366 passed; zero failures/skips | 366 passed; zero failures/skips |
+| Locked restore and solution builds | Pass; zero warnings/errors | Pass; zero warnings/errors |
+| Existing cook parity, recording disabled | Seven passed; zero failures/skips | Seven passed; zero failures/skips |
+| Full Private/All lane | Blocked before test execution | Blocked before test execution |
+
+The seven retained cook cases preserve the accepted payload/report records. The public lane includes the existing parser bounds/mutation, cancellation, publication fault/recovery and lifecycle/concurrency checks within their tested scope. The initial sandboxed direct build exited unsuccessfully without compiler diagnostics; the same build and final verification succeeded outside the sandbox. No production workaround was introduced.
+
+`scripts/verify.ps1 -Lane All` refuses to start because `work/NOT_BACKPORT_elf` is missing. A create-only restoration harness checked retained source provenance before writing derived fixtures. The original GT7 default AMPR file is empty. Its retained decrypted and USA copies both unwrap to SHA-256 `26367ffde3e746eeaf552cb5f595002f271f91890eb22125070b7a92ace99076`, while the existing unmodified private patch golden requires `c681b42e2d9ad844f8acba524bf835b79b5914c15daa3e6de7e720e4fffc545c`. Searching all 87 matching AMPR files under `.original` and `fakelibs` found no copy with the required unwrapped hash. Restoration stopped before creating any fixture directory. A different library was not substituted, and no golden was changed in this phase. Other deleted private fixture directories also remain absent; restoring AMPR alone would not establish that the full lane passes.
+
+Local evidence: `work/verification/anyps5-phase4-integration-debug.xml`, `anyps5-phase4-cook-debug.xml`, `anyps5-phase4-cook-release.xml`, `anyps5-phase4-ampr-search.json` and `anyps5-phase4-private-preflight.txt`. Final public XML and environment records are under `work/verification/20261011-132940-1192b9de269a478ea7ef21b2dc554d56/`. The ignored restoration harness is `work/verification/RestoreFixtures/`. `git diff --check` passed.
+
+**Initial stop decision:** available integration and cook gates passed, but the full private gate was blocked by missing directories. This setup blocker was subsequently resolved as recorded below. Native UI, console runtime compatibility, long-running memory growth and exhaustive absence of defects remain unverified. No release was performed.
+
+#### Follow-up research and extracted fixtures (2026-10-11)
+
+The expanded local search covered sibling PS5 tools, game folders, downloads, relevant D: folders and accessible recycle-bin records. It inspected 291 candidate binaries: 280 unwrapped successfully, 11 were unsupported/invalid, and none matched the missing historical AMPR hash. Individual AMPR entries were also extracted into ignored verification folders from two local GT7 archives and four download archives. None matched. The older GT7 archive reproduced the retained decrypted AMPR ELF hash exactly; the Lizard archive contained a different build. The [public AMPR release history](https://github.com/drakmor/ampr_emu/releases) provides reimplementation releases, but did not establish provenance or a hash match for the missing historical fixture. No replacement library was installed.
+
+Following the user's clarification, fixture preparation proceeded from the actual retained `.original/backports` modules despite the known historical hash mismatch, so the existing expectations could adjudicate the result. The create-only extraction produced 33 ELF files: nine NOT_BACKPORT fixtures from GT7 `decrypted`, thirteen GT7 fixtures from `4xx+/USA`, and eleven CONTROL fixtures from PPSA34547 `4xx+`. Signed inputs were unwrapped with `Self.Unwrap`; already-ELF inputs were copied as ELF. For every non-AMPR GT7 decrypted module, extracted bytes matched the corresponding default input's extracted bytes. The default AMPR file is empty, so its retained decrypted copy was used with explicit provenance rather than asserting equivalence to that empty file. Rechecking all 33 source hashes after verification found zero source changes.
+
+| Full suite after extraction | Debug | Release |
+| --- | --- | --- |
+| Total executed | 481 | 481 |
+| Passed | 476 | 476 |
+| Failed | Five golden comparisons | Same five golden comparisons |
+| Skipped / runner errors | Zero / zero | Zero / zero |
+| Locked restore and solution build | Pass; zero warnings/errors | Pass; zero warnings/errors |
+
+The failing methods are `PatchTests.AllKnownFixes_OnEveryNotBackportModule_MatchGolden`, `PatchTests.CodeSpaceFallback_WhenPaddingIsUsedUp_MatchesGolden`, `CliParityTests.ReadOnlyCommands_MatchGolden`, `CliParityTests.WritingCommands_MatchGolden`, and `AnalysisTests.ModulesClassifyReferencesAndReports_MatchGolden`. Observed differences include patched ELF hashes, CLI output/order and resolved report names. These assertions stop at their first mismatch; the excerpts do not establish the complete cause of each comparison.
+
+An isolated copy of the Debug test runner then exercised the three affected test classes with the preserved Core assembly from before Phases 2 and 3 (SHA-256 `ca68dd6c3b784d10fd69df2c944d40bfcc15a7e8d15da74764e3055eb829cc0a`). Sixteen tests ran: eleven passed and the same five failed, with identical assertion failure messages. This establishes that those observed failures also occur without the two new production fixes when using the restored inputs and current catalogs. It does not prove that every byte differs solely because of fixture preparation, or justify rewriting goldens.
+
+Full results: `work/verification/20261011-133656-9d968e364501462d9261acdf3939e176/All-Debug.xml` and `work/verification/20261011-133807-92c0f7338fb44cab87624a77dadecd1c/All-Release.xml`. Extraction provenance: `work/verification/anyps5-phase4-restored-fixtures.json`. Control and comparison: `work/verification/fixture-recovery-prechange-control-debug.xml` and `fixture-recovery-failure-comparison.json`. Broader search evidence is in `work/verification/fixture-search-*.json` and archive listings. All recovery files and tools are ignored work artifacts.
+
+**Interim stop decision:** missing fixture directories no longer blocked execution, but five reproduced pre-change golden comparisons failed. This state was investigated and resolved as recorded below. No production fix or golden change was made during that initial recovery attempt.
+
+#### Historical fixture contract verified; full automated gate passed (2026-10-11)
+
+The original AMPR file was available in the retained decrypted inputs. The earlier comparison incorrectly treated the header-preserving C# extraction as equivalent to the historical fixture representation. `ps5bp/vendor/make_fself_batch.py` from commit `a071572` explicitly clears four ELF section-header fields after unpacking: `e_shoff` (eight bytes at `0x28`), `e_shentsize` (two bytes at `0x3A`), `e_shnum` (two bytes at `0x3C`) and `e_shstrndx` (two bytes at `0x3E`). These section headers are not preserved by the signer. Applying this historical preparation step to the derived AMPR ELF reproduces SHA-256 `c681b42e2d9ad844f8acba524bf835b79b5914c15daa3e6de7e720e4fffc545c` exactly. Searching for that hash in header-preserving ELF output was therefore the wrong recovery criterion.
+
+Normalized all 33 newly restored work fixtures using that preparation contract. A byte-difference assertion restricts edits to those fourteen header-field bytes; all other bytes and lengths remain unchanged. Running the actual historical unpacker independently on all nine retained decrypted GT7 modules produced nine exact hash matches to the normalized fixtures, with no rejections. The affected Debug classes then ran sixteen tests: fourteen passed, including both patch tests and the CLI writing test, leaving two report comparisons. No patched ELF hash expectation was changed to resolve those three failures. Production `Self.Unwrap` retains its existing header-preserving behavior.
+
+Captured every record behind the two remaining report tests, including commands/sample roots that the first failing assertion previously prevented from reaching a golden check: ten read-only CLI records and three game-analysis records. Ten records were already identical. The only changed records were `analysis/PPSA01317_4xx+_USA.txt`, `analysis/PPSA01317_default.txt` and `cli/report-eboot-4-provider.txt`. They contain eight occurrences of the same three catalog-resolved names documented in Phase 1. `Imports.Report` sorts each library by status and then resolved name, so resolving `-KRzWekV120` also moves its row. Reversing only those three names and applying that documented sort reproduces all thirteen original records exactly, with matching whole-record hashes. Statuses, counts, GOT addresses, reference/classification hashes and code-reference records are unchanged.
+
+Updated only those three report goldens to the verified current catalog names and resulting order. This is a manual, proven expectation migration; `PS5BP_RECORD=1` was never enabled. This investigation changed no production code or test assertions. The Debug Core SHA-256 remains Phase 3's `e6e57c643e2f9add3f1a2a33d2e7aabd3abd8c1271ba76673c68195f4af7f333`.
+
+| Final full verification | Debug | Release |
+| --- | --- | --- |
+| All lane, recording disabled | 481 passed | 481 passed |
+| Failures / skips / runner errors | Zero / zero / zero | Zero / zero / zero |
+| Locked restore and solution build | Pass; zero warnings/errors | Pass; zero warnings/errors |
+
+Final XML and environment records: `work/verification/20261011-134527-2fcf3fb999e94f33b5967bf37c2b0c0c/`. Fixture preparation and independent historical controls: `fixture-normalization-provenance.json` and `historical-unwrapper-comparison.json`. Complete report captures: `work/verification/fixture-report-capture-debug/`; exact name/order reversal proof: `fixture-report-name-proof.json`. Rechecking all 33 source hashes and all 33 normalized fixture hashes found zero mismatches. The historical control, extraction, normalization and capture tools remain ignored verification artifacts. `git diff --check` passed.
+
+**Final stop decision:** Phase 4's full automated gate passes. The missing fixture blocker and all five observed comparisons have verified explanations and are resolved. Stop here; no new production phase or release was performed. This establishes the exercised automated behavior and accepted cook baseline, not a universal absence of defects. Target-console gameplay, native UI and long-running memory measurements remain separate unverified evidence.
+
+### Phase acceptance criteria
+
+**Phase 2:** inspect every string-table consumer and the declared-size/address contract before changing it. Test the last valid NUL, offset at/end/beyond size, missing NUL, truncated table and sizes that would overflow address arithmetic. Preserve supported inputs with absent optional metadata unless the actual format contract and fixtures justify rejecting them. Use checked bounds before indexing; malformed data must produce a deliberate diagnostic rather than an incidental runtime exception. Re-run the generated parser/mutation checks and available real-input corpus as well as the cook baseline. Do not add unrelated program-header or dynamic-tag rejection rules in this phase. Accept only if the defect test turns green, valid controls remain green and accepted cook payload/report records are unchanged.
+
+**Phase 3:** establish the documentation's distinction between a named function and a library-wide link before choosing extraction behavior. Explicit names that match nothing must not silently select every function; choose and test the caller-visible diagnostic/empty-result contract before coding. Compare pinned-reference candidate output function by function, checking NID, firmware availability and existing fixes; constant return in a host emulator is not evidence that stubbing a console API is safe. Accept only if the two defect expectations turn green, unrelated candidate selections are preserved, public verification passes and the unchanged live catalog preserves cook results.
+
+**Phase 4:** verify the combined change against the accepted baseline without `PS5BP_RECORD=1`. Bounds tests and mutation budgets address parser overflow/termination risks; cancellation/publication fault tests address resource cleanup and integration behavior. Existing lifecycle/concurrency tests apply only to their exercised interleavings and do not prove absence of all races/deadlocks. Builds and nullable checks address compiler/type issues within their scope. Native UI, runtime compatibility and memory growth need separate applicable measurements. If any gate fails, stop, retain the failure evidence and do not release or expand scope. There is no universal zero-defect guarantee.
+
+### Reference improvement priority 1 — dry-run option coverage (2026-10-11)
+
+The four-day reference audit exposed a stale private dry-run expectation: `GuiSupportTests.DryRun_WritesNothing_ButReportsTheSame` expected 21 fixes although the existing save/audio option changes correctly produce 18 by default. A focused pre-change run reproduced that failure. This correction changes the test contract; it does not change application behavior, default options, rule data, or golden expectations.
+
+The replacement theory, `DryRun_WritesNothing_AndReportsOnlySelectedAdapters`, checks both the 18-fix default and the 21-fix run with `save_mount_compat`, `save_prepare_compat`, and `audio_speaker_compat` explicitly selected. It asserts the presence or absence of each adapter's NID, rather than relying on totals alone. Existing output-directory, module-write, unresolved-import, and status assertions remain. Both focused cases pass.
+
+Full verification with recording disabled: `pwsh -NoProfile -File scripts/verify.ps1 -Lane All` passes **506 tests in each Debug/Release configuration**, with zero failures/skips and zero-warning/error builds. This includes 390 public and 116 private cases and the existing cook payload/report comparisons. The previous suite had 505 cases and the one stale dry-run failure; replacing that Fact with two theory cases adds one case. Evidence: `work/verification/reference-priority1/before.xml`, `after.xml`, and `work/verification/20261011-211610-be0d80bf568d48f49a9ee02610574e54/`. Priority 1 improves regression coverage and restores the complete automated baseline. Provider-identity, ELF-format, PlayGo, and other reference improvements remain separate work; this result does not establish console compatibility.
+
+### Reference improvement priority 2 — optional provider audit (2026-10-11)
+
+The CLI report command accepts `--provider-audit` to show bundled export candidates by declared library and NID:
+
+```powershell
+ps5backport report eboot.bin --firmware 4 --provider sce_module/libc.prx --provider fakelib/libScePlayGo.sprx --provider-audit
+```
+
+Supply each relevant module with repeated `--provider` arguments. The audit preserves the same NID under different imported libraries, identifies every candidate's module and export library, excludes the importing module itself, and distinguishes `same-library`, `cross-library`, and `unknown-library` metadata. Cross-library candidates can be aliases/re-exports; missing bundled candidates do not imply absence from firmware. The audit makes no new runtime-resolution claim.
+
+This is an opt-in diagnostic in the CLI, not a new Analyze/Cook GUI mode. The existing report remains the default. Cooking, classification, fixes, stubs, firmware matching and publication do not call the new audit. Strict library matching in automatic patch decisions remains deferred.
+
+Nine new public tests cover provider identity, same-NID imports in different libraries, multiple candidates, self-exclusion, missing metadata, libc labeling and read-only CLI behavior. A separate before/after comparison of GT7 at FW 4 with default and explicitly selected save/audio options found identical normalized dry-run/cook results and identical SHA-256 hashes for all 14 payload files in each configuration. Evidence: `tmp/reference-priority2-parity/before.json` and `after.json` (both SHA-256 `ada86d11a60e13e98724e83b101e806377c04e1f64c51c7904be7ffdf7201fa3`). A real PlayGo/libc audit reports eight cross-library candidates while retaining all eight firmware-reference classifications; example: `tmp/reference-priority2/implemented-example.txt`.
+
+Locked restore and Debug/Release builds passed with zero warnings/errors. The complete Debug suite passed **515 tests**, zero failures/skips. Parallel Release completed with **514 passed, one failed**, zero skips: the existing headless UI `busy-cancel` test exceeded its 30-second timeout. The audit tests and existing cook payload/report comparisons passed in that run. Records: `work/verification/20261011-213832-13421d14d9024be2b8ac47b6b0588aae/All-Debug.xml` and `All-Release.xml`. The first parallel Debug attempt also hit a headless timeout and was interrupted; the subsequent Debug run passed. These results do not establish a clean parallel Release gate or console compatibility. No assertions, test deadlines, rules, catalogs or goldens were changed for this improvement.
+
+A complete serial Release rerun also finished with **514 passed, one failed**, zero skips. The same headless `busy-cancel` check failed during cleanup because `writer.lock` remained in use. Record: `All-Release-Serial.xml` in the same directory. This unresolved UI verification issue was not suppressed or addressed by changes outside the provider-report scope.
+
+### Reference improvement priority 3 — SCE-relative dynamic tables (2026-10-11)
+
+`SceElf` now reads SCE string, symbol, RELA and JMPREL tables using offsets relative to the file-backed `PT_SCE_DYNLIBDATA` segment. These tables can be outside every `PT_LOAD`. Standard tables retain their existing precedence and address handling. Raw dynamic entries and input bytes are not rewritten during parsing.
+
+The SCE path requires one unambiguous data segment and matching table sizes. It rejects offsets or extents outside that segment, truncated entries, unsupported declared entry formats, out-of-range symbol writes, and strings whose terminator lies outside the declared string table. Standard string tables without `DT_STRSZ` retain their existing file-bounded fallback. Import renaming and symbol-definition writes use the same resolved table locations; a read-only parser change would have left cooking incomplete. Existing code extension already stops at the next file-backed segment, including SCE data.
+
+Pre-change regression tests reproduced empty SCE symbol results and missing dynamic strings. The final **34 new public cases** cover equivalent standard/SCE parsing, export identity, both relocation kinds, rename/definition/stub writes, malformed metadata and complete synthetic cooking through fake-SELF signing and publication. Two initial fixture-padding failures were corrected by supplying the existing cave detector's required preceding `ret`; production cave detection was not changed.
+
+Before/after GT7 FW 4 dry runs and published cooks, with default options and explicitly selected save/audio options, have identical normalized results and identical SHA-256 hashes for all **14 payload files per configuration**. Evidence: `tmp/reference-priority3-parity/before.json` and `after.json`, both SHA-256 `ada86d11a60e13e98724e83b101e806377c04e1f64c51c7904be7ffdf7201fa3`.
+
+Locked restore and both solution builds passed with zero warnings/errors. Complete Debug and Release verification passed **549 tests each**, zero failures/skips, including the existing headless UI cases and unchanged cook payload/report goldens. Runs used `-maxThreads 2` to bound test contention; no assertion, timeout or case was relaxed or omitted, and golden recording was disabled. Records: `work/verification/reference-priority3/All-Debug.xml` and `All-Release.xml`. Focused before/after evidence is in `tmp/reference-priority3-parity/`. Rules, catalogs, goldens and private fixtures were not edited for this improvement. Existing user edits were retained.
+
+**Verdict: implemented and worthwhile for format support.** The reproduced parser gap is fixed and checked legacy cooking results are unchanged. New SCE-only cooking is validated with synthetic binaries; console runtime compatibility and a real-game benefit for that format remain unverified.
+
+### Reference priority 4 — optional PlayGo 0.6 (2026-10-11)
+
+Studio's optional patches now offer **PlayGo 0.6 (experimental)** and **PlayGo 0.6 logging (experimental)**; CLI keys are `playgo_0_6` and `playgo_0_6_log`. The GUI allows one at a time, and Core rejects both together. Separately manifested official variants are present in the local `4`, `4.03`, `7`, `9.60`, `10` and `11` store sets. The logging asset is mounted as `libScePlayGo.sprx` and writes `/app0/playlgo.log` (upstream spelling), with its path and experimental status in cook warnings. Configuration is preserved; no `playgo_stub.dat` is generated. Custom library folders need their own variant subfolders; the existing missing-variant warning keeps their library unchanged.
+
+Historical source/tags and official 0.4/0.5/0.6 assets were compared. The default FW 4 file exactly matches official 0.4 without logging, and 9.60 matches official 0.5 without logging. The 4.03/7 binary matches neither official release. All six official binaries retain the same 24 exported NIDs and SDK metadata, and their imported NIDs appear in all 43 available firmware catalogs. This does not establish loader, library-binding, ABI or native lifecycle compatibility, and gives no reason to automatically replace a version by firmware. **All current defaults remain intact.** Native PlayGo was not rebuilt; the official hash-verified assets were used.
+
+All 33 original base-store files remain hash-identical. Before/after GT7 FW 4 cooking with default settings and existing save/audio options produced identical normalized reports and identical hashes for all 13 module/data files per cook. The run-evidence file correctly records the changed optional-patch catalog. Twelve cooks using the actual 0.6 assets across the six target sets kept every unwrapped PlayGo byte unchanged, required no fixes/stubs, and had no unresolved imports. Complete Debug and Release verification each passed **576 tests**, zero failures/skips, with clean builds and no golden edits. Evidence: `work/verification/reference-priority4/All-*.xml`, `tmp/reference-priority4-parity/`, and `tmp/reference-priority4/IMPLEMENTATION.md` (history and firmware recommendation table).
+
+Two additional GT7 FW 4 cooks selected the normal/logging 0.6 variants. Only `fakelib/libScePlayGo.sprx` changed among the 13 module/data files in either cook; all other file hashes and module decisions matched the default. Capture: `tmp/reference-priority4-parity/variants.json`.
+
+**Verdict: worthwhile as an optional diagnostic/compatibility experiment; default promotion deferred.** Console tests must establish an actual title benefit and cover lifecycle, empty lists, enumeration, scenarios/languages and reloads. The current known working library remains the first choice for each supplied backport.
+
+### Reference priority 5 — PlayGo config evaluation (2026-10-12)
+
+**Verdict: defer automatic generation.** Only two game metadata files are available (PPSA23566 and PPSA24003); both declare 35 chunks and explicitly list IDs 0..34 in one scenario. A bounded scratch reader validated the observed header/table profile and rejected 17 malformed/unsupported controls. No real game chunk-definition XML or title log establishes a benefit from generating stricter configuration.
+
+Thirteen probes against a scratch host build of the local PlayGo 0.6 source passed normally and with AddressSanitizer/UndefinedBehaviorSanitizer. The stub's default enumeration is already bounded at 1,000 chunks, unlike the motivating AnyPS5 emulator behavior. A chunk-only `35` config narrows it to 35. Copying scenario count `1` also changes a scenario-ID-1 request from success to an error; singleton explicit IDs require comma syntax (`9,` is one ID, while `9` means a count). These are host contract checks, not console/game compatibility proof.
+
+No application, rule, fakelib, golden or game file was changed; all 33 original base-store files still match the previous baseline. No production config is generated. Further work should first compare a chunk-only config against a reproduced title failure, preserving scenario/language defaults and existing files. Full evidence and implementation criteria: `tmp/reference-priority5/VERDICT.md`. The previous 576-test Debug/Release record belongs to priority 4; the application suite was not rerun for this scratch/documentation-only evaluation.
+
+### Reference priority 6 — candidate catalog review (2026-10-12)
+
+**Verdict: not worth promoting the 13 additions now.** Twelve functions already appear in their expected modules in all 43 supplied firmware catalogs, starting at 1.00. Their AnyPS5 constant returns depend on host assumptions such as offline networking, no USB devices or no system media player. The remaining VRR function is absent on older firmware but already has a maintained `ret0` fix. Twelve additions are deferred pending title-specific evidence; the duplicate VRR addition is rejected.
+
+A read-only scan parsed 258 of 260 modules across 17 original/default game folders and found 19 candidate import sites; two malformed/unsupported inputs remain unassessed. Four GT7 FW 4 dry runs compared the maintained 26-entry catalog with a scratch generated 39-entry catalog, with candidate fixes disabled and enabled. Both pairs produced identical complete reports across 12 modules and reused the existing VRR fix. All maintained data hashes were unchanged. No application, rule/catalog, fakelib, golden or game file was modified, and no fresh full suite or console verification is claimed. Individual decisions, limitations and evidence: `tmp/reference-priority6/VERDICT.md`.
+
+### Reference priority 7 — deployment report guidance (2026-10-12)
+
+**Verdict: worthwhile and implemented in text/JSON reports.** The new deployment section identifies Full-mode requirements, libkernel exclusion even in Full, fakelib2/source preference, narrower package filtering and conditional PPR cleanup. It lists added app0 data and applied diagnostic log destinations, preserving optional PlayGo configuration. The assessed rules are pinned to ShadowMountPlus 1.7beta5-fix1; the console's version, settings and launch format remain unknown. The planned merged-game module inventory includes unchanged source libraries; actual output hashes continue to live in `backport_publication.json`, with source provenance in `backport_run.json`.
+
+Formatting uses only the captured result and reads no additional files. Parsing, patching, selection, signing and publication were not changed. Twenty new public regression cases cover the policy, source inventories, failed modules, missing logging variants and complete synthetic analysis/cooking. Three before/after GT7 configurations (default, selected save/audio, PlayGo logging) have identical existing report decisions and all 14 payload/evidence file hashes per cook. Five existing cook goldens were reproduced before editing; their reviewed updates change only deployment text and report hashes, retaining every payload hash. Locked restore and clean Debug/Release builds passed; both complete suites passed **596 tests**, zero failures/skips, with required private fixtures and golden recording disabled. Records: `work/verification/reference-priority7/All-*.xml`; implementation/evidence: `tmp/reference-priority7/IMPLEMENTATION.md`; actual example: `tmp/reference-priority7-parity/after/playgo-log/backport_report.txt`. The earlier read-only prototype verdict is retained in `tmp/reference-priority7/VERDICT.md`. No console runtime verification is claimed.
+
+### Reference priority 8 — local crash-log diagnostics (2026-10-12)
+
+**Verdict: worthwhile; implemented as a separate read-only CLI command.** Run `ps5backport crash-log LOG [--report backport_report.json] [--json]`. Text output shows fatal events, runtime addresses, unique logged module mappings and text-relative offsets; JSON additionally retains module ranges, opaque fingerprints and candidate cook-report patch context. Both inputs stay unchanged, with SHA256 identities recorded. This command does not invoke cooking or automatically repair a game.
+
+Full fatal dumps, numbered excerpts and ShadowMount summaries are supported. Each event owns its own module map. Zero addresses, missing maps and overlapping ranges stay unattributed or ambiguous. Cook-report association is always unverified; filename matches and opaque fingerprints do not establish loaded-binary identity or crash cause. Offsets are relative to logged xotext starts, using half-open ranges; ELF virtual addresses and file offsets require matching binary/layout evidence. Input limits are 1 MiB per log, 4,096 characters per parsed line, 64 events, 128 addresses per event, 256 modules per event and 256 ranges per module; optional reports are limited to 8 MiB and 4,096 modules. Malformed recognized addresses/ranges produce warnings; excessive input or invalid report structure is rejected. NUL removal and UTF-8 replacements are disclosed and affect only parsing.
+
+The original PPSA38510 log and its excerpt produce the same eleven addresses and eight nonzero text offsets, with 40 modules in the full log. All original log/excerpt/report hashes remain unchanged. The separate FW 8.60 recook report remains unverified context. A before/after GT7 analysis and real cook have identical existing report decisions and all 14 payload/evidence hashes. Locked restore and final Debug/Release builds passed with zero warnings/errors. Both full suites passed **631 tests**, zero failures/skips, with required private fixtures and golden recording disabled; this includes 35 new diagnostic cases. Earlier failures from concurrent UI expectation changes were resolved by separately updated UI tests and retained in historical XML. Production verification and commands: `tmp/reference-priority8/IMPLEMENTATION.md`; parser output: `tmp/reference-priority8/production-result.json`; cooking parity: `tmp/reference-priority8-parity/before.json` and `after.json`. The earlier 27-control research evaluation is retained in `tmp/reference-priority8/VERDICT.md`. No console runtime verification is claimed.
 
 <a id="engineering-milestones"></a>
 ## Engineering milestones

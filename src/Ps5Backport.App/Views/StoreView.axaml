@@ -43,7 +43,7 @@
     </Border>
 
     <Panel Grid.Column="1" Margin="16,14,16,8">
-      <TextBlock Classes="muted" Text="No fakelib sets yet. Add libraries to start one." IsVisible="{Binding !HasSet}" />
+      <TextBlock Classes="muted" Text="No compatibility library sets yet. Add libraries to start one." IsVisible="{Binding !HasSet}" />
       <DockPanel IsVisible="{Binding HasSet}">
         <Grid DockPanel.Dock="Top" ColumnDefinitions="*,Auto" Margin="0,0,0,10">
           <TextBlock Classes="title" Text="{Binding SetTitle}" VerticalAlignment="Center" />

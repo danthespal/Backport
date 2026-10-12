@@ -1,13 +1,38 @@
 <Styles xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
 
+  <Style Selector="Window">
+    <Setter Property="FontFamily" Value="{StaticResource UiFont}" />
+    <Setter Property="Background" Value="{DynamicResource CanvasBrush}" />
+    <Setter Property="Foreground" Value="{DynamicResource InkBrush}" />
+  </Style>
+  <Style Selector="Button, ToggleButton, TextBox, ComboBox">
+    <Setter Property="CornerRadius" Value="0" />
+    <Setter Property="BorderBrush" Value="{DynamicResource HairlineBrush}" />
+  </Style>
+  <Style Selector="Button, DropDownButton">
+    <Setter Property="Background" Value="{DynamicResource CardBrush}" />
+    <Setter Property="MinHeight" Value="34" />
+    <Setter Property="Padding" Value="14,7" />
+  </Style>
+  <Style Selector="Button:pointerover /template/ ContentPresenter">
+    <Setter Property="BorderBrush" Value="{DynamicResource CyanBrush}" />
+  </Style>
+  <Style Selector="Button.accent">
+    <Setter Property="FontWeight" Value="Bold" />
+    <Setter Property="Foreground" Value="#090910" />
+  </Style>
+  <Style Selector="TextBox:focus">
+    <Setter Property="BorderBrush" Value="{DynamicResource CyanBrush}" />
+  </Style>
   <Style Selector="TextBlock.title">
     <Setter Property="FontSize" Value="22" />
-    <Setter Property="FontWeight" Value="Medium" />
+    <Setter Property="FontWeight" Value="Bold" />
+    <Setter Property="Foreground" Value="{DynamicResource CyanBrush}" />
   </Style>
   <Style Selector="TextBlock.section">
     <Setter Property="FontSize" Value="14" />
-    <Setter Property="FontWeight" Value="Medium" />
+    <Setter Property="FontWeight" Value="Bold" />
   </Style>
   <Style Selector="TextBlock.muted">
     <Setter Property="Foreground" Value="{DynamicResource StatusMuted}" />
@@ -19,6 +44,8 @@
   <Style Selector="TextBlock.metric">
     <Setter Property="FontSize" Value="24" />
     <Setter Property="FontWeight" Value="Medium" />
+    <Setter Property="FontFamily" Value="{StaticResource MonoFont}" />
+    <Setter Property="Foreground" Value="{DynamicResource CyanBrush}" />
   </Style>
   <Style Selector="TextBlock.icon">
     <Setter Property="FontFamily" Value="{StaticResource IconFont}" />
@@ -34,26 +61,26 @@
     <Setter Property="FontSize" Value="12" />
   </Style>
 
-  <!-- quiet surfaces: hairline borders, no shadows -->
+  <!-- Angular terminal panels keep the dense workbench readable. -->
   <Style Selector="Border.card">
     <Setter Property="Background" Value="{DynamicResource CardBrush}" />
     <Setter Property="BorderBrush" Value="{DynamicResource HairlineBrush}" />
     <Setter Property="BorderThickness" Value="1" />
-    <Setter Property="CornerRadius" Value="8" />
+    <Setter Property="CornerRadius" Value="0" />
     <Setter Property="Padding" Value="12" />
   </Style>
   <!-- an enabled optional patch: warning outline, so it can't be missed -->
   <Style Selector="Border.card.optionOn">
     <Setter Property="BorderBrush" Value="{DynamicResource StatusWarn}" />
   </Style>
-  <!-- settings rows: one card per setting, Windows 11 Settings style -->
+  <!-- One bordered row per setting. -->
   <Style Selector="Border.setting">
     <Setter Property="Padding" Value="14,10" />
     <Setter Property="MinHeight" Value="56" />
   </Style>
   <Style Selector="Border.tag">
     <Setter Property="Background" Value="{DynamicResource HairlineBrush}" />
-    <Setter Property="CornerRadius" Value="4" />
+    <Setter Property="CornerRadius" Value="0" />
     <Setter Property="Padding" Value="6,0" />
     <Setter Property="VerticalAlignment" Value="Center" />
   </Style>
@@ -74,7 +101,7 @@
     <Setter Property="HorizontalAlignment" Value="Center" />
     <Setter Property="Template">
       <ControlTemplate>
-        <Border Name="bg" Background="Transparent" CornerRadius="6">
+        <Border Name="bg" Background="Transparent" CornerRadius="0" BorderThickness="2,0,0,0" BorderBrush="Transparent">
           <ContentPresenter Content="{TemplateBinding Content}" HorizontalAlignment="Center" VerticalAlignment="Center" />
         </Border>
       </ControlTemplate>
@@ -85,16 +112,25 @@
   </Style>
   <Style Selector="RadioButton.rail:checked /template/ Border#bg">
     <Setter Property="Background" Value="{DynamicResource HairlineBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource MagentaBrush}" />
   </Style>
   <Style Selector="RadioButton.rail:checked TextBlock.icon">
-    <Setter Property="Foreground" Value="{DynamicResource SystemAccentColor}" />
+    <Setter Property="Foreground" Value="{DynamicResource CyanBrush}" />
   </Style>
 
-  <!-- compact tab headers for a workbench -->
-  <Style Selector="TabItem">
+  <!-- Spacious workbench tabs with a clear selected state. -->
+  <Style Selector="TabControl.workbench TabItem">
     <Setter Property="FontSize" Value="14" />
-    <Setter Property="MinHeight" Value="36" />
-    <Setter Property="Padding" Value="10,0" />
+    <Setter Property="MinHeight" Value="44" />
+    <Setter Property="Padding" Value="18,10" />
+    <Setter Property="Margin" Value="0,0,8,0" />
+  </Style>
+  <Style Selector="TabControl.workbench TabItem:selected">
+    <Setter Property="Foreground" Value="{DynamicResource CyanBrush}" />
+    <Setter Property="Background" Value="{DynamicResource CardBrush}" />
+  </Style>
+  <Style Selector="TabControl.workbench Expander">
+    <Setter Property="Background" Value="{DynamicResource CardBrush}" />
   </Style>
 
   <!-- compact, quiet tables -->
@@ -106,18 +142,42 @@
     <Setter Property="Padding" Value="10,0" />
   </Style>
   <Style Selector="TableViewRow">
-    <Setter Property="MinHeight" Value="30" />
+    <Setter Property="MinHeight" Value="36" />
     <Setter Property="Padding" Value="0" />
   </Style>
 
+  <Style Selector="Border.status">
+    <Setter Property="Background" Value="{DynamicResource HairlineBrush}" />
+    <Setter Property="CornerRadius" Value="4" />
+    <Setter Property="Padding" Value="7,3" />
+    <Setter Property="HorizontalAlignment" Value="Left" />
+  </Style>
+  <Style Selector="Border.status TextBlock">
+    <Setter Property="Foreground" Value="{DynamicResource StatusMuted}" />
+    <Setter Property="FontSize" Value="12" />
+  </Style>
+  <Style Selector="Border.status.ok TextBlock">
+    <Setter Property="Foreground" Value="{DynamicResource StatusOk}" />
+  </Style>
+  <Style Selector="Border.status.warning TextBlock">
+    <Setter Property="Foreground" Value="{DynamicResource StatusWarn}" />
+  </Style>
+  <Style Selector="Border.status.error TextBlock">
+    <Setter Property="Foreground" Value="{DynamicResource StatusError}" />
+  </Style>
+
   <!-- dense log lines -->
+  <Style Selector="ListBox.patchOptions ListBoxItem">
+    <Setter Property="Padding" Value="8,2" />
+    <Setter Property="MinHeight" Value="0" />
+  </Style>
   <Style Selector="ListBox.log ListBoxItem">
     <Setter Property="Padding" Value="4,1" />
     <Setter Property="MinHeight" Value="0" />
   </Style>
 
   <!-- log filter chips -->
-  <Style Selector="ToggleButton.chip">
+  <Style Selector="ToggleButton.chip, Button.chip">
     <Setter Property="Padding" Value="8,2" />
     <Setter Property="MinHeight" Value="24" />
     <Setter Property="FontSize" Value="12" />
