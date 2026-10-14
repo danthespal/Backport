@@ -18,7 +18,7 @@ public static partial class Pipeline
                 evidence.Verify();
                 publication!.Commit(cancel);
                 result.Published = true;
-                if (Directory.Exists(publication.Backup))
+                if (Directory.Exists(publication.Backup)) // the commit discards it; still here only if that failed
                     result.PreviousOutputBackup = publication.Backup;
             }
         }

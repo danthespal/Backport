@@ -61,7 +61,7 @@ public static class Publication
         finally { if (File.Exists(temp)) File.Delete(temp); }
     }
 
-    /// <summary>Recovers an interrupted publication. Prior successful backups and diagnostic folders are retained.</summary>
+    /// <summary>Recovers an interrupted publication. Diagnostic folders are retained; a committed run's backup is discarded.</summary>
     public static void Recover(string destination)
     {
         using var writer = DirectoryTransaction.Acquire(destination);
@@ -163,8 +163,7 @@ internal sealed class DirectoryTransaction : IDisposable
         _checkpoint?.Invoke("committed");
         try
         {
-            if (Directory.Exists(Backup) && !Directory.EnumerateFileSystemEntries(Backup).Any())
-                Directory.Delete(Backup); // discard only an empty prior destination
+            DiscardBackup(Backup);
             File.Delete(Control(Destination) + ".journal.json");
         }
         catch (Exception e) when (e is IOException or UnauthorizedAccessException)
@@ -197,7 +196,10 @@ internal sealed class DirectoryTransaction : IDisposable
         Paths.RequireNoLinks(stage, tree: true);
         Paths.RequireNoLinks(backup, tree: true);
         if (journal.Committed)
+        {
             Publication.Verify(destination);
+            DiscardBackup(backup);
+        }
         else if (Directory.Exists(backup))
         {
             if (Directory.Exists(destination))
@@ -209,6 +211,19 @@ internal sealed class DirectoryTransaction : IDisposable
         if (Directory.Exists(stage))
             Directory.Delete(stage, recursive: true); // exact journal-derived sibling, validated above; never a supplied path
         File.Delete(journalPath);
+    }
+
+    /// <summary>Best-effort removal of the replaced destination once the new one is committed; a failure leaves it in place.</summary>
+    static void DiscardBackup(string backup)
+    {
+        try
+        {
+            if (!Directory.Exists(backup))
+                return;
+            Paths.RequireNoLinks(backup, tree: true);
+            Directory.Delete(backup, recursive: true); // exact journal-derived sibling, never a supplied path
+        }
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException) { }
     }
 
     static void DeletePublished(string destination, string id)

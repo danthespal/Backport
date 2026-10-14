@@ -1,6 +1,6 @@
-backport_report.json 9ab80db584ce3fdd2bd86bf11854e8b90133fe970e8695073c696c6340c6cb21
-backport_report.txt e20f1807267b985cbcefe27b40b5194a35490dbda1a8f7b0a780280f799a6062
-eboot.bin 8862cd203ce47577cf8797abc78cfe8d5f0d2f0fbf897996203f3a06e688179f
+backport_report.json 8ca645b48c1ad87379edebb5f64a0bd20986d35a5a417ec82a6541678b0be401
+backport_report.txt d237f99aaaea80a4903db1392375100d547b17c2f9451c845b3fdfff5da8c33b
+eboot.bin 537ba98922fb44040c18fb1abf844fbce1dab9c973e83fb6a38bf56333ca199b
 fakelib/libSceAgc.sprx 73611ebe0777da0b2a6087eb169d4b997bf14a4f6e7aacdc1e5cbe973ce9d1d6
 fakelib/libSceAgcDriver.sprx d83edb3a0b57c4a2476d902e16da051db82ef36b81b791d6e8d2d998f083e27b
 fakelib/libSceAmpr.sprx 362c84e31e3a06a42f50fe4d6ea124d15e73f77c901470f90823935d7f36ca76
@@ -32,7 +32,7 @@ MediaDecoders.Prospero.prx  [PS4-style fake SELF (make_fself.py)]  unchanged
 eboot.bin  [PS4-style fake SELF (make_fself.py)]  written
   SDK 0x04030031/0x09040001 (kept)
   imports: data=42, patched=1, provided=179, reference=604, stubbed=8
-  fixed    3WVD91e12ZQ  scePsmlMfsrInit  (PLT -> ret0 @ 0xd8; DERIVED, not console-tested; from Kingdom Come: Deliverance II PPSA21704 FW4.xx (test status unknown))
+  fixed    3WVD91e12ZQ  scePsmlMfsrInit  (PLT -> ret:0x8a810012 @ 0xd8; DERIVED, not console-tested; from Kingdom Come: Deliverance II PPSA21704 FW4.xx (test status unknown))
   pattern  Wwise 7.1.4 -> 7.1 (channel switch)  x1
   pattern  Wwise 7.1.4 -> 7.1 (packed default)  x1
 

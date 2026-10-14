@@ -218,7 +218,8 @@ public sealed partial class StoreViewModel(MainViewModel main) : ObservableObjec
             Log.Info($"Added {string.Join(", ", added.Select(a => a.Name))} to {folder}");
             Select(System.IO.Path.GetFileName(folder));
         }
-        catch (Exception e) when (e is IOException or InvalidDataException or ArgumentException or UnauthorizedAccessException)
+        catch (Exception e) when (e is IOException or InvalidDataException or ArgumentException or UnauthorizedAccessException
+                                     or System.Text.Json.JsonException)
         {
             Log.Error($"Adding fakelibs failed: {e.Message}", exception: e);
         }
@@ -236,7 +237,7 @@ public sealed partial class StoreViewModel(MainViewModel main) : ObservableObjec
             BpsInfo = $"Expects a 0x{patch.SourceSize:x}-byte library with CRC32 {patch.SourceCrc:x8}; " +
                       $"{Bps.Edits(patch).Count} edits; output 0x{patch.TargetSize:x} bytes";
         }
-        catch (Exception e) when (e is IOException or InvalidDataException or PatchException or IndexOutOfRangeException)
+        catch (Exception e) when (e is IOException or InvalidDataException or PatchException or IndexOutOfRangeException or UnauthorizedAccessException)
         {
             BpsInfo = $"Not a usable BPS patch: {e.Message}";
         }
@@ -260,7 +261,8 @@ public sealed partial class StoreViewModel(MainViewModel main) : ObservableObjec
             Log.Error("Choose a BPS patch and the library it applies to");
             return;
         }
-        string temp = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "ps5backport-bps-" + Guid.NewGuid().ToString("N"));
+        // scratch folder inside the store (the .ps5bp- prefix hides it from set listings), never the Windows temp folder
+        string temp = System.IO.Path.Combine(store, ".ps5bp-bps-" + Guid.NewGuid().ToString("N"));
         try
         {
             byte[] source = File.ReadAllBytes(BpsInput);
@@ -279,7 +281,8 @@ public sealed partial class StoreViewModel(MainViewModel main) : ObservableObjec
             Log.Info($"Patched {BpsInput} with {System.IO.Path.GetFileName(BpsPatch)}{(BpsSign ? " (fake-signed)" : "")} -> {System.IO.Path.Combine(folder, name)}");
             Select(System.IO.Path.GetFileName(folder));
         }
-        catch (Exception e) when (e is IOException or InvalidDataException or PatchException or ArgumentException or UnauthorizedAccessException)
+        catch (Exception e) when (e is IOException or InvalidDataException or PatchException or ArgumentException or UnauthorizedAccessException
+                                     or System.Text.Json.JsonException)
         {
             Log.Error($"BPS patch failed: {e.Message}", exception: e);
         }

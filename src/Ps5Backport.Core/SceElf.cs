@@ -41,7 +41,8 @@ public sealed class SceElf
     public const uint PtLoad = 1, PtDynamic = 2, PtSceProcParam = 0x61000001, PtSceModuleParam = 0x61000002;
     public const uint PtSceVersion = 0x6FFFFF01;
     public const uint PtSceDynlibData = 0x61000000;
-    public const uint PfX = 1;
+    public const uint PfX = 1, PfW = 2;
+    public const uint PtGnuRelro = 0x6474E552;
     public const ulong DtStrtab = 5, DtSymtab = 6, DtRela = 7, DtRelaSz = 8, DtStrSz = 10, DtJmpRel = 23, DtPltRelSz = 2;
     public const ulong DtSceModuleInfoPath = 0x61000041, DtSceModuleName = 0x61000043;
     public const ulong DtSceExportLib = 0x61000047, DtSceImportLib = 0x61000049, DtSceSymtabSz = 0x6100003F;
@@ -64,6 +65,8 @@ public sealed class SceElf
     public bool AllowTextExtension { get; set; }
     /// <summary>Bytes added to .text by the code-space fallback.</summary>
     public long TextExtended { get; set; }
+    /// <summary>Runtime state blocks of fixes (name -> vaddr, size), see <see cref="Patching.AllocateState"/>.</summary>
+    public Dictionary<string, (ulong Vaddr, int Size)> StateBlocks { get; } = new(StringComparer.Ordinal);
 
     public SceElf(byte[] data)
     {
@@ -349,5 +352,6 @@ public sealed class SceElf
     }
 
     // --- code helpers --------------------------------------------------------
-    public Phdr TextSegment() => Phdrs.First(p => p.Type == PtLoad && (p.Flags & PfX) != 0);
+    public Phdr TextSegment() => Phdrs.FirstOrDefault(p => p.Type == PtLoad && (p.Flags & PfX) != 0)
+        ?? throw new InvalidDataException("ELF has no executable PT_LOAD segment");
 }

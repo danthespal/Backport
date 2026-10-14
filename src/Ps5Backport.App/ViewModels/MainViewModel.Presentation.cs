@@ -34,7 +34,8 @@ public partial class MainViewModel
     {
         base.OnPropertyChanged(e);
         if (e.PropertyName is nameof(SelectedFirmware) or nameof(KnownFixes) or nameof(CandidateFixes)
-            or nameof(StubUnknown) or nameof(DefineSymbol) or nameof(ExtendText) or nameof(PatchParam) or nameof(AmprDebugLogging))
+            or nameof(StubUnknown) or nameof(DefineSymbol) or nameof(ExtendText) or nameof(PatchParam) or nameof(AmprDebugLogging)
+            or nameof(BootNoticeMessage))
             MarkAnalysisStale();
     }
 

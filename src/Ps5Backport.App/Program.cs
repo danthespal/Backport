@@ -12,7 +12,7 @@ static class Program
     [STAThread]
     public static int Main(string[] args)
     {
-        // ps5backportstudio --snapshot OUT.png [--game DIR] [--option KEY]... [--analyze] [--dark] [--tab N] [--page settings|store|firmwaredb|tools] [--files F1;F2] [--nid TEXT]: render the main window
+        // ps5backportstudio --snapshot OUT.png [--game DIR] [--option KEY]... [--analyze] [--expand] [--height PX] [--dark] [--tab N] [--page settings|store|firmwaredb|tools] [--files F1;F2] [--nid TEXT]: render the main window
         // without a display (headless Skia) and save it. Used to review the UI and for docs.
         int at = Array.IndexOf(args, "--snapshot");
         if (at >= 0 && at + 1 < args.Length)
@@ -76,9 +76,17 @@ static class Program
         if (nid >= 0 && nid + 1 < args.Length)
             vm.Tools.NidQuery = args[nid + 1];
 
-        var window = new MainWindow { DataContext = vm, Width = 1280, Height = 820 };
+        int height = Array.IndexOf(args, "--height");
+        var window = new MainWindow { DataContext = vm, Width = 1280,
+            Height = height >= 0 && height + 1 < args.Length ? int.Parse(args[height + 1]) : 820 };
         window.Show();
         Dispatcher.UIThread.RunJobs();
+        if (args.Contains("--expand"))
+        {
+            foreach (var expander in Avalonia.VisualTree.VisualExtensions.GetVisualDescendants(window).OfType<Avalonia.Controls.Expander>())
+                expander.IsExpanded = true;
+            Dispatcher.UIThread.RunJobs();
+        }
         AvaloniaHeadlessPlatform.ForceRenderTimerTick();
         using var frame = window.CaptureRenderedFrame();
         frame?.Save(output, Avalonia.Media.Imaging.PngBitmapEncoderOptions.Default);

@@ -21,7 +21,7 @@ public static class Cli
           stub ELF OUT [--nid NID]... [--unknown] [--firmware FW] [--define-symbol] [--reference DIR] [--provider ELF]...
           backport GAME OUT --firmware FW [--patch-param] [--fakelib DIR] [--fakelib-store DIR] [--no-fakelib-store]
                    [--stub-nid NID]... [--stub-unknown] [--define-symbol] [--no-known-fixes] [--candidate-fixes]
-                   [--option KEY]... [--no-extend-text] [--reference DIR]
+                   [--option KEY]... [--boot-notice TEXT] [--boot-notice-delay SECONDS] [--no-extend-text] [--reference DIR]
           fwdb import-genstub|import-dump DIR --firmware FW --source TEXT [--db DIR]
           fwdb list [--db DIR]  |  fwdb diff OLD NEW [--db DIR]
           fwdb import-firmwares [FW...] [--dumps DIR] [--db DIR]   every (or the given) 'Firmware X.YY' dump folder
@@ -78,6 +78,9 @@ public static class Cli
     static string DefaultReference => Paths.FirmwareDbDir ?? RepoPath(".original", "reference", "PS5-3.20_Libs");
     static string DefaultStore => Paths.FakelibStoreDir ?? "fakelibs";
     static string DefaultDb => Paths.FirmwareDbDir ?? "firmware_db";
+    /// <summary>Where fwdb imports write: the repository firmware_db (not the bundled copy) when run inside the repository.</summary>
+    public static string ImportDb => Paths.FindUp("Ps5Backport.slnx") is { } solution
+        ? Path.Combine(Path.GetDirectoryName(solution)!, "firmware_db") : DefaultDb;
     static string DefaultDumps => RepoPath(".original", ".PS5OriginalLibs");
 
     static NameDb Names(Args a)
@@ -185,6 +188,15 @@ public static class Cli
         }
     }
 
+    /// <summary>--boot-notice-delay in seconds: sceKernelUsleep takes a 32-bit microsecond count (at most 4294 s).</summary>
+    static int BootNoticeDelay(string s)
+    {
+        uint seconds = ParseInt0(s);
+        if (seconds > uint.MaxValue / 1000000)
+            throw new ArgumentException($"--boot-notice-delay must be 0 to {uint.MaxValue / 1000000} seconds");
+        return (int)seconds;
+    }
+
     static uint ParseInt0(string s)
     {
         s = s.Trim();
@@ -271,6 +283,8 @@ public static class Cli
             CandidateFixes = a.Has("--candidate-fixes"),
             ExtendText = !a.Has("--no-extend-text"),   // --extend-text: accepted, now the default
             Options = a.All("--option"),
+            BootNoticeMessage = a.Get("--boot-notice"),
+            BootNoticeDelaySeconds = BootNoticeDelay(a.Get("--boot-notice-delay", "8")),
             Names = Names(a),
         };
         var result = Pipeline.Backport(p[0], p[1], options, Knowledge.Default, diagnostics: diagnostics);
@@ -286,8 +300,8 @@ public static class Cli
 
     static int FwdbCommand(Args a, List<string> p, TextWriter o)
     {
-        string db = a.Get("--db", DefaultDb);
         string action = p[0];
+        string db = a.Get("--db", action.StartsWith("import-", StringComparison.Ordinal) ? ImportDb : DefaultDb);
         if (action == "import-firmwares")
         {
             string dumps = a.Get("--dumps", DefaultDumps);

@@ -2,8 +2,8 @@
   "_about": "Functions known to appear only in a later firmware, from console-tested backports. Used when no firmware_db covers the range. NID -> first firmware that has it + source.",
   "introduced": {
     "tU5e3f9gSiU": {
-      "firmware": "7.01",
-      "source": "firmware dumps: first decrypted dump exporting it is 7.01 (6.50 lacks it; the 7.00 dump is encrypted). CONTROL Resonant README said 7.61."
+      "firmware": "7.00",
+      "source": "firmware dumps: first decrypted dump exporting it is 7.00 (6.50 lacks it). CONTROL Resonant README said 7.61."
     }
   }
 }

@@ -166,11 +166,21 @@
     <Setter Property="Foreground" Value="{DynamicResource StatusError}" />
   </Style>
 
-  <!-- dense log lines -->
-  <Style Selector="ListBox.patchOptions ListBoxItem">
-    <Setter Property="Padding" Value="8,2" />
-    <Setter Property="MinHeight" Value="0" />
+  <!-- optional patch names: flat, left-aligned; the selected one (shown in the details strip) uses the highlight colour -->
+  <Style Selector="Button.patchName">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderThickness" Value="0" />
+    <Setter Property="Padding" Value="2,4" />
+    <Setter Property="HorizontalAlignment" Value="Stretch" />
+    <Setter Property="HorizontalContentAlignment" Value="Left" />
+    <Setter Property="VerticalAlignment" Value="Center" />
   </Style>
+  <Style Selector="Button.patchName.selected TextBlock">
+    <Setter Property="Foreground" Value="{DynamicResource CyanBrush}" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+  </Style>
+
+  <!-- dense log lines -->
   <Style Selector="ListBox.log ListBoxItem">
     <Setter Property="Padding" Value="4,1" />
     <Setter Property="MinHeight" Value="0" />

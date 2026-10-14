@@ -32,9 +32,9 @@
       "note": "bool out-parameter = 0 (missing sceAgcGetIsTrinityMode): *(u8*)rdi = 0; return 0"
     },
     "byte1": {
-      "hex": "c6070131c0c3",
-      "asm": "mov byte [rdi], 1; xor eax, eax; ret",
-      "note": "bool out-parameter = 1 (sceAgcGetIsTrinityMode forcing PS5 Pro, AC 4xx+): *(u8*)rdi = 1; return 0"
+      "hex": "c60701b801000000c3",
+      "asm": "mov byte [rdi], 1; mov eax, 1; ret",
+      "note": "bool out-parameter = 1 and return 1 (sceAgcGetIsTrinityMode forcing PS5 Pro, from AC 4xx+): the native function stores sceKernelIsTrinityMode() in *out and returns it, so a real Pro gives *out = 1, eax = 1 (FINDINGS 6e)"
     },
     "out2_byte0": {
       "hex": "c6060031c0c3",

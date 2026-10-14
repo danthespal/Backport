@@ -60,7 +60,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
         ExtendText = Settings.ExtendText;
         PatchParam = Settings.PatchParam;
         foreach (var option in Knowledge.Options.Values)
-            PatchOptions.Add(new OptionRow(option));
+            PatchOptions.Add(new OptionRow(option, row => SelectedPatchOption = row));
           foreach (var option in PatchOptions)
               option.PropertyChanged += (_, e) =>
               {
@@ -73,6 +73,8 @@ public partial class MainViewModel : ObservableObject, IDisposable
                           foreach (var other in PatchOptions.Where(o => o.Key == (option.Key == "playgo_0_6" ? "playgo_0_6_log" : "playgo_0_6")))
                               other.IsEnabled = false;
                       OnPropertyChanged(nameof(PatchOptionsSummary));
+                      if (option.Key == BootNoticeOption)
+                          OnPropertyChanged(nameof(IsBootNoticeEnabled));
                       MarkAnalysisStale();
                   }
               };
@@ -252,8 +254,26 @@ public partial class MainViewModel : ObservableObject, IDisposable
       public string PatchOptionsSummary => $"Optional patches · {PatchOptions.Count} available · {PatchOptions.Count(o => o.IsEnabled)} enabled";
       [ObservableProperty] public partial OptionRow? SelectedPatchOption { get; set; }
       [ObservableProperty]
-      [NotifyPropertyChangedFor(nameof(VisiblePatchOptions))]
+      [NotifyPropertyChangedFor(nameof(VisiblePatchOptions), nameof(VisiblePatchGroups))]
       public partial string PatchSearch { get; set; } = "";
+      /// <summary>The visible patches by area, in data/fixes.json "option_groups" order; empty areas are left out.</summary>
+      public IReadOnlyList<PatchGroup> VisiblePatchGroups => VisiblePatchOptions
+          .GroupBy(o => o.Group, StringComparer.Ordinal)
+          .OrderBy(g => GroupRank(g.Key))
+          .Select(g => new PatchGroup(g.Key, g.ToList())).ToList();
+      int GroupRank(string group)
+      {
+          int rank = Knowledge.OptionGroups.ToList().IndexOf(group);
+          return rank < 0 ? int.MaxValue : rank;
+      }
+      partial void OnSelectedPatchOptionChanged(OptionRow? oldValue, OptionRow? newValue)
+      {
+          if (oldValue is not null) oldValue.IsSelected = false;
+          if (newValue is not null) newValue.IsSelected = true;
+      }
+      const string BootNoticeOption = "boot_notice";
+      /// <summary>The boot notification message box is shown only while that patch is enabled.</summary>
+      public bool IsBootNoticeEnabled => PatchOptions.Any(o => o.Key == BootNoticeOption && o.IsEnabled);
       public IEnumerable<OptionRow> VisiblePatchOptions => PatchOptions.Where(o =>
           o.Name.Contains(PatchSearch.Trim(), StringComparison.OrdinalIgnoreCase) ||
           o.Description.Contains(PatchSearch.Trim(), StringComparison.OrdinalIgnoreCase));
@@ -263,6 +283,9 @@ public partial class MainViewModel : ObservableObject, IDisposable
               SelectedPatchOption = VisiblePatchOptions.FirstOrDefault();
       }
 
+    /// <summary>Message text for the "Boot notification" patch; empty = default. Applied only when that patch is enabled.</summary>
+    [ObservableProperty] public partial string BootNoticeMessage { get; set; } = "";
+
     // --- run state ---------------------------------------------------------------------------
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(AnalyzeCommand), nameof(CookCommand), nameof(BuildAmprIndexCommand), nameof(OpenGameCommand), nameof(BuildPublishedAmprIndexCommand))]
@@ -270,6 +293,16 @@ public partial class MainViewModel : ObservableObject, IDisposable
 
     [ObservableProperty] public partial string StatusText { get; set; } = "Open a game folder to start";
     [ObservableProperty] public partial string AmprIndexText { get; set; } = "Build after creating the backport if the release needs an AMPR index.";
+
+    /// <summary>ampr_emu loads a valid ampr_emu.index as the complete /app0 file list (FINDINGS 6b2).</summary>
+    public const string AmprIndexWarning =
+        "Warning: ampr_emu treats ampr_emu.index as the complete list of /app0 files: a file missing from it is " +
+        "\"not found\" on the console. Build it from exactly the files the console will have (this game folder plus " +
+        "the overlay) and rebuild it after any change. Without an index, ampr_emu scans all of /app0 at the game's first " +
+        "file access and the game waits on its splash screen meanwhile; on a large game this takes minutes.";
+
+    /// <summary>Bound by the AMPR index sections of the window.</summary>
+    public string AmprIndexWarningText => AmprIndexWarning;
     [ObservableProperty] public partial double Progress { get; set; }
     [ObservableProperty] public partial OperationState OperationState { get; set; } = OperationState.Pending;
     [ObservableProperty] public partial int SelectedTab { get; set; }
@@ -428,9 +461,11 @@ public partial class MainViewModel : ObservableObject, IDisposable
             AmprIndexResult index = await Task.Run(() => AmprIndex.Build(game.Root, output, token), token);
             OperationState = OperationState.Completed;
             Progress = 100;
-            AmprIndexText = $"AMPR index ready: {index.Entries:N0} files ({index.OverlayEntries:N0} from the overlay). Include ampr_emu.index in the release.";
+            AmprIndexText = $"AMPR index ready: {index.Entries:N0} files ({index.OverlayEntries:N0} from the overlay). " +
+                            "Include ampr_emu.index only if the console's /app0 holds exactly these files.";
             StatusText = "AMPR index built";
             Log.Info($"Built {index.Path}: {index.Entries:N0} /app0 entries, {index.OverlayEntries:N0} overlay entries");
+            Log.Warning(AmprIndexWarning);
         }
         catch (OperationCanceledException)
         {
@@ -507,10 +542,11 @@ public partial class MainViewModel : ObservableObject, IDisposable
                 DefineSymbol = DefineSymbol, ExtendText = ExtendText, PatchParam = PatchParam,
                 AmprDebugLogging = AmprDebugLogging,
                 Options = PatchOptions.Where(o => o.IsEnabled).Select(o => o.Key).ToList(),
+                BootNoticeMessage = BootNoticeMessage,
                 Names = Names, DryRun = dryRun,
             };
             var knowledge = Knowledge;
-            string output = dryRun ? System.IO.Path.Combine(System.IO.Path.GetTempPath(), "ps5backport-analyze") : OutputFolder;
+            string output = OutputFolder; // a dry run writes nothing there
             using var operation = new BackportOperation(game.Root, output, options, knowledge, dryRun ? null : _analysis, _diagnostics);
             Log.RunId = operation.RunId;
             _operation = operation;
@@ -533,7 +569,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
                 ? $"Analyzed: {FixedCount} fixes planned, {UnresolvedCount} unresolved" : "Incomplete: analysis contains module errors"
                 : result.Published ? $"Backport created: {written} files written" : "Incomplete: output not published";
             if (!dryRun && result.Published)
-                AmprIndexText = "Backport created. Build the AMPR index before packaging if the release uses AMPR.";
+                AmprIndexText = "Backport created. Build the AMPR index from the same game folder you copy to the console; without it, ampr_emu scans /app0 at first start.";
             if (result.State == OperationState.Failed)
                 Log.Error(dryRun ? "Analysis contains module errors; resolve them before cooking"
                     : $"Output left unchanged; incomplete-run reports: {result.DiagnosticDirectory}");
@@ -541,7 +577,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
                 Log.Info(dryRun ? $"Analysis done: {ModuleCount} modules, {FixedCount} fixes, {UnresolvedCount} unresolved imports"
                                 : $"Done: {written} files and the reports written to {output}");
             if (result.PreviousOutputBackup.Length > 0)
-                Log.Info($"Previous output retained at {result.PreviousOutputBackup}");
+                Log.Warning($"Previous output could not be deleted (a file may be open); remove it manually: {result.PreviousOutputBackup}");
         }
         catch (OperationCanceledException)
         {

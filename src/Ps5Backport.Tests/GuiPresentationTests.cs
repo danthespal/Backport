@@ -38,6 +38,7 @@ public sealed class GuiPresentationTests : IDisposable
     [InlineData("logging")]
     [InlineData("optional")]
     [InlineData("paths")]
+    [InlineData("notice")]
     public async Task RelevantChanges_MarkDisplayedResultsStale(string change)
     {
         await _vm.AnalyzeCommand.ExecuteAsync(null);
@@ -56,6 +57,7 @@ public sealed class GuiPresentationTests : IDisposable
             case "logging": _vm.AmprDebugLogging = !_vm.AmprDebugLogging; break;
             case "optional": _vm.PatchOptions[0].IsEnabled = true; break;
             case "paths": _vm.SetPath(PathKind.Aerolib, Path.Combine(_root, "names.csv")); break;
+            case "notice": _vm.BootNoticeMessage = "changed after analysis"; break;   // part of the cook fingerprint
         }
         Assert.True(_vm.IsAnalysisStale);
         Assert.Same(displayed, _vm.Result);
@@ -125,6 +127,10 @@ public sealed class GuiPresentationTests : IDisposable
         Assert.Equal(OperationState.Completed, _vm.OperationState);
         Assert.True(File.Exists(Path.Combine(published, "ampr_emu.index")));
         Assert.False(Directory.Exists(_vm.OutputFolder));
+        // ampr_emu treats the index as the complete /app0 list (FINDINGS 6b2): the build warns, every time
+        Assert.Contains(_vm.Log.Visible, e => e.Level == LogLevel.Warning && e.Message == MainViewModel.AmprIndexWarning);
+        Assert.DoesNotContain("Include ampr_emu.index in the release", _vm.AmprIndexText);
+        Assert.Contains("only if", _vm.AmprIndexText);
     }
 
     [Fact]

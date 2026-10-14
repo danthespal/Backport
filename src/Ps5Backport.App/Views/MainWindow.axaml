@@ -140,7 +140,8 @@
                   <TextBlock Classes="section" Text="Last published backport" Foreground="{DynamicResource StatusOk}" />
                   <TextBlock Text="{Binding CompletionText}" TextWrapping="Wrap" />
                   <SelectableTextBlock Classes="mono" Text="{Binding PublishedOutput}" TextWrapping="Wrap" />
-                  <TextBlock Classes="muted" Text="If this release uses AMPR, build its index before packaging. Merge the release into the matching game folder before testing." TextWrapping="Wrap" />
+                  <TextBlock Classes="muted" Text="Merge the release into the matching game folder before testing. Build the AMPR index from that same folder." TextWrapping="Wrap" />
+                  <TextBlock Text="{Binding AmprIndexWarningText}" TextWrapping="Wrap" Foreground="{DynamicResource StatusWarn}" />
                   <WrapPanel ItemSpacing="8" LineSpacing="8">
                     <Button Content="Open created backport" Command="{Binding OpenPublishedOutputCommand}" />
                     <Button Content="Build AMPR index" Command="{Binding BuildPublishedAmprIndexCommand}" />
@@ -198,7 +199,8 @@
                     <StackPanel Spacing="8">
                       <TextBlock Classes="caption" Text="{Binding AmprIndexText}" TextWrapping="Wrap" />
                       <TextBlock Classes="muted" Text="After creating the backport, build the index if this release needs AMPR. It indexes the original game and this overlay, excludes private reports and logs, and writes ampr_emu.index in the output folder." TextWrapping="Wrap" />
-                      <TextBlock Classes="muted" Text="Include the index with the release. For testing, merge the release contents into the matching game folder (overwrite files), then copy the complete game folder to /data/homebrew/&lt;GAME&gt;/ for ShadowMountPlus." TextWrapping="Wrap" />
+                      <TextBlock Classes="muted" Text="For testing, merge the release contents into the matching game folder (overwrite files), then build the index and copy the complete game folder, ampr_emu.index included, to /data/homebrew/&lt;GAME&gt;/ for ShadowMountPlus." TextWrapping="Wrap" />
+                      <TextBlock Text="{Binding AmprIndexWarningText}" TextWrapping="Wrap" Foreground="{DynamicResource StatusWarn}" />
                       <Button Content="Build AMPR index" Command="{Binding BuildAmprIndexCommand}" HorizontalAlignment="Left" />
                     </StackPanel>
                   </Expander>
@@ -208,40 +210,56 @@
                         HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch">
                 <StackPanel Spacing="8">
                   <TextBlock Classes="caption" Text="Off by default and not remembered. Review the warnings, choose patches per game, then analyze or create the backport again." TextWrapping="Wrap" />
-                  <Grid ColumnDefinitions="320,*" ColumnSpacing="12" Height="196">
-                    <Grid RowDefinitions="Auto,*" RowSpacing="6">
-                      <TextBox Text="{Binding PatchSearch}" PlaceholderText="Search optional patches" />
-                      <ListBox Grid.Row="1" Classes="patchOptions" ItemsSource="{Binding VisiblePatchOptions}" SelectedItem="{Binding SelectedPatchOption}"
-                               Background="{DynamicResource CardBrush}" BorderBrush="{DynamicResource HairlineBrush}" BorderThickness="1">
-                        <ListBox.ItemTemplate>
-                          <DataTemplate x:DataType="vm:OptionRow">
-                            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8" MinHeight="32">
-                              <TextBlock Text="{Binding Name}" FontWeight="SemiBold" VerticalAlignment="Center" TextWrapping="Wrap">
-                                <ToolTip.Tip>
-                                  <StackPanel Spacing="6" MaxWidth="420">
-                                    <TextBlock Text="{Binding Description}" TextWrapping="Wrap" />
-                                    <TextBlock Text="{Binding Warning}" TextWrapping="Wrap" Foreground="{DynamicResource StatusWarn}" />
-                                  </StackPanel>
-                                </ToolTip.Tip>
-                              </TextBlock>
-                              <ToggleSwitch Grid.Column="1" IsChecked="{Binding IsEnabled}" OnContent="" OffContent=""
-                                            MinHeight="0" Height="32" VerticalAlignment="Center"
-                                            AutomationProperties.Name="{Binding Name}" ToolTip.Tip="{Binding Warning}" />
-                            </Grid>
-                          </DataTemplate>
-                        </ListBox.ItemTemplate>
-                      </ListBox>
-                    </Grid>
-                    <Border Grid.Column="1" Classes="card">
-                      <ScrollViewer>
-                        <StackPanel Spacing="6">
-                          <TextBlock Text="{Binding SelectedPatchOption.Name, FallbackValue='Select a patch to see details'}" FontWeight="SemiBold" TextWrapping="Wrap" />
-                          <TextBlock Classes="muted" Text="{Binding SelectedPatchOption.Description, FallbackValue=''}" TextWrapping="Wrap" />
-                          <TextBlock Text="{Binding SelectedPatchOption.Warning, FallbackValue=''}" TextWrapping="Wrap" Foreground="{DynamicResource StatusWarn}" />
-                        </StackPanel>
-                      </ScrollViewer>
-                    </Border>
-                  </Grid>
+                  <TextBox Text="{Binding PatchSearch}" PlaceholderText="Search optional patches" MaxWidth="320" HorizontalAlignment="Left" />
+                  <!-- one card per area (data/fixes.json option "group"); cards wrap as areas are added -->
+                  <ItemsControl ItemsSource="{Binding VisiblePatchGroups}">
+                    <ItemsControl.ItemsPanel>
+                      <ItemsPanelTemplate>
+                        <WrapPanel ItemSpacing="10" LineSpacing="10" />
+                      </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                    <ItemsControl.ItemTemplate>
+                      <DataTemplate x:DataType="vm:PatchGroup">
+                        <Border Classes="card" Width="280" Padding="10,8">
+                          <StackPanel Spacing="2">
+                            <TextBlock Classes="caption" Text="{Binding Name}" Margin="2,0,0,2" />
+                            <ItemsControl ItemsSource="{Binding Options}">
+                              <ItemsControl.ItemTemplate>
+                                <DataTemplate x:DataType="vm:OptionRow">
+                                  <Grid ColumnDefinitions="*,Auto" ColumnSpacing="6" MinHeight="30">
+                                    <Button Classes="patchName" Classes.selected="{Binding IsSelected}" Command="{Binding SelectCommand}"
+                                            AutomationProperties.Name="{Binding Name}">
+                                      <TextBlock Text="{Binding Name}" TextWrapping="Wrap" />
+                                      <ToolTip.Tip>
+                                        <StackPanel Spacing="6" MaxWidth="420">
+                                          <TextBlock Text="{Binding Description}" TextWrapping="Wrap" />
+                                          <TextBlock Text="{Binding Warning}" TextWrapping="Wrap" Foreground="{DynamicResource StatusWarn}" />
+                                        </StackPanel>
+                                      </ToolTip.Tip>
+                                    </Button>
+                                    <ToggleSwitch Grid.Column="1" IsChecked="{Binding IsEnabled}" OnContent="" OffContent=""
+                                                  MinHeight="0" Height="30" VerticalAlignment="Center"
+                                                  AutomationProperties.Name="{Binding Name}" ToolTip.Tip="{Binding Warning}" />
+                                  </Grid>
+                                </DataTemplate>
+                              </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                          </StackPanel>
+                        </Border>
+                      </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                  </ItemsControl>
+                  <Border Classes="card" Padding="12,8">
+                    <StackPanel Spacing="4">
+                      <TextBlock Text="{Binding SelectedPatchOption.Name, FallbackValue='Select a patch to see details'}" FontWeight="SemiBold" TextWrapping="Wrap" />
+                      <TextBlock Classes="muted" Text="{Binding SelectedPatchOption.Description, FallbackValue=''}" TextWrapping="Wrap" />
+                      <TextBlock Text="{Binding SelectedPatchOption.Warning, FallbackValue=''}" TextWrapping="Wrap" Foreground="{DynamicResource StatusWarn}" />
+                    </StackPanel>
+                  </Border>
+                  <StackPanel Spacing="4" IsVisible="{Binding IsBootNoticeEnabled}">
+                    <TextBlock Classes="caption" Text="Boot notification message. Empty uses the default. Baked into the eboot and shown on the console after the patch's delay." TextWrapping="Wrap" />
+                    <TextBox Text="{Binding BootNoticeMessage}" PlaceholderText="Backport test files by Arsenic" MaxWidth="640" HorizontalAlignment="Left" />
+                  </StackPanel>
                 </StackPanel>
               </Expander>
               <Expander Header="Diagnostics" IsVisible="{Binding HasGame}" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch">

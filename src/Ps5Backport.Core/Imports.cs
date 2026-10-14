@@ -120,7 +120,7 @@ public static partial class Imports
 
     /// <summary>
     /// {NID: number of instructions in executable segments that call, jump to or load the import's
-    /// PLT entry or GOT slot}: call/jmp rel32, call/jmp [rip+disp32], mov/lea reg, [rip+disp32].
+    /// PLT entry or GOT slot}: call/jmp/jcc rel32, call/jmp [rip+disp32], mov/lea/cmp/add reg, [rip+disp32].
     /// A byte-pattern scan (no disassembly): chance matches, prefixes and unsupported encodings can
     /// produce false positives or missed references. Zero does not prove an import is unused; data
     /// pointers and indirect control flow are not resolved. Positive counts do not prove reachability.
@@ -159,7 +159,8 @@ public static partial class Imports
                 if (b is 0xE8 or 0xE9)
                     opcodeLength = 1;
                 else if (i + 1 < seg.Length && ((b == 0xFF && seg[i + 1] is 0x15 or 0x25) ||
-                                                (b is 0x8B or 0x8D && (seg[i + 1] & 0xC7) == 0x05)))
+                                                (b == 0x0F && seg[i + 1] is >= 0x80 and <= 0x8F) ||   // jcc rel32: conditional tail call
+                                                (b is 0x8B or 0x8D or 0x3B or 0x03 && (seg[i + 1] & 0xC7) == 0x05)))
                     opcodeLength = 2;
                 else
                     continue;

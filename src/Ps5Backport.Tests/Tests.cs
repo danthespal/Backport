@@ -284,6 +284,49 @@ namespace Ps5Backport.Tests
             finally { if (Directory.Exists(store)) Directory.Delete(store, true); }
         }
 
+        /// <summary>An unreadable choice (here a folder: UnauthorizedAccessException on Windows) is reported in the
+        /// panel; an exception escaping an async command would end the app.</summary>
+        [Fact]
+        public async Task ChooseBpsPatch_UnreadableFile_IsReportedNotThrown()
+        {
+            string store = TempStore();
+            try
+            {
+                var vm = Open(store);
+                string folder = Directory.CreateDirectory(Path.Combine(store, "not-a-file.bps")).FullName;
+                vm.Store.PickFiles = (_, _, _, _) => Task.FromResult(new[] { folder });
+                await vm.Store.ChooseBpsPatchCommand.ExecuteAsync(null);
+                Assert.StartsWith("Not a usable BPS patch:", vm.Store.BpsInfo);
+            }
+            finally { if (Directory.Exists(store)) Directory.Delete(store, true); }
+        }
+
+        /// <summary>A corrupt manifest.json (JsonException) is logged by Add and Apply BPS like any other store
+        /// error; escaping a command would end the app.</summary>
+        [Fact]
+        public async Task CorruptManifest_AddAndApplyBps_LogErrors()
+        {
+            string[] files = Directory.GetFiles(Repo.Need("fakelibs", "4.03"), "*.sprx").Take(1).ToArray();
+            string store = TempStore();
+            try
+            {
+                string set = Directory.CreateDirectory(Path.Combine(store, "4.03")).FullName;
+                File.Copy(files[0], Path.Combine(set, Path.GetFileName(files[0])));
+                File.WriteAllText(Path.Combine(set, Ps5Backport.Core.FakelibStore.ManifestName), "{");
+                var vm = Open(store);
+                int errors = vm.Log.ErrorCount;
+                vm.Store.PickFiles = (_, _, _, _) => Task.FromResult(files);
+                vm.Store.AddFirmware = "4.03";
+                await vm.Store.AddFilesCommand.ExecuteAsync(null);
+                Assert.Equal(errors + 1, vm.Log.ErrorCount);
+                vm.Store.BpsPatch = Repo.Need(".original", "reference", "BackPork", "patches", "7xx", "libSceAgc.bps");
+                vm.Store.BpsInput = Repo.Need(".original", ".PS5OriginalLibs", "Firmware 10.01", "system", "common", "lib", "libSceAgc.sprx");
+                vm.Store.ApplyBpsCommand.Execute(null);
+                Assert.Equal(errors + 2, vm.Log.ErrorCount);
+            }
+            finally { if (Directory.Exists(store)) Directory.Delete(store, true); }
+        }
+
         [Fact]
         public void ApplyBps_WrongLibrary_LogsErrorAndAddsNothing()
         {
@@ -308,15 +351,15 @@ namespace Ps5Backport.Tests
     public class FirmwareDbPageTests
     {
         [Fact]
-        public async Task Compare_650With701_ShowsTrinityModeAdded()
+        public async Task Compare_650With700_ShowsTrinityModeAdded()
         {
-            string db = Repo.Need("firmware_db", "7.01.json");
+            string db = Repo.Need("firmware_db", "7.00.json");
             var vm = new MainViewModel(new AppSettings { FirmwareDbDir = Path.GetDirectoryName(db) }) { Page = AppPage.FirmwareDb };
             await vm.PageLoad;
             Assert.Equal(Directory.GetFiles(Path.GetDirectoryName(db)!, "*.json").Length, vm.Database.Firmwares.Count);
 
             vm.Database.Selected = vm.Database.Firmwares.Single(f => f.Firmware == "6.50");
-            Assert.Equal("7.01", vm.Database.CompareWith?.Firmware);         // the next newer firmware by default
+            Assert.Equal("7.00", vm.Database.CompareWith?.Firmware);         // the next newer firmware by default
             string trinity = Ps5Backport.Core.Nid.Compute("sceKernelIsTrinityMode");
             vm.Database.Search = trinity;
             var row = Assert.Single(vm.Database.Modules);
@@ -490,6 +533,37 @@ namespace Ps5Backport.Tests
     [Trait("Lane", "Private")]
     public class OptionalPatchTests
     {
+        /// <summary>The grouped panel is built from data/fixes.json: every option once, in its group, groups in
+        /// option_groups order; search filters across groups and drops empty ones.</summary>
+        [Fact]
+        public void PatchGroups_ShowEveryOptionOnce_InDataOrder_AndFilter()
+        {
+            var k = new Core.Knowledge(Repo.Need("data"));
+            var vm = new MainViewModel(new AppSettings());
+            var groups = vm.VisiblePatchGroups;
+            Assert.Equal(k.Options.Keys.Order(StringComparer.Ordinal), groups.SelectMany(g => g.Options).Select(o => o.Key).Order(StringComparer.Ordinal));
+            Assert.Equal(k.OptionGroups.Where(name => k.Options.Values.Any(o => o.Group == name)), groups.Select(g => g.Name));
+            Assert.All(groups, g => Assert.All(g.Options, o => Assert.Equal(g.Name, o.Group)));
+            Assert.All(k.Options.Values, o => Assert.False(string.IsNullOrWhiteSpace(o.Group)));
+
+            vm.PatchSearch = "speaker";
+            Assert.All(vm.VisiblePatchGroups, g => Assert.NotEmpty(g.Options));
+            Assert.Equal(vm.PatchOptions.Count(o => o.Name.Contains("speaker", StringComparison.OrdinalIgnoreCase)
+                                                    || o.Description.Contains("speaker", StringComparison.OrdinalIgnoreCase)),
+                         vm.VisiblePatchGroups.Sum(g => g.Options.Count));
+            Assert.Contains(vm.VisiblePatchGroups, g => g.Options.Any(o => o.Key == "audio_speaker_compat"));
+            vm.PatchSearch = "";
+
+            var port = vm.PatchOptions.Single(o => o.Key == "audio_port_compat");
+            port.SelectCommand.Execute(null);
+            Assert.Same(port, vm.SelectedPatchOption);
+            Assert.Same(port, Assert.Single(vm.PatchOptions, o => o.IsSelected));
+
+            Assert.False(vm.IsBootNoticeEnabled);
+            vm.PatchOptions.Single(o => o.Key == "boot_notice").IsEnabled = true;
+            Assert.True(vm.IsBootNoticeEnabled);
+        }
+
         [Fact]
         public async Task EnabledOption_ReachesTheRun_AndResetsForTheNextGame()
         {
@@ -677,6 +751,14 @@ namespace Ps5Backport.Tests
                 Assert.NotEmpty(problem);
             }
             finally { Directory.Delete(root, true); }
+        }
+
+        /// <summary>Imports write the repository firmware_db, not the copy bundled next to the executable.</summary>
+        [Fact]
+        public void Cli_FirmwareImportsDefaultToRepositoryDatabase()
+        {
+            Assert.Equal(Path.Combine(Repo.Root, "firmware_db"), Cli.ImportDb);
+            Assert.NotEqual(Path.GetFullPath(Cli.ImportDb), Path.GetFullPath(Paths.FirmwareDbDir!));   // the bundled copy wins for reading
         }
 
         [Fact]
@@ -1159,6 +1241,31 @@ namespace Ps5Backport.Tests
                 Directory.CreateDirectory(Path.Combine(root, "docs", "dev"));
                 File.WriteAllText(Path.Combine(root, "docs", "dev", "TechnicalDebt.md"), "# Renamed sections\n");
                 Assert.Throws<InvalidDataException>(() => DataGenerators.ScanCandidates(root));
+            }
+            finally { Directory.Delete(root, true); }
+        }
+
+        /// <summary>AnyPS5 2026-10 moved the bullets to docs/dev/debt/&lt;library&gt;.md; an empty top-level section must not wipe the catalog.</summary>
+        [Fact]
+        public void CandidateGenerator_ReadsPerLibraryDebtFiles()
+        {
+            string root = TempRoot();
+            try
+            {
+                string library = Directory.CreateDirectory(Path.Combine(root, "core", "libs", "prx", "libSynthetic")).FullName;
+                string debt = Directory.CreateDirectory(Path.Combine(root, "docs", "dev", "debt")).FullName;
+                File.WriteAllText(Path.Combine(library, "Export.cpp"),
+                    "int APS5_VABI sceTarget() { return 0; }\nint APS5_VABI sceOther() { return 1; }\n");
+                File.WriteAllText(Path.Combine(root, "docs", "dev", "TechnicalDebt.md"),
+                    "### Silent stubs\n\nEverywhere... except:\n\n### Unknown function info\n");
+                Assert.Throws<InvalidDataException>(() => DataGenerators.ScanCandidates(root));
+
+                File.WriteAllText(Path.Combine(debt, "libSynthetic.md"),
+                    "### Silent stubs\n\n- [sceTarget](../../../core/libs/prx/libSynthetic/Export.cpp) (libSynthetic)\n\n" +
+                    "### Unknown function info\n\n- [sceOther](../../../core/libs/prx/libSynthetic/Export.cpp)\n");
+                var candidate = Assert.Single(DataGenerators.ScanCandidates(root));
+                Assert.Equal("sceTarget", candidate.Name);
+                Assert.Equal("AnyPS5 libSynthetic/Export.cpp:1", candidate.Source);
             }
             finally { Directory.Delete(root, true); }
         }
@@ -1990,12 +2097,10 @@ namespace Ps5Backport.Tests
                 ulong target = (ulong)((long)plt[n] + 5 + BinaryPrimitives.ReadInt32LittleEndian(elf.Data.AsSpan((int)entry + 1)));
                 if (fix.Kind == Fix.KindAdapter)
                 {
-                    long code = elf.Off(target);
-                    byte[] body = fix.Insns.SelectMany(i => i.Bytes).ToArray();
-                    Assert.Equal(body, elf.Data[(int)code..(int)(code + body.Length)]);
-                    Assert.Equal([0xFF, 0x25], elf.Data[(int)(code + body.Length)..(int)(code + body.Length + 2)]);
-                    ulong jmp = target + (ulong)body.Length;
-                    Assert.Equal(got[n], (ulong)((long)jmp + 6 + BinaryPrimitives.ReadInt32LittleEndian(elf.Data.AsSpan((int)(code + body.Length + 2)))));
+                    // the cave chain runs every instruction; call_got / the tail jmp go through the import's own GOT slot
+                    var (executed, called, jumped) = Samples.Trace(elf, elf.Imports().First(i => i.Plt && i.GotVaddr == got[n]), fix);
+                    Assert.Equal(fix.Insns.Select(i => i.Hex), executed);
+                    Assert.Equal(got[n], fix.PostCall ? called : jumped);
                     Assert.Equal(plt[n] + 6, elf.ReadU64(got[n]));               // lazy binding left intact
                 }
                 else if (fix.Kind == Fix.KindRedirect)
@@ -2158,7 +2263,7 @@ namespace Ps5Backport.Tests
             var reference = Imports.LoadReference(Repo.Need("firmware_db"), "4");
             var statuses = Imports.Classify(elf, reference.Nids, exact: reference.Exact).Where(s => s.Nid is "2jiIxUmcsGo" or "bIi4YUfSRys" or "f3kPeoTZnIE");
             var refs = Imports.CodeReferences(elf, statuses, cancel: TestContext.Current.CancellationToken);
-            Assert.Equal(0, refs["2jiIxUmcsGo"]);   // sceTextToSpeech2Cancel: never referenced
+            Assert.Equal(1, refs["2jiIxUmcsGo"]);   // sceTextToSpeech2Cancel: only a conditional tail call, je rel32 at 0x180bc02
             Assert.Equal(3, refs["bIi4YUfSRys"]);   // sceHmd2GetDeviceInformation
             Assert.Equal(1, refs["f3kPeoTZnIE"]);   // sceHmd2Open
         }
@@ -2477,6 +2582,33 @@ namespace Ps5Backport.Tests
 
     public sealed class ImportLibraryRenameTests
     {
+        /// <summary>A module without an executable PT_LOAD is malformed input for patching: InvalidDataException,
+        /// which the pipeline reports as a module error (InvalidOperationException would abort the whole run).</summary>
+        [Fact]
+        public void ModuleWithoutCode_IsADataError()
+        {
+            byte[] data = SyntheticBinary.Elf(imports: true);
+            SyntheticBinary.W32(data, 0x40 + 4, 4);       // PT_LOAD #0: read-only, no execute flag
+            var elf = new SceElf(data);
+            Assert.Throws<InvalidDataException>(() => elf.TextSegment());
+            Assert.Throws<InvalidDataException>(() => Patching.FindCave(elf, 8));
+        }
+
+        /// <summary>String-table suffix merging also works the other way: the import's name can be the tail of a
+        /// longer name. Renaming in place would then corrupt that other symbol, so it must be refused.</summary>
+        [Fact]
+        public void NameThatIsTheTailOfAnotherName_IsRefusedWithoutChangingBytes()
+        {
+            byte[] data = SyntheticBinary.Elf(imports: true);
+            data[0x200] = (byte)'Q';                      // "QXXXXXXXXXXX#A#A" at 0x200; the import's own name starts at 0x201
+            SyntheticBinary.W32(data, 0x2B0, 0);          // symbol 2's name = the longer string
+            var elf = new SceElf(data);
+            Assert.Equal("Q" + SyntheticBinary.Nid + "#A#A", elf.Symbols()[2].Name);
+            var original = data.ToArray();
+            Assert.Contains("shared", Assert.Throws<PatchException>(() => Patching.RenameImport(elf, elf.Imports()[0], "04AjkP0jO9U")).Message);
+            Assert.Equal(original, data);
+        }
+
         [Fact]
         public void CrossLibraryRename_UsesTargetLibraryAndModuleIds()
         {
@@ -2541,6 +2673,26 @@ namespace Ps5Backport.Tests
                 var fix = Knowledge.Default.Fixes[nid];
                 Assert.Equal("04AjkP0jO9U", fix.NewNid);
                 Assert.Equal("libkernel", fix.NewLibrary);
+            }
+        }
+
+        /// <summary>The Wait adapters hand _umtx_op a real timespec: the u32 microsecond timeout is converted in the
+        /// adapter's own stack frame instead of passing the u32 pointer through (FINDINGS §6d).</summary>
+        [Fact]
+        public void SyncWaitAdapters_ConvertMicrosecondTimeout()
+        {
+            foreach (string nid in new[] { "B2n8aDorSH4", "PZQhiiLXRFs", "Hc4CaR6JBL0" })
+            {
+                var fix = Knowledge.Default.Fixes[nid];
+                Assert.True(fix.PostCall, nid);
+                Assert.DoesNotContain(fix.Insns, i => !i.CallGot && (i.Bytes[0] is >= 0x70 and <= 0x7F ||
+                                                                     i.Bytes[0] == 0x0F && i.Bytes[1] is >= 0x80 and <= 0x8F));   // branch-free: may be split across caves
+                string[] hex = fix.Insns.Select(i => i.Hex).ToArray();
+                Assert.Equal(["55", "4889e5", "4883ec10"], hex[..3]);       // frame + 16-byte timespec; rsp stays 16-aligned for the call
+                Assert.Contains("41b940420f00", hex);                        // microseconds / 1000000 = tv_sec
+                Assert.Contains("69d2e8030000", hex);                        // remainder * 1000 = tv_nsec
+                Assert.Contains("4989e0", hex);                              // uaddr2 = &timespec
+                Assert.Equal([Insn.CallGotToken, "c9", "c3"], hex[^3..]);    // call _umtx_op; leave; ret
             }
         }
 
@@ -3598,7 +3750,9 @@ namespace Ps5Backport.Tests
             Assert.True(k.Options["save_prepare_compat"].Fixes["sDCBrmc61XU"].Due("12.00"));                   // no limit
             var mfsr = k.Fixes["3WVD91e12ZQ"];                                   // scePsmlMfsrInit: skipped below 9.00
             Assert.True(mfsr.Kind == Fix.KindPltStub && mfsr.When == Fix.WhenAlways && mfsr.Due("4") && !mfsr.Due("9.00"));
+            Assert.Equal(Convert.FromHexString("B81200818AC3"), k.StubBytes(mfsr.Stub));   // returns 0x8a810012 (MFSR not supported), as on a base console
             Assert.False(table.ContainsKey("3WVD91e12ZQ"));                      // force_pro lifts it (kind "none")
+            Assert.Equal(Convert.FromHexString("C60701B801000000C3"), k.StubBytes(table["BfBDZGbti7A"].Stub));   // *out = 1 and return 1, as on a real Pro
         }
 
         [Fact]
@@ -3640,7 +3794,8 @@ namespace Ps5Backport.Tests
         {
             var k = K;
             Assert.Equal(["sceHmd2ReprojectionSetAllowPositionalReprojection", "sceHttp2SetRequestNoContentLength",
-                          "sceKernelSyncOnAddressWait", "scePsmlMfsrInit", "sceUserServiceGetGamePresets", "sceVideoOutGetOutputStatusWithVrr"],
+                          "sceKernelSyncOnAddressWait", "sceKernelSyncOnAddressWait32", "sceKernelSyncOnAddressWait64",
+                          "scePsmlMfsrInit", "sceUserServiceGetGamePresets", "sceVideoOutGetOutputStatusWithVrr"],
                          k.FixList.Where(f => !f.Proven).Select(f => f.Name).Order(StringComparer.Ordinal));
             Assert.True(k.Fixes["NH6xARDOVv8"].Proven);   // GetOperationMode stub: proven by both games
         }
@@ -3724,7 +3879,7 @@ namespace Ps5Backport.Tests
             Assert.Contains("D-CzAxQL0XI", fw400.Nids);                       // UserServicePlatformPrivacyWs1, called by GT7 at startup
             Assert.DoesNotContain("B2n8aDorSH4", fw400.Nids);                 // sceKernelSyncOnAddressWait32 does not
             Assert.Equal("9.00", FirmwareDb.Introduced("B2n8aDorSH4", dbs, k)!.Value.Firmware);
-            Assert.Equal("7.01", FirmwareDb.Introduced("tU5e3f9gSiU", dbs, k)!.Value.Firmware);   // sceKernelIsTrinityMode
+            Assert.Equal("7.00", FirmwareDb.Introduced("tU5e3f9gSiU", dbs, k)!.Value.Firmware);   // sceKernelIsTrinityMode
             Assert.Equal(("4.03", false), (FirmwareDb.Select(Repo.Need("firmware_db"), "4.10").Db!.Firmware, FirmwareDb.Select(Repo.Need("firmware_db"), "4.10").Exact));
         }
 
@@ -3756,7 +3911,7 @@ namespace Ps5Backport.Tests
 
                 var k = new Knowledge(Repo.Need("data"));
                 Assert.Equal(("4.00", "firmware_db 4.00"), FirmwareDb.Introduced("tU5e3f9gSiU", all, k));
-                Assert.Equal("7.01", FirmwareDb.Introduced("tU5e3f9gSiU", [], k)!.Value.Firmware);   // known fact (data/introduced.json)
+                Assert.Equal("7.00", FirmwareDb.Introduced("tU5e3f9gSiU", [], k)!.Value.Firmware);   // known fact (data/introduced.json)
                 Assert.Null(FirmwareDb.Introduced("XXXXXXXXXXX", all, k));
             }
             finally { Directory.Delete(dir, true); }
@@ -4630,7 +4785,9 @@ namespace Ps5Backport.Tests
                 var renamed = Assert.Single(reloaded.Imports(), i => i.SymIndex == original.SymIndex);
                 Assert.Equal("04AjkP0jO9U", renamed.Nid);
                 Assert.Equal("libkernel", renamed.Library);
-                Assert.Equal(original.GotVaddr, Samples.Trace(reloaded, original, Samples.K.Fixes[original.Nid]).Jumped);
+                var fix = Samples.K.Fixes[original.Nid];
+                var (_, called, jumped) = Samples.Trace(reloaded, original, fix);
+                Assert.Equal(original.GotVaddr, fix.PostCall ? called : jumped);      // Wait: call [GOT] (post-call, timespec); Wake: jmp [GOT]
             }
         }
 
@@ -5009,7 +5166,10 @@ namespace Ps5Backport.Tests
     /// <summary>Staged publication, batch rollback, provenance, aliases and actual process-interruption recovery.</summary>
     public sealed class PublicationTests : IDisposable
     {
-        readonly string _root = Directory.CreateDirectory(Path.Combine(Path.GetTempPath(), "ps5backport-publication-" + Guid.NewGuid().ToString("N"))).FullName;
+        // The interruption child process uses the parent's root and exits without Dispose, so it creates none.
+        readonly string _root = Environment.GetEnvironmentVariable("PS5BP_TRANSACTION_TEST_ROOT") is null
+            ? Directory.CreateDirectory(Path.Combine(Path.GetTempPath(), "ps5backport-publication-" + Guid.NewGuid().ToString("N"))).FullName
+            : "";
         string Output => Path.Combine(_root, "out");
 
         void Previous()
@@ -5099,7 +5259,7 @@ namespace Ps5Backport.Tests
         }
 
         [Fact]
-        public void ReusedDestination_ContainsOnlyNewArtifactsAndRetainsBackup()
+        public void ReusedDestination_ContainsOnlyNewArtifactsAndDiscardsBackup()
         {
             Previous();
             string backup;
@@ -5110,7 +5270,8 @@ namespace Ps5Backport.Tests
                 transaction.Commit(TestContext.Current.CancellationToken);
             }
             Assert.False(File.Exists(Path.Combine(Output, "old.bin")));
-            Assert.Equal("previous", File.ReadAllText(Path.Combine(backup, "old.bin")));
+            Assert.False(Directory.Exists(backup));
+            Assert.Empty(Directory.GetDirectories(_root, "*.backup"));
             Publication.Verify(Output);
             File.WriteAllText(Path.Combine(Output, "new.bin"), "tampered");
             Assert.Throws<InvalidDataException>(() => Publication.Verify(Output));
@@ -5154,6 +5315,7 @@ namespace Ps5Backport.Tests
             {
                 Assert.Equal("replacement", File.ReadAllText(Path.Combine(Output, "new.bin")));
                 Publication.Verify(Output);
+                Assert.Empty(Directory.GetDirectories(_root, "*.backup"));
             }
             else if (existing)
                 Assert.Equal("previous", File.ReadAllText(Path.Combine(Output, "old.bin")));
@@ -5223,7 +5385,8 @@ namespace Ps5Backport.Tests
             var result = Pipeline.Backport(fixture.Game, Output, options, fixture.Knowledge, cancel: TestContext.Current.CancellationToken);
             Assert.True(result.Published);
             Assert.False(File.Exists(Path.Combine(Output, "old.bin")));
-            Assert.Equal("previous", File.ReadAllText(Path.Combine(result.PreviousOutputBackup, "old.bin")));
+            Assert.Empty(result.PreviousOutputBackup);
+            Assert.Empty(Directory.GetDirectories(_root, "*.backup"));
             Assert.Equal(new byte[] { 1, 2 }, File.ReadAllBytes(Path.Combine(fixture.Game, "data.bin")));
             Publication.Verify(Output);
             using var evidence = JsonDocument.Parse(File.ReadAllBytes(Path.Combine(Output, Publication.EvidenceName)));
@@ -5304,7 +5467,8 @@ namespace Ps5Backport.Tests
             Assert.True(result.Published);
             Assert.Equal(new byte[] { 3, 4 }, File.ReadAllBytes(Path.Combine(Output, "data.bin")));
             Assert.Equal(data, File.ReadAllBytes(module));
-            Assert.Equal("previous", File.ReadAllText(Path.Combine(result.PreviousOutputBackup, "old.bin")));
+            Assert.Empty(result.PreviousOutputBackup);
+            Assert.Empty(Directory.GetDirectories(_root, "*.backup"));
             Publication.Verify(Output);
         }
 
@@ -5519,7 +5683,11 @@ namespace Ps5Backport.Tests
         [DllImport("kernel32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
         static extern uint GetShortPathNameW(string path, StringBuilder shortPath, uint length);
 
-        public void Dispose() => Directory.Delete(_root, recursive: true);
+        public void Dispose()
+        {
+            if (_root.Length > 0)
+                Directory.Delete(_root, recursive: true);
+        }
     }
 }
 #endregion
@@ -5622,16 +5790,27 @@ namespace Ps5Backport.Tests
     internal static class SyntheticBinary
     {
         internal const string Nid = "XXXXXXXXXXX";
+        internal const ulong BssVaddr = 0x10000, BssSize = 0x100;
 
-        internal static byte[] Elf(byte[]? payload = null, bool imports = false, bool exports = false)
+        /// <summary><paramref name="writable"/>: adds a bss-only read-write PT_LOAD at vaddr
+        /// <see cref="BssVaddr"/> (memsz <see cref="BssSize"/>); the program headers then move to the file's end.</summary>
+        internal static byte[] Elf(byte[]? payload = null, bool imports = false, bool exports = false, bool writable = false)
         {
-            var data = new byte[0x500 + (payload?.Length ?? 0)];
+            int body = 0x500 + (payload?.Length ?? 0);
+            var data = new byte[body + (writable ? 4 * 0x38 : 0)];
+            int phoff = writable ? body : 0x40;
             SceElf.Magic.CopyTo(data); data[4] = 2; data[5] = 1;
             W16(data, 0x10, SceElf.EtSceExec); W16(data, 0x12, 0x3E); W32(data, 0x14, 1);
-            W64(data, 0x20, 0x40); W16(data, 0x34, 0x40); W16(data, 0x36, 0x38); W16(data, 0x38, 3);
+            W64(data, 0x20, (ulong)phoff); W16(data, 0x34, 0x40); W16(data, 0x36, 0x38); W16(data, 0x38, writable ? (ushort)4 : (ushort)3);
             Header(0, SceElf.PtLoad, 0, (ulong)data.Length, SceElf.PfX);
             Header(1, SceElf.PtDynamic, 0x100, 0x80, 0);
             Header(2, SceElf.PtSceModuleParam, 0x180, 0x18, 0);
+            if (writable)
+            {
+                Header(3, SceElf.PtLoad, (ulong)body, 0, SceElf.PfW | 4);
+                W64(data, phoff + 3 * 0x38 + 0x10, BssVaddr); W64(data, phoff + 3 * 0x38 + 0x18, BssVaddr);
+                W64(data, phoff + 3 * 0x38 + 0x28, BssSize);
+            }
             var tags = new (ulong, ulong)[]
             {
                 (SceElf.DtStrtab, 0x200), (SceElf.DtSymtab, 0x280), (SceElf.DtSceSymtabSz, 72),
@@ -5650,7 +5829,7 @@ namespace Ps5Backport.Tests
 
             void Header(int index, uint type, ulong offset, ulong size, uint flags)
             {
-                int at = 0x40 + index * 0x38;
+                int at = phoff + index * 0x38;
                 W32(data, at, type); W32(data, at + 4, flags); W64(data, at + 8, offset);
                 W64(data, at + 0x10, offset); W64(data, at + 0x20, size); W64(data, at + 0x28, size);
             }
@@ -5951,6 +6130,208 @@ namespace Ps5Backport.Tests
 
         static void Rip(byte[] data, int instruction, int length, int displacement, int target)
             => BinaryPrimitives.WriteInt32LittleEndian(data.AsSpan(instruction + displacement), target - instruction - length);
+    }
+}
+#endregion
+#endif
+
+#if !BACKPORT_SYNTHETIC_ONLY && !BACKPORT_PARSER_TESTS_ONLY
+#region BootNoticeTests
+namespace Ps5Backport.Tests
+{
+    using System.Buffers.Binary;
+    using System.Text;
+    using Ps5Backport.Core;
+
+    public sealed class BootNoticeTests
+    {
+        [Fact]
+        public void RedirectsEntry_IntoCave_WithEncodedMessage_AndIsIdempotent()
+        {
+            var elf = Fixture();
+            byte[] before = elf.Data.ToArray();
+            const string msg = "Backport";
+            Assert.Equal(1, BootNotice.Apply(elf, msg, 8, TestContext.Current.CancellationToken));
+
+            const int entry = 0x500;
+            Assert.Equal(0xE9, elf.Data[entry]);                       // e_entry redirect (6 bytes)
+            int cave = entry + 5 + BinaryPrimitives.ReadInt32LittleEndian(elf.Data.AsSpan(entry + 1));
+
+            // Cave replicates the overwritten _start bytes, then saves caller-saved registers.
+            Assert.Equal(new byte[] { 0x55, 0x48, 0x89, 0xE5, 0x41, 0x57 }, elf.Data.AsSpan(cave, 6).ToArray());
+            Assert.Equal(new byte[] { 0x57, 0x56, 0x52, 0x51, 0x50 }, elf.Data.AsSpan(cave + 6, 5).ToArray());
+            // The message and the device path are materialised as immediates (X-only text).
+            Assert.True(Contains(elf.Data, cave, "Backport"u8.ToArray()));
+            Assert.True(Contains(elf.Data, cave, "/dev/not"u8.ToArray()));
+            Assert.True(Contains(elf.Data, cave, "ificatio"u8.ToArray()));
+            // Every call routes through the imported libkernel PLT entries (open/write/close/usleep).
+            Assert.Equal(new ulong[] { 0x420, 0x430, 0x440, 0x450 },
+                CallTargets(elf.Data, cave, cave + 0x200).OrderBy(t => t).ToArray());
+
+            // Idempotent: the entry no longer starts with the _start prologue.
+            byte[] patched = elf.Data.ToArray();
+            Assert.Equal(0, BootNotice.Apply(elf, msg, 8, TestContext.Current.CancellationToken));
+            Assert.Equal(patched, elf.Data);
+        }
+
+        /// <summary>
+        /// _start is entered like a normal function (rsp = 8 mod 16: the game's own _start pushes 5 registers before
+        /// its calls), so the cave's 11 pushes plus its stack allocation must leave rsp 16-aligned at every call.
+        /// </summary>
+        [Fact]
+        public void Cave_KeepsStackAlignedAtCalls()
+        {
+            var elf = Fixture();
+            Assert.Equal(1, BootNotice.Apply(elf, "Hi", 8, TestContext.Current.CancellationToken));
+            int cave = 0x500 + 5 + BinaryPrimitives.ReadInt32LittleEndian(elf.Data.AsSpan(0x501));
+            int sub = cave;
+            while (!(elf.Data[sub] == 0x48 && elf.Data[sub + 1] == 0x81 && elf.Data[sub + 2] == 0xEC))
+                sub++;
+            int pushes = 2 + 5 + 4;                       // rbp, r15 (replicated prologue); rdi..rax; r8..r11
+            Assert.Equal(6 + 5 + 8, sub - cave);          // the pushes are exactly the bytes before "sub rsp"
+            int alloc = BinaryPrimitives.ReadInt32LittleEndian(elf.Data.AsSpan(sub + 3));
+            Assert.Equal(8, (pushes * 8 + alloc) % 16);   // rsp at each call = entry (8 mod 16) - this = 0 mod 16
+        }
+
+        [Fact]
+        public void LongMessage_IsCutAtACharacterBoundary()
+        {
+            var elf = Fixture();
+            string message = new string('a', 255) + "é";   // the 2-byte é straddles the 256-byte limit
+            Assert.Equal(1, BootNotice.Apply(elf, message, 0, TestContext.Current.CancellationToken));
+            int cave = 0x500 + 5 + BinaryPrimitives.ReadInt32LittleEndian(elf.Data.AsSpan(0x501));
+            byte[] sevenA = [.. Enumerable.Repeat((byte)'a', 7)];
+            Assert.False(Contains(elf.Data, cave, [.. sevenA, 0xC3]));   // no orphaned UTF-8 lead byte
+            Assert.True(Contains(elf.Data, cave, [.. sevenA, 0x00]));    // the last word ends after 255 'a's
+        }
+
+        /// <summary>usleep takes a 32-bit microsecond count: 4294 s is the largest delay; more must not wrap.</summary>
+        [Fact]
+        public void Delay_BeyondUsleepRange_IsRejected()
+        {
+            Assert.Equal(1, BootNotice.Apply(Fixture(), "Hi", 4294, TestContext.Current.CancellationToken));
+            Assert.Throws<ArgumentOutOfRangeException>(() => BootNotice.Apply(Fixture(), "Hi", 4295, TestContext.Current.CancellationToken));
+            using var output = new StringWriter();
+            using var error = new StringWriter();
+            Assert.NotEqual(0, Cli.Run(["backport", "in", "out", "--firmware", "4", "--boot-notice-delay", "5000"], output, error));
+            Assert.Contains("--boot-notice-delay", error.ToString());
+        }
+
+        [Fact]
+        public void Delay_ControlsUsleep_Call()
+        {
+            Assert.Equal(4, ApplyAndCount(8));   // usleep + open + write + close
+            Assert.Equal(3, ApplyAndCount(0));   // open + write + close
+
+            static int ApplyAndCount(int delay)
+            {
+                var elf = Fixture();
+                Assert.Equal(1, BootNotice.Apply(elf, "Hi", delay, TestContext.Current.CancellationToken));
+                int cave = 0x500 + 5 + BinaryPrimitives.ReadInt32LittleEndian(elf.Data.AsSpan(0x501));
+                return CallTargets(elf.Data, cave, cave + 0x200).Length;
+            }
+        }
+
+        [Fact]
+        public void UnrecognizedEntry_LeavesEveryByteUnchanged()
+        {
+            // e_entry that does not begin with "push rbp" (0x55).
+            var elf = Fixture();
+            elf.Data[0x500] = 0x90;
+            byte[] before = elf.Data.ToArray();
+            Assert.Equal(0, BootNotice.Apply(elf, "x", 8, TestContext.Current.CancellationToken));
+            Assert.Equal(before, elf.Data);
+
+            // "push rbp" but missing the mov r14d,[rdi]; mov rbx,rsi signature.
+            elf = Fixture();
+            elf.Data.AsSpan(0x50A, 6).Fill(0x90);
+            before = elf.Data.ToArray();
+            Assert.Equal(0, BootNotice.Apply(elf, "x", 8, TestContext.Current.CancellationToken));
+            Assert.Equal(before, elf.Data);
+        }
+
+        [Theory]
+        [InlineData(false, true, false)]
+        [InlineData(true, false, false)]
+        [InlineData(true, true, true)]
+        public void Pipeline_RequiresOptionAndKnownFixes_AndReportsIt(bool selected, bool known, bool applied)
+        {
+            string root = Path.Combine(Path.GetTempPath(), "ps5backport-notice-" + Guid.NewGuid().ToString("N"));
+            try
+            {
+                string game = Directory.CreateDirectory(Path.Combine(root, "game")).FullName;
+                string db = Directory.CreateDirectory(Path.Combine(root, "db")).FullName;
+                File.WriteAllBytes(Path.Combine(game, "eboot.bin"), Fixture().Data);
+                FirmwareDb.Save(new FirmwareExports("4", "synthetic", false, new()), Path.Combine(db, "4.00.json"));
+                var result = Pipeline.Backport(game, Path.Combine(root, "out"), new BackportOptions
+                {
+                    Firmware = "4", ReferenceDir = db, KnownFixes = known, DryRun = true,
+                    Options = selected ? [BootNotice.Option] : [],
+                    BootNoticeMessage = "hi", BootNoticeDelaySeconds = 0,
+                }, Knowledge.Default, cancel: TestContext.Current.CancellationToken);
+                var module = Assert.Single(result.Modules);
+                Assert.Empty(module.Error);
+                Assert.Equal(applied, module.Patterns.Any(p => p.Name == BootNotice.Name));
+                Assert.False(Directory.Exists(Path.Combine(root, "out")));
+            }
+            finally { if (Directory.Exists(root)) Directory.Delete(root, true); }
+        }
+
+        static ulong[] CallTargets(byte[] data, int start, int end)
+        {
+            var targets = new List<ulong>();
+            for (int i = start; i + 5 <= end; i++)
+                if (data[i] == 0xE8)
+                    targets.Add((ulong)(i + 5) + (ulong)(long)BinaryPrimitives.ReadInt32LittleEndian(data.AsSpan(i + 1)));
+            return targets.ToArray();
+        }
+
+        static bool Contains(byte[] haystack, int start, byte[] needle)
+        {
+            for (int i = start; i + needle.Length <= haystack.Length; i++)
+                if (haystack.AsSpan(i, needle.Length).SequenceEqual(needle)) return true;
+            return false;
+        }
+
+        static SceElf Fixture()
+        {
+            // A minimal SCE ELF whose single executable segment holds a real SDK _start prologue and
+            // imports sceKernelOpen/Write/Close/Usleep through PLT entries, plus an int3 run for the cave.
+            string[] nids = ["1G3lF1Gg1k8", "4wSze92BhLI", "UK2Tl2DWUns", "1jfXLRVzisc"];
+            var payload = new byte[0x1200];
+            byte[] prologue = [0x55, 0x48, 0x89, 0xE5, 0x41, 0x57, 0x41, 0x56, 0x53, 0x50, 0x44, 0x8B, 0x37, 0x48, 0x89, 0xF3];
+            prologue.CopyTo(payload, 0);
+            payload[0x100] = 0xC3;                            // ret before the int3 run
+            for (int i = 0x101; i < payload.Length; i++) payload[i] = 0xCC;
+
+            byte[] d = SyntheticBinary.Elf(payload, imports: true);
+            SyntheticBinary.W64(d, 0x18, 0x500);              // e_entry -> the _start prologue
+
+            // Four PLT (JMPREL) imports: expand the symbol table to 5 entries and the relocation table to 4.
+            SyntheticBinary.W64(d, 0x128, 120);               // DtSceSymtabSz = 5 syms
+            SyntheticBinary.W64(d, 0x130, SceElf.DtJmpRel);   // DtRela -> DtJmpRel
+            SyntheticBinary.W64(d, 0x140, SceElf.DtPltRelSz); // DtRelaSz -> DtPltRelSz
+            SyntheticBinary.W64(d, 0x148, 96);                // DtPltRelSz = 4 relocs
+            for (int i = 0; i < nids.Length; i++)
+            {
+                Encoding.ASCII.GetBytes(nids[i] + "#A#A\0").CopyTo(d, 0x201 + i * 16);
+                int symAt = 0x298 + i * 24;                   // symbol i + 1
+                SyntheticBinary.W32(d, symAt, (uint)(1 + i * 16));
+                d[symAt + 4] = SceElf.SttFunc;
+                int relAt = 0x300 + i * 24;                   // JMPREL relocation i
+                ulong got = 0x480 + (ulong)i * 8;
+                SyntheticBinary.W64(d, relAt, got);
+                SyntheticBinary.W64(d, relAt + 8, ((ulong)(i + 1) << 32) | 1);
+                ulong plt = 0x420 + (ulong)i * 16;            // PLT entry i
+                SyntheticBinary.W64(d, (int)got, plt + 6);    // GOT slot -> PLT+6 (lazy-bind)
+                d[(int)plt] = 0xFF; d[(int)plt + 1] = 0x25;   // jmp [rip+rel32] -> GOT
+                SyntheticBinary.W32(d, (int)plt + 2, (uint)(got - (plt + 6)));
+            }
+            d[0x380] = Patching.Ret;                          // PLT0 stub (lazy-bind target)
+            d.AsSpan(0x381, 32).Fill(Patching.Int3);
+
+            return new SceElf(d);
+        }
     }
 }
 #endregion

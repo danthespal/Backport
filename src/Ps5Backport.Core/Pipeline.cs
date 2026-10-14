@@ -23,6 +23,10 @@ public sealed record BackportOptions
     public bool ExtendText { get; init; } = true;
     /// <summary>Opt-in fix groups (keys of data/fixes.json "options").</summary>
     public IReadOnlyList<string> Options { get; init; } = [];
+    /// <summary>Message text for the boot_notice option (baked into the e_entry cave); empty = default.</summary>
+    public string? BootNoticeMessage { get; init; }
+    /// <summary>Delay before the boot_notice toast, in seconds (0 = immediate).</summary>
+    public int BootNoticeDelaySeconds { get; init; } = 8;
     /// <summary>Replace libSceAmpr with the logging-enabled ampr_emu variant for a diagnostic run.</summary>
     public bool AmprDebugLogging { get; init; }
     /// <summary>Analyze only: run every step but write nothing (no modules, no param.json, no reports).</summary>
@@ -103,7 +107,7 @@ public sealed class GameResult(string source, string output, string targetFirmwa
     public bool Published { get; internal set; }
     /// <summary>Incomplete-run diagnostics, kept outside the active output; empty for successful runs and analysis.</summary>
     public string DiagnosticDirectory { get; internal set; } = "";
-    /// <summary>Previous output retained as a backup after successful replacement, or empty for a new destination.</summary>
+    /// <summary>Previous output left behind because it could not be deleted after successful replacement; normally empty.</summary>
     public string PreviousOutputBackup { get; internal set; } = "";
     public string Source { get; } = source;
     public string Output { get; } = output;

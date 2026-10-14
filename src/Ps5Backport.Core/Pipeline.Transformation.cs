@@ -151,6 +151,15 @@ public static partial class Pipeline
                 changed = true;
             }
         }
+        if (o.KnownFixes && o.Options.Contains(BootNotice.Option, StringComparer.Ordinal))
+        {
+            int count = BootNotice.Apply(elf, o.BootNoticeMessage ?? "", o.BootNoticeDelaySeconds, cancel);
+            if (count > 0)
+            {
+                mod.Patterns.Add(new PatternEntry { Name = BootNotice.Name, Count = count });
+                changed = true;
+            }
+        }
         foreach (var pattern in patterns)
         {
             cancel.ThrowIfCancellationRequested();

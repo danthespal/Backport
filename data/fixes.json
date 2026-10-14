@@ -1,5 +1,5 @@
 {
-  "_about": "Known fixes at the game <-> system-library boundary, keyed by the imported NID. Per library function, never per game. Read by Ps5Backport.Core. Fields: kind (stub | swap | adapter | redirect | plt_stub = stub body in a cave and the PLT entry jumps to it, the GOT slot is left alone: forces a value even where the target firmware has the function | none = only in an option: removes the default fix for that NID), name, area, sources (keys of \"sources\" or free text), stub (a name in stubs.json, or \"ret:<value>\"), new_nid (swap/adapter target), new_library (optional target import library; reuse its existing library/module suffix), export_nid (redirect target, exported by the same module), insns (adapter code, one \"hex  ; asm\" per instruction, branch-free; \"call_got\" = call the real function through its GOT slot), when (missing = only when the import is missing on the target [default] | always = argument fixes), below (optional firmware: apply only when the target is lower, e.g. 5.00), post_call (adapter runs after the real function), proven (default true; false = derived, not console-tested), note, rationale. \"options\": opt-in groups (never applied by default; selected per backport). Each has name, description, warning, sources and its own fixes (a selected option's fixes replace the default fix for the same NID), optionally fakelib_variant (files in the fakelib set's <variant>/ subfolder replace the same-named fakelibs) and patterns (byte replacements: find/replace hex; in modules only 4-aligned hits inside non-executable segments, in the listed data files every hit). \"patterns\": byte replacements applied with the known fixes (name, area, sources, find/replace hex, code = search executable segments at any offset instead of 4-aligned data, note, rationale); the find bytes carry enough context to match one function only.",
+  "_about": "Known fixes at the game <-> system-library boundary, keyed by the imported NID. Per library function, never per game. Read by Ps5Backport.Core. Fields: kind (stub | swap | adapter | redirect | plt_stub = stub body in a cave and the PLT entry jumps to it, the GOT slot is left alone: forces a value even where the target firmware has the function | none = only in an option: removes the default fix for that NID), name, area, sources (keys of \"sources\" or free text), stub (a name in stubs.json, or \"ret:<value>\"), new_nid (swap/adapter target), new_library (optional target import library; reuse its existing library/module suffix), export_nid (redirect target, exported by the same module), insns (adapter code, one \"hex  ; asm\" per instruction, branch-free; \"call_got\" = call the real function through its GOT slot), when (missing = only when the import is missing on the target [default] | always = argument fixes), below (optional firmware: apply only when the target is lower, e.g. 5.00), post_call (adapter runs after the real function), proven (default true; false = derived, not console-tested), note, rationale. \"options\": opt-in groups (never applied by default; selected per backport). Each has name, description, warning, sources, group (where the app lists it; top-level \"option_groups\" orders the groups, unlisted groups follow) and its own fixes (a selected option's fixes replace the default fix for the same NID), optionally fakelib_variant (files in the fakelib set's <variant>/ subfolder replace the same-named fakelibs) and patterns (byte replacements: find/replace hex; in modules only 4-aligned hits inside non-executable segments, in the listed data files every hit). \"patterns\": byte replacements applied with the known fixes (name, area, sources, find/replace hex, code = search executable segments at any offset instead of 4-aligned data, note, rationale); the find bytes carry enough context to match one function only.",
   "sources": {
     "GT7": "GT7 1.71 FW4",
     "CONTROL": "CONTROL Resonant 1.300 FW4.03",
@@ -15,7 +15,8 @@
     "HADES2": "Hades II PPSA36082 FW4.03 (console-tested)",
     "HKSS": "Hollow Knight: Silksong PPSA12544 FW4.xx (test status unknown)",
     "HCOTM": "Horizon Call of the Mountain PPSA05666 FW4.xx/5.xx (test status unknown)",
-    "KCD2": "Kingdom Come: Deliverance II PPSA21704 FW4.xx (test status unknown)"
+    "KCD2": "Kingdom Come: Deliverance II PPSA21704 FW4.xx (test status unknown)",
+    "YOTEI4": "Ghost of Yotei 02.002.000 FW4 cook (console-tested on FW 13.60)"
   },
   "umtx_op": "04AjkP0jO9U",
   "fixes": {
@@ -47,7 +48,7 @@
         "KCD2"
       ],
       "stub": "ret0",
-      "note": "PS5 Pro query (libkernel from FW 7.01); 0 = not Pro"
+      "note": "PS5 Pro query (libkernel from FW 7.00); 0 = not Pro"
     },
     "3WVD91e12ZQ": {
       "kind": "plt_stub",
@@ -56,12 +57,12 @@
       "sources": [
         "KCD2"
       ],
-      "stub": "ret0",
+      "stub": "ret:0x8a810012",
       "when": "always",
       "below": "9.00",
       "proven": false,
-      "note": "PSSR (MFSR) init skipped, reports success",
-      "rationale": "libScePsml first appears in FW 9.00. Most games call scePsmlMfsrInit only on a PS5 Pro (behind sceKernelIsTrinityMode or a Pro flag), so with Trinity stubbed to 0 they never reach it. Kingdom Come: Deliverance II calls sceSysmoduleLoadModule(0x137) and then scePsmlMfsrInit on every console, and its tester replaced the call with return 0. plt_stub because the Psml fakelib provides the function. Lifted by the force_pro option (REFERENCE_OVERVIEW Part 28)."
+      "note": "PSSR (MFSR) init skipped, reports 0x8a810012 (MFSR not supported), the native base-console answer",
+      "rationale": "libScePsml first appears in FW 9.00. Most games call scePsmlMfsrInit only on a PS5 Pro (behind sceKernelIsTrinityMode or a Pro flag). Kingdom Come: Deliverance II calls sceSysmoduleLoadModule(0x137) and then scePsmlMfsrInit on every console, and its tester replaced the call with return 0. plt_stub because the Psml fakelib provides the function. The stub returns 0x8a810012 instead of 0: the native MfsrInit returns exactly that on a base console ('MFSR isn't supported in sceKernelIsTrinityMode() == 0', FW 12.70 libScePsml 0x2a85f), so every game shipped on base PS5s handles it, whereas success without initialisation makes every later Mfsr call return 0x8a810001 (not initialised). On a PS5 Pro (Trinity reported natively from FW 7.00) a sub-9.00 cook therefore skips PSSR cleanly (FINDINGS 6e). Lifted by the force_pro option (REFERENCE_OVERVIEW Part 28)."
     },
     "yu17wG8L5FI": {
       "kind": "stub",
@@ -188,15 +189,20 @@
       "note": "no WQHD output detection: return 0 (FW 6.00 and later have it)"
     },
     "TViD1EZXkNI": {
-      "kind": "stub",
+      "kind": "plt_stub",
       "name": "sceAudioOut2Set3DLatency",
       "area": "audio / ACM",
       "sources": [
         "CONTROL",
         "BL4",
-        "DL"
+        "DL",
+        "YOTEI4"
       ],
-      "stub": "ret0"
+      "stub": "ret0",
+      "when": "always",
+      "below": "10.01",
+      "note": "3D-audio latency request skipped, reports success",
+      "rationale": "Absent before FW 6.00. FW 6.00-9.60 export it but accept latency 0-1 only (0x80268001 otherwise); latency 2 (user 0xff only) arrives in 10.01. Ghost of Yotei calls Set3DLatency(0xff, 2) during NCA setup: on FW 8.60 the refusal fails snd_SynthInit and the game crashes. A GOT stub is overwritten by the loader wherever the export exists, so the PLT entry is stubbed (FINDINGS 6b). Console-tested: Yotei FW 4.00 cook boots and plays on FW 8.60 (2026-10-13)."
     },
     "GTfJ64qFCPw": {
       "kind": "stub",
@@ -234,7 +240,7 @@
         "AC"
       ],
       "stub": "ret:0x80000001",
-      "note": "store dialog unavailable: returns an error (FW 7.01 and later have it)"
+      "note": "store dialog unavailable: returns an error (FW 7.00 and later have it)"
     },
     "fCWdlnmB1Ks": {
       "kind": "stub",
@@ -432,10 +438,10 @@
       ],
       "new_nid": "IWIBBdTHit4",
       "insns": [
-        "81e1ff7fffff  ; and ecx, 0xffff7fff"
+        "81e1ff7ff7ff  ; and ecx, 0xfff77fff"
       ],
-      "note": "-> sceKernelMapFlexibleMemory (name argument ignored), flag 0x8000 cleared",
-      "rationale": "libc's heap growth passes flags 0x8000, which only the internal entry accepts: the public sceKernelMapFlexibleMemory masks flags with 0xffbfff6f on FW 1.00-6.50 and rejects 0x88000 outright on FW 12.70, returning 0x80020016 (EINVAL) on every firmware, so a plain swap fails as soon as libc grows its heap ('Failed to create the heap', 0xa002000e). The swap is console-proven where that path was not taken; a FW 4.03 backport (console-tested) cleared the flag at both call sites, and so does this adapter."
+      "note": "-> sceKernelMapFlexibleMemory (name argument ignored), flags 0x8000 and 0x80000 cleared",
+      "rationale": "libc's heap growth passes flags 0x8000, which only the internal entry accepts: the public sceKernelMapFlexibleMemory masks flags with 0xffbfff6f on FW 1.00-6.50 and rejects any bit of 0x88000 outright on FW 7.00-13.60 (test ecx, 0x88000), returning 0x80020016 (EINVAL), so a plain swap fails as soon as libc grows its heap ('Failed to create the heap', 0xa002000e). The swap is console-proven where that path was not taken; a FW 4.03 backport (console-tested) cleared the flag at both call sites, and so does this adapter. Every sample libc (SDK 9-13) passes exactly 0x8000; 0x80000 is cleared too so that a libc passing it cannot fail on 7.00+ (FINDINGS 6d)."
     },
     "B2n8aDorSH4": {
       "kind": "adapter",
@@ -449,14 +455,35 @@
       "new_nid": "04AjkP0jO9U",
       "new_library": "libkernel",
       "insns": [
-        "4989d0  ; mov r8, rdx",
-        "89f2  ; mov edx, esi",
-        "6a0b  ; push 0xb",
-        "5e  ; pop rsi",
+        "55  ; push rbp",
+        "4889e5  ; mov rbp, rsp",
+        "4883ec10  ; sub rsp, 0x10   timespec on the stack; keeps rsp 16-aligned for the call",
+        "4531d2  ; xor r10d, r10d",
+        "4989e0  ; mov r8, rsp   readable stand-in when there is no timeout",
+        "4885d2  ; test rdx, rdx   rdx = u32* timeout in microseconds, or NULL",
+        "410f95c2  ; setne r10b   r10 = 1 when a timeout was given",
+        "4c0f45c2  ; cmovne r8, rdx",
+        "418b00  ; mov eax, dword ptr [r8]   microseconds",
+        "31d2  ; xor edx, edx",
+        "41b940420f00  ; mov r9d, 1000000",
+        "41f7f1  ; div r9d   eax = seconds, edx = remaining microseconds",
+        "48890424  ; mov qword ptr [rsp], rax   tv_sec",
+        "69d2e8030000  ; imul edx, edx, 1000   -> nanoseconds",
+        "4889542408  ; mov qword ptr [rsp + 8], rdx   tv_nsec",
+        "4989e0  ; mov r8, rsp   uaddr2 = &timespec (relative timeout, uaddr = 0)",
+        "4d85d2  ; test r10, r10",
+        "4d0f44c2  ; cmove r8, r10   no timeout -> uaddr2 = NULL",
+        "89f2  ; mov edx, esi   expected value",
+        "be0b000000  ; mov esi, 0xb   _umtx_op op",
+        "31c9  ; xor ecx, ecx   uaddr = 0",
         "41b9ffffffff  ; mov r9d, -1",
-        "31c9  ; xor ecx, ecx"
+        "call_got  ; call _umtx_op through its GOT slot",
+        "c9  ; leave",
+        "c3  ; ret (eax = the _umtx_op result)"
       ],
-      "rationale": "GT7's exact register transforms to _umtx_op op 11 (WAIT_UINT); CONTROL stubbed it to return 0."
+      "post_call": true,
+      "proven": false,
+      "rationale": "GT7's register transforms to _umtx_op op 11 (WAIT_UINT); CONTROL stubbed it to return 0. The timeout is a u32* in microseconds (Sony's own 12.70 implementation reads [rdx] and divides by 1000000; game libcs pass &u32 on their timed path, e.g. Yotei libc 0x1120b0). _umtx_op with uaddr = 0 reads uaddr2 as a struct timespec, so the adapter builds one on its stack (post-call, branch-free so it can be split across small caves) instead of passing the u32 pointer, which made timed waits read stack bytes as the timespec (FINDINGS 6d). The untimed path is the console-proven GT7 one; the timespec path is emulator-tested, not console-tested."
     },
     "PZQhiiLXRFs": {
       "kind": "adapter",
@@ -470,14 +497,35 @@
       "new_nid": "04AjkP0jO9U",
       "new_library": "libkernel",
       "insns": [
-        "4989d0  ; mov r8, rdx",
-        "4889f2  ; mov rdx, rsi",
-        "6a02  ; push 2",
-        "5e  ; pop rsi",
+        "55  ; push rbp",
+        "4889e5  ; mov rbp, rsp",
+        "4883ec10  ; sub rsp, 0x10   timespec on the stack; keeps rsp 16-aligned for the call",
+        "4531d2  ; xor r10d, r10d",
+        "4989e0  ; mov r8, rsp   readable stand-in when there is no timeout",
+        "4885d2  ; test rdx, rdx   rdx = u32* timeout in microseconds, or NULL",
+        "410f95c2  ; setne r10b   r10 = 1 when a timeout was given",
+        "4c0f45c2  ; cmovne r8, rdx",
+        "418b00  ; mov eax, dword ptr [r8]   microseconds",
+        "31d2  ; xor edx, edx",
+        "41b940420f00  ; mov r9d, 1000000",
+        "41f7f1  ; div r9d   eax = seconds, edx = remaining microseconds",
+        "48890424  ; mov qword ptr [rsp], rax   tv_sec",
+        "69d2e8030000  ; imul edx, edx, 1000   -> nanoseconds",
+        "4889542408  ; mov qword ptr [rsp + 8], rdx   tv_nsec",
+        "4989e0  ; mov r8, rsp   uaddr2 = &timespec (relative timeout, uaddr = 0)",
+        "4d85d2  ; test r10, r10",
+        "4d0f44c2  ; cmove r8, r10   no timeout -> uaddr2 = NULL",
+        "4889f2  ; mov rdx, rsi   expected value",
+        "be02000000  ; mov esi, 0x2   _umtx_op op",
+        "31c9  ; xor ecx, ecx   uaddr = 0",
         "41b9ffffffff  ; mov r9d, -1",
-        "31c9  ; xor ecx, ecx"
+        "call_got  ; call _umtx_op through its GOT slot",
+        "c9  ; leave",
+        "c3  ; ret (eax = the _umtx_op result)"
       ],
-      "rationale": "GT7's exact register transforms to _umtx_op op 2 (WAIT); CONTROL stubbed it to return 0."
+      "post_call": true,
+      "proven": false,
+      "rationale": "GT7's register transforms to _umtx_op op 2 (WAIT); CONTROL stubbed it to return 0. The timeout is a u32* in microseconds (Sony's own 12.70 implementation reads [rdx] and divides by 1000000; game libcs pass &u32 on their timed path, e.g. Yotei libc 0x1120b0). _umtx_op with uaddr = 0 reads uaddr2 as a struct timespec, so the adapter builds one on its stack (post-call, branch-free so it can be split across small caves) instead of passing the u32 pointer, which made timed waits read stack bytes as the timespec (FINDINGS 6d). The untimed path is the console-proven GT7 one; the timespec path is emulator-tested, not console-tested."
     },
     "q2y-wDIVWZA": {
       "kind": "adapter",
@@ -513,15 +561,35 @@
       "new_nid": "04AjkP0jO9U",
       "new_library": "libkernel",
       "insns": [
-        "4989d0  ; mov r8, rdx",
-        "89f2  ; mov edx, esi",
-        "6a0b  ; push 0xb",
-        "5e  ; pop rsi",
+        "55  ; push rbp",
+        "4889e5  ; mov rbp, rsp",
+        "4883ec10  ; sub rsp, 0x10   timespec on the stack; keeps rsp 16-aligned for the call",
+        "4531d2  ; xor r10d, r10d",
+        "4989e0  ; mov r8, rsp   readable stand-in when there is no timeout",
+        "4885d2  ; test rdx, rdx   rdx = u32* timeout in microseconds, or NULL",
+        "410f95c2  ; setne r10b   r10 = 1 when a timeout was given",
+        "4c0f45c2  ; cmovne r8, rdx",
+        "418b00  ; mov eax, dword ptr [r8]   microseconds",
+        "31d2  ; xor edx, edx",
+        "41b940420f00  ; mov r9d, 1000000",
+        "41f7f1  ; div r9d   eax = seconds, edx = remaining microseconds",
+        "48890424  ; mov qword ptr [rsp], rax   tv_sec",
+        "69d2e8030000  ; imul edx, edx, 1000   -> nanoseconds",
+        "4889542408  ; mov qword ptr [rsp + 8], rdx   tv_nsec",
+        "4989e0  ; mov r8, rsp   uaddr2 = &timespec (relative timeout, uaddr = 0)",
+        "4d85d2  ; test r10, r10",
+        "4d0f44c2  ; cmove r8, r10   no timeout -> uaddr2 = NULL",
+        "89f2  ; mov edx, esi   expected value",
+        "be0b000000  ; mov esi, 0xb   _umtx_op op",
+        "31c9  ; xor ecx, ecx   uaddr = 0",
         "41b9ffffffff  ; mov r9d, -1",
-        "31c9  ; xor ecx, ecx"
+        "call_got  ; call _umtx_op through its GOT slot",
+        "c9  ; leave",
+        "c3  ; ret (eax = the _umtx_op result)"
       ],
+      "post_call": true,
       "proven": false,
-      "rationale": "AnyPS5 shows the generic Wait has Wait32's signature (u32* addr, u32 expected, KernelUseconds* timeout, name), so it gets Wait32's translation (the console-proven Wait32 path, op 11 WAIT_UINT). GT7's own patch passed `expected` as the _umtx_op op code (spins instead of sleeping)."
+      "rationale": "AnyPS5 shows the generic Wait has Wait32's signature (u32* addr, u32 expected, KernelUseconds* timeout, name), so it gets Wait32's translation (the console-proven Wait32 path, op 11 WAIT_UINT). GT7's own patch passed `expected` as the _umtx_op op code (spins instead of sleeping). The timeout is a u32* in microseconds (Sony's own 12.70 implementation reads [rdx] and divides by 1000000; game libcs pass &u32 on their timed path, e.g. Yotei libc 0x1120b0). _umtx_op with uaddr = 0 reads uaddr2 as a struct timespec, so the adapter builds one on its stack (post-call, branch-free so it can be split across small caves) instead of passing the u32 pointer, which made timed waits read stack bytes as the timespec (FINDINGS 6d). The 64-bit expected value and op question stays open (FINDINGS 1.6)."
     },
     "-sD02mFDBh4": {
       "kind": "adapter",
@@ -568,9 +636,11 @@
       "rationale": "FW 10.01 libSceVideoOut: (handle, status*); the export returns an error without writing when VideoOut is not initialised or status is null, otherwise the implementation writes exactly 0x50 bytes (+0x00..+0x30 and a 32-byte block at +0x30). A game calling it ignores the return value and reads the struct (+0x04 == 2, bit 0x10 at +0x10, words at +0x30..+0x34), sometimes from uninitialised stack, so ret0 alone is not enough; an all-zero status takes the game's 'VRR off' path. Derived from the firmware code, not console-tested."
     }
   },
+  "option_groups": ["Saves", "Audio", "PS5 Pro", "Libraries", "Engine", "Online", "Diagnostics"],
   "options": {
     "ubisoft_offline_popups": {
       "name": "Ubisoft offline popups",
+      "group": "Engine",
       "description": "Suppresses MUFFIN-4520 and MUFFIN-4521 using the existing silent-error callbacks in recognized Unity/Esut Ubisoft code. Detects linked code patterns without a game ID or fixed address.",
       "warning": "Opt-in. Requires Known fixes. Suppresses these two warnings only; online services remain unavailable when authentication fails. Tested on Rogue Prince of Persia; other matching games require console verification. Does not fix progress saving.",
       "sources": ["Rogue Prince of Persia 01.006.000 PPSA28155: Ghidra analysis and console-confirmed popup suppression"],
@@ -578,13 +648,23 @@
     },
     "unity_sku_offline": {
       "name": "Unity unset-SKU offline fallback",
+      "group": "Engine",
       "description": "Allows recognized Unity/Esut authentication code to use its existing recoverable startup path when the platform reports an unset SKU. Detects linked code patterns rather than a game ID or fixed address; leaves trial and full-game results unchanged.",
       "warning": "Opt-in. Console-tested on The Rogue Prince of Persia 01.006.000 (PPSA28155); other games require testing. Unrecognized or ambiguous code is left unchanged. Online-service warnings may still appear.",
       "sources": ["The Rogue Prince of Persia 01.006.000 PPSA28155, user console-tested guarded NotSet fallback"],
       "fixes": {}
     },
+    "boot_notice": {
+      "name": "Boot notification (Debug toast)",
+      "group": "Diagnostics",
+      "description": "Redirects the eboot entry point into a cave that writes a user message to /dev/notification0 through the game's own imported libkernel functions (sceKernelOpen/sceKernelWrite/sceKernelClose, plus sceKernelUsleep for the delay), so the console renders it as a 'Debug:' toast after the configured delay, then jumps back to the real entry. The calls go through the game's PLT stubs, keeping the syscalls inside libkernel's text (a native_game process is killed for a direct syscall). The message text is baked into the eboot as immediate-encoded bytes (X-only text cannot hold string constants).",
+      "warning": "Opt-in. Not console-tested: /dev/notification0 reachability from a game sandbox and toast rendering are unverified. Delays the whole eboot start by the delay (default 8 s); 0 disables the delay. Requires Known fixes.",
+      "sources": ["FINDINGS.md §6f: ShadowMountPlus sceKernelSendNotificationRequest mechanism"],
+      "fixes": {}
+    },
     "save_mount_compat": {
       "name": "Save mount compatibility",
+      "group": "Saves",
       "description": "Changes sceSaveDataMount3 systemBlocks from -1 to 0 on target firmware below 5.00. Requires Known fixes enabled.",
       "warning": "Disabled by default. Derived adapter, not console-tested. Without it, old firmware may reject a save-mount request using -1. Disabling does not undo patches already present in the input.",
       "sources": ["Existing save-data argument adapter; console testing pending"],
@@ -619,6 +699,7 @@
     },
     "save_prepare_compat": {
       "name": "Save preparation compatibility",
+      "group": "Saves",
       "description": "Changes sceSaveDataPrepare preparation mode 2 to 1 before the native call. Requires Known fixes enabled.",
       "warning": "Disabled by default. Derived adapter, not console-tested. Without it, the native save-preparation call may reject mode 2. Disabling does not undo patches already present in the input.",
       "sources": ["Existing save-data argument adapter; console testing pending"],
@@ -646,6 +727,7 @@
     },
     "audio_speaker_compat": {
       "name": "Audio speaker compatibility",
+      "group": "Audio",
       "description": "Limits the reported speaker configuration to eight speakers and clears the 3D-audio flag after sceAudioOut2GetSpeakerInfo. Optional so dialogue issues can be compared with this adapter enabled or disabled. Requires Known fixes enabled.",
       "warning": "Experimental; this adapter is derived and not console-tested. Disabled by default. Without it, some old-SDK games may select an unsupported audio layout and lose sound. Required missing audio API stubs and other existing audio fixes remain active. Re-cook from the same source for each test; disabling does not undo patches already present in the input.",
       "sources": ["CONTROL README + eboot analysis", "AnyPS5 struct"],
@@ -674,8 +756,298 @@
         }
       }
     },
+    "audio_port_compat": {
+      "name": "Audio port compatibility",
+      "group": "Audio",
+      "description": "Turns a 12-channel (7.1.4) main sceAudioOut2 port into an 8-channel (7.1) one and folds the game's 12-channel audio into it every grain (height channels mixed into the front and back pairs), so old-SDK cooks of games with 7.1.4 output start and sound right. Applies to targets below 11.00. Requires Known fixes enabled.",
+      "warning": "Experimental, not console-tested yet. Ghost of Yotei (SDK 4.00 cook) needs it to start on FW 13.60; the earlier rewrite-only version crackled, this version adds the downmix. Code is placed in the code-space extension and keeps 0x48 bytes of state in the last data page. Disabled by default. Re-cook from the same source for each test; disabling does not undo patches already present in the input.",
+      "sources": [
+        "YOTEI4"
+      ],
+      "fixes": {
+        "0x6o1VVAYSY": {
+          "kind": "adapter",
+          "name": "sceAudioOut2ContextCreate",
+          "area": "audio / ACM",
+          "sources": [
+            "YOTEI4"
+          ],
+          "insns": [
+            "4885ff  ; test rdi, rdi",
+            "7412  ; je 0x17",
+            "8b4710  ; mov eax, dword ptr [rdi + 0x10]",
+            "85c0  ; test eax, eax",
+            "7505  ; jne 0x11",
+            "b800010000  ; mov eax, 0x100",
+            "8905{state+0x0}  ; mov dword ptr [rip + state+0x0], eax"
+          ],
+          "when": "always",
+          "below": "11.00",
+          "proven": false,
+          "contiguous": true,
+          "state": "audio_out2_downmix",
+          "state_size": 72,
+          "note": "AudioOut2ContextParam.num_grains (+0x10) saved as the grain length of the 12->8 downmix",
+          "rationale": "Part of the 12->8 channel downmix (with sceAudioOut2PortCreate, PortSetAttributes, ContextAdvance and PortDestroy). A port's PCM buffer holds one grain of frames; the grain is the context's num_grains (AnyPS5 AudioOut2ContextParam: max_ports, max_object_ports, guarantee_object_ports, queue_depth, num_grains, flags; 0 means 256). State 'audio_out2_downmix' (0x48 bytes, zero at load, shared by the five rules): +0 u32 grain (frames, from the last sceAudioOut2ContextCreate num_grains, 256 for 0); +4 u32 bitmask of slots folded in the current grain; +8 8 x u64 handles of ports rewritten from 12 to 8 channels (0 = free; 8 slots: Ghost of Yotei keeps at most 3 bed ports plus the probe port open, and the 0x48 bytes fit the 0x58-byte page tail of EA eboots such as Battlefield 6)."
+        },
+        "JK2wamZPzwM": {
+          "kind": "adapter",
+          "name": "sceAudioOut2PortCreate",
+          "area": "audio / ACM",
+          "sources": [
+            "YOTEI4"
+          ],
+          "insns": [
+            "53  ; push rbx",
+            "4154  ; push r12",
+            "4155  ; push r13",
+            "4889d3  ; mov rbx, rdx",
+            "4531e4  ; xor r12d, r12d",
+            "4885f6  ; test rsi, rsi",
+            "7421  ; je 0x31",
+            "833e00  ; cmp dword ptr [rsi], 0",
+            "751c  ; jne 0x31",
+            "8b4604  ; mov eax, dword ptr [rsi + 4]",
+            "25ff0f0000  ; and eax, 0xfff",
+            "3d000c0000  ; cmp eax, 0xc00",
+            "750d  ; jne 0x31",
+            "816e0400040000  ; sub dword ptr [rsi + 4], 0x400",
+            "41bc01000000  ; mov r12d, 1",
+            "call_got  ; call [GOT]",
+            "85c0  ; test eax, eax",
+            "752a  ; jne 0x65",
+            "4585e4  ; test r12d, r12d",
+            "7425  ; je 0x65",
+            "4885db  ; test rbx, rbx",
+            "7420  ; je 0x65",
+            "488b0b  ; mov rcx, qword ptr [rbx]",
+            "488d15{state+0x8}  ; lea rdx, [rip + state+0x8]",
+            "31f6  ; xor esi, esi",
+            "48833cf200  ; cmp qword ptr [rdx + rsi*8], 0",
+            "7409  ; je 0x61",
+            "ffc6  ; inc esi",
+            "83fe08  ; cmp esi, 8",
+            "72f2  ; jb 0x51",
+            "eb04  ; jmp 0x65",
+            "48890cf2  ; mov qword ptr [rdx + rsi*8], rcx",
+            "415d  ; pop r13",
+            "415c  ; pop r12",
+            "5b  ; pop rbx",
+            "c3  ; ret"
+          ],
+          "when": "always",
+          "below": "11.00",
+          "post_call": true,
+          "proven": false,
+          "contiguous": true,
+          "state": "audio_out2_downmix",
+          "state_size": 72,
+          "note": "AudioOut2PortParam.data_format (+4): 12-channel float main port (0xC00) -> 8 channels (0x800); the new port is remembered for the downmix",
+          "rationale": "An old-SDK binary is refused a 12-channel (7.1.4) main port with 0x8026800E (unsupported format) on FW 13.60, and FW 4.00's libSceAudioOut accepts only 2, 8 or 10 channels for main ports (channel mask 0x504 in sceAudioOut2LoPortCreate), while 8 channels are accepted everywhere. Ghost of Yotei's Scream/NCA always builds 7.1.4 bed ports (snd_SynthInit sets NCA parameter 1 = 0x3fff; FINDINGS Part 1 section 6a); refused, snd_SynthInit failed and the game crashed. The rewrite alone made 8-channel ports carry 12-channel frames (crackle); the companion rules fold the data. Post-call: only for port_type 0 and data_format & 0xfff == 0xC00 (float), the field is rewritten in place (the caller's descriptor then says 8 channels, so its gain attribute has 8 entries) and, when the call succeeds, the returned handle goes into a free slot (8 slots; more ports stay unfolded). State 'audio_out2_downmix' (0x48 bytes, zero at load, shared by the five rules): +0 u32 grain (frames, from the last sceAudioOut2ContextCreate num_grains, 256 for 0); +4 u32 bitmask of slots folded in the current grain; +8 8 x u64 handles of ports rewritten from 12 to 8 channels (0 = free; 8 slots: Ghost of Yotei keeps at most 3 bed ports plus the probe port open, and the 0x48 bytes fit the 0x58-byte page tail of EA eboots such as Battlefield 6)."
+        },
+        "8XTArSPyWHk": {
+          "kind": "adapter",
+          "name": "sceAudioOut2PortSetAttributes",
+          "area": "audio / ACM",
+          "sources": [
+            "YOTEI4"
+          ],
+          "insns": [
+            "4885ff  ; test rdi, rdi",
+            "0f84f7000000  ; je 0x100",
+            "4885f6  ; test rsi, rsi",
+            "0f84ee000000  ; je 0x100",
+            "53  ; push rbx",
+            "55  ; push rbp",
+            "4154  ; push r12",
+            "4155  ; push r13",
+            "4156  ; push r14",
+            "4157  ; push r15",
+            "488d1d{state+0x8}  ; lea rbx, [rip + state+0x8]",
+            "31ed  ; xor ebp, ebp",
+            "48393ceb  ; cmp qword ptr [rbx + rbp*8], rdi",
+            "740c  ; je 0x37",
+            "ffc5  ; inc ebp",
+            "83fd08  ; cmp ebp, 8",
+            "72f3  ; jb 0x25",
+            "e9bf000000  ; jmp 0xf6",
+            "4989f4  ; mov r12, rsi",
+            "4189d5  ; mov r13d, edx",
+            "4585ed  ; test r13d, r13d",
+            "0f84b0000000  ; je 0xf6",
+            "418b0424  ; mov eax, dword ptr [r12]",
+            "83f801  ; cmp eax, 1",
+            "751a  ; jne 0x69",
+            "49837c241030  ; cmp qword ptr [r12 + 0x10], 0x30",
+            "0f858f000000  ; jne 0xea",
+            "49c744241020000000  ; mov qword ptr [r12 + 0x10], 0x20",
+            "e981000000  ; jmp 0xea",
+            "85c0  ; test eax, eax",
+            "757d  ; jne 0xea",
+            "498b442408  ; mov rax, qword ptr [r12 + 8]",
+            "4885c0  ; test rax, rax",
+            "7473  ; je 0xea",
+            "4c8b30  ; mov r14, qword ptr [rax]",
+            "4d85f6  ; test r14, r14",
+            "746b  ; je 0xea",
+            "0fa32d{state+0x4}  ; bt dword ptr [rip + state+0x4], ebp",
+            "7262  ; jb 0xea",
+            "0fab2d{state+0x4}  ; bts dword ptr [rip + state+0x4], ebp",
+            "8b05{state+0x0}  ; mov eax, dword ptr [rip + state+0x0]",
+            "85c0  ; test eax, eax",
+            "7451  ; je 0xea",
+            "41bff304353f  ; mov r15d, 0x3f3504f3",
+            "c4c1796eef  ; vmovd xmm5, r15d",
+            "c4e27d18ed  ; vbroadcastss ymm5, xmm5",
+            "c5d857e4  ; vxorps xmm4, xmm4, xmm4",
+            "4d89f2  ; mov r10, r14",
+            "4d89f3  ; mov r11, r14",
+            "c4c17c1002  ; vmovups ymm0, ymmword ptr [r10]",
+            "c4c178104a20  ; vmovups xmm1, xmmword ptr [r10 + 0x20]",
+            "c5fa7ed1  ; vmovq xmm2, xmm1",
+            "c4e3710cdc03  ; vblendps xmm3, xmm1, xmm4, 3",
+            "c4e36d18d301  ; vinsertf128 ymm2, ymm2, xmm3, 1",
+            "c5ec59d5  ; vmulps ymm2, ymm2, ymm5",
+            "c5fc58c2  ; vaddps ymm0, ymm0, ymm2",
+            "c4c17c1103  ; vmovups ymmword ptr [r11], ymm0",
+            "4983c230  ; add r10, 0x30",
+            "4983c320  ; add r11, 0x20",
+            "ffc8  ; dec eax",
+            "75cc  ; jne 0xb3",
+            "c5f877  ; vzeroupper",
+            "4983c418  ; add r12, 0x18",
+            "41ffcd  ; dec r13d",
+            "e947ffffff  ; jmp 0x3d",
+            "415f  ; pop r15",
+            "415e  ; pop r14",
+            "415d  ; pop r13",
+            "415c  ; pop r12",
+            "5d  ; pop rbp",
+            "5b  ; pop rbx"
+          ],
+          "when": "always",
+          "below": "11.00",
+          "proven": false,
+          "contiguous": true,
+          "state": "audio_out2_downmix",
+          "state_size": 72,
+          "note": "PCM of a rewritten port folded in place from 7.1.4 to 7.1 (once per grain); a 12-entry gain attribute trimmed to 8",
+          "rationale": "For a port whose handle the sceAudioOut2PortCreate rule remembered: attribute 0 (value = 8 bytes holding the PCM buffer pointer, AnyPS5) -> the buffer's grain x 12 float frames are folded in place to grain x 8: channels 0-7 kept, heights 8/9 (top front L/R) added to 0/1 and 10/11 (top rear L/R) to 6/7 at 0.7071 (AnyPS5's 12-channel order: L R C LFE Ls Rs Lb Rb TFL TFR TRL TRR). Once per port and grain (bitmask cleared by the sceAudioOut2ContextAdvance rule), so a second PCM set in the same grain does not fold twice. Attribute 1 (gains) of size 48 becomes 32. Data is final at this call: the library reads the buffer at this call or later, and NCA renders before it submits attributes (vtable +0x48 0x74e6b0 sets attributes, then advances). In place is safe: frame f is read whole before its 8 floats are written at 32*f <= 48*f. Other ports and attributes are untouched. State 'audio_out2_downmix' (0x48 bytes, zero at load, shared by the five rules): +0 u32 grain (frames, from the last sceAudioOut2ContextCreate num_grains, 256 for 0); +4 u32 bitmask of slots folded in the current grain; +8 8 x u64 handles of ports rewritten from 12 to 8 channels (0 = free; 8 slots: Ghost of Yotei keeps at most 3 bed ports plus the probe port open, and the 0x48 bytes fit the 0x58-byte page tail of EA eboots such as Battlefield 6)."
+        },
+        "PE2zHMqLSHs": {
+          "kind": "adapter",
+          "name": "sceAudioOut2ContextAdvance",
+          "area": "audio / ACM",
+          "sources": [
+            "YOTEI4"
+          ],
+          "insns": [
+            "c705{state+0x4}00000000  ; mov dword ptr [rip + state+0x4], 0"
+          ],
+          "when": "always",
+          "below": "11.00",
+          "proven": false,
+          "contiguous": true,
+          "state": "audio_out2_downmix",
+          "state_size": 72,
+          "note": "a new grain starts: the downmix's per-grain fold marks are cleared",
+          "rationale": "Part of the 12->8 channel downmix: clears the bitmask that keeps the sceAudioOut2PortSetAttributes rule to one fold per port and grain. State 'audio_out2_downmix' (0x48 bytes, zero at load, shared by the five rules): +0 u32 grain (frames, from the last sceAudioOut2ContextCreate num_grains, 256 for 0); +4 u32 bitmask of slots folded in the current grain; +8 8 x u64 handles of ports rewritten from 12 to 8 channels (0 = free; 8 slots: Ghost of Yotei keeps at most 3 bed ports plus the probe port open, and the 0x48 bytes fit the 0x58-byte page tail of EA eboots such as Battlefield 6)."
+        },
+        "cd+Rtw+D1x8": {
+          "kind": "adapter",
+          "name": "sceAudioOut2PortDestroy",
+          "area": "audio / ACM",
+          "sources": [
+            "YOTEI4"
+          ],
+          "insns": [
+            "4885ff  ; test rdi, rdi",
+            "7421  ; je 0x26",
+            "488d05{state+0x8}  ; lea rax, [rip + state+0x8]",
+            "4531d2  ; xor r10d, r10d",
+            "4a393cd0  ; cmp qword ptr [rax + r10*8], rdi",
+            "7508  ; jne 0x1d",
+            "4ac704d000000000  ; mov qword ptr [rax + r10*8], 0",
+            "41ffc2  ; inc r10d",
+            "4183fa08  ; cmp r10d, 8",
+            "72e9  ; jb 0xf"
+          ],
+          "when": "always",
+          "below": "11.00",
+          "proven": false,
+          "contiguous": true,
+          "state": "audio_out2_downmix",
+          "state_size": 72,
+          "note": "a destroyed port is removed from the downmix's port list",
+          "rationale": "Part of the 12->8 channel downmix: frees the handle's slot, so a later port that reuses the handle value or the buffer is not folded by mistake. State 'audio_out2_downmix' (0x48 bytes, zero at load, shared by the five rules): +0 u32 grain (frames, from the last sceAudioOut2ContextCreate num_grains, 256 for 0); +4 u32 bitmask of slots folded in the current grain; +8 8 x u64 handles of ports rewritten from 12 to 8 channels (0 = free; 8 slots: Ghost of Yotei keeps at most 3 bed ports plus the probe port open, and the 0x48 bytes fit the 0x58-byte page tail of EA eboots such as Battlefield 6)."
+        }
+      }
+    },
+    "audio_bed_71": {
+      "name": "Audio 7.1 bed (engine)",
+      "group": "Audio",
+      "description": "Makes the Scream/NCA audio engine render its main output as 7.1 instead of 7.1.4: the engine's permitted output modes lose the 7.1.4 bit, the start-up probe asks for an 8-channel port, and the reported output channel count is capped at 8. The engine then builds 8-channel beds itself (the path its music outputs already use), so no per-grain conversion runs. Alternative to Audio port compatibility (the 12->8 downmix); select one. Applies to targets below 11.00. Requires Known fixes enabled.",
+      "warning": "Experimental, not console-tested. Height channels are dropped rather than mixed into the bed. Only games whose engine matches the byte patterns (Ghost of Yotei's Scream build) are changed; the channel cap alone is harmless elsewhere. Cannot be combined with Audio port compatibility. Re-cook from the same source for each test; disabling does not undo patches already present in the input.",
+      "sources": [
+        "YOTEI4"
+      ],
+      "patterns": [
+        {
+          "name": "Scream permitted output modes 7.1.4 -> 7.1",
+          "find": "be01000000c745a0ff3f000031c9c645a802",
+          "replace": "be01000000c745a0ef3f000031c9c645a802",
+          "code": true,
+          "sources": [
+            "YOTEI4"
+          ],
+          "note": "snd_SynthInit SetParam(kProperty_OutputModesPermitted, 0x3fff) -> 0x3fef: bit 0x10 (7.1.4) is read only by NCA's bed-channel selection, so the main beds become 8-channel (format 0x880, the BGM ports' format)"
+        },
+        {
+          "name": "NCA probe port 12 -> 8 channels",
+          "find": "48b8000c000080bb0000",
+          "replace": "48b80008000080bb0000",
+          "code": true,
+          "sources": [
+            "YOTEI4"
+          ],
+          "note": "the start-up speaker probe's AudioOut2PortParam constant (48000 Hz, data_format 0xC00) -> 0x800; a 12-channel main port is refused for an old-SDK caller on FW 13.60 and for everyone below 11"
+        }
+      ],
+      "fixes": {
+        "gatEUKG+Ea4": {
+          "kind": "adapter",
+          "name": "sceAudioOut2PortGetState",
+          "area": "audio / ACM",
+          "sources": [
+            "YOTEI4"
+          ],
+          "insns": [
+            "53  ; push rbx",
+            "4889f3  ; mov rbx, rsi",
+            "call_got  ; call [GOT]",
+            "4885db  ; test rbx, rbx",
+            "740e  ; je 0x1d",
+            "85c0  ; test eax, eax",
+            "750a  ; jne 0x1d",
+            "807b0208  ; cmp byte ptr [rbx + 2], 8",
+            "7604  ; jbe 0x1d",
+            "c6430208  ; mov byte ptr [rbx + 2], 8",
+            "5b  ; pop rbx",
+            "c3  ; ret"
+          ],
+          "when": "always",
+          "below": "11.00",
+          "post_call": true,
+          "proven": false,
+          "contiguous": true,
+          "note": "AudioOut2PortState.num_channels (+2) capped at 8 after a successful call, so the engine never selects 7.1.4 for an 8-channel bed",
+          "rationale": "Part of the 7.1 bed option: with the beds built as 8 channels, a console that reports a 12-channel output (FW 13.60 with a 7.1.4 layout) would still make Scream pick the 7.1.4 playback mode, and NCA writes a 7.1.4 mix into an 8-channel bed through its generic fallback. Capping the reported count keeps the mode at 7.1, which the 8-channel bed path renders directly. The adapter forwards the call unchanged and edits the result only when the call succeeded and a state pointer was given. The one-adapter console test on FW 13.60 (T4, FINDINGS Part 1 section 6a) found this cap harmless on its own."
+        }
+      }
+    },
     "auto_pro": {
       "name": "Automatic Pro mode",
+      "group": "PS5 Pro",
       "description": "Keeps native console-mode queries when available, so the game can choose its base PS5 or PS5 Pro path at runtime. Missing queries fall back to base-console values. Keeps the default Psml initialization guard below firmware 9.00. Requires Known fixes enabled.",
       "warning": "Experimental; test on both console types. Queries missing from the selected target fall back to fixed base-console answers, even if this cook later runs on a Pro with newer firmware. Preserves automatic selection only for queries the target supports. Replacement libraries must report the actual console correctly. Cannot be combined with Force PS5 Pro mode.",
       "sources": ["Native hardware queries with base-console fallback; console testing pending"],
@@ -721,6 +1093,7 @@
     },
     "force_pro": {
       "name": "Force PS5 Pro mode",
+      "group": "PS5 Pro",
       "description": "Makes the game treat the console as a PS5 Pro (Pro graphics mode, PSSR when the game supports it): sceKernelGetOperationMode reports mode 3, sceKernelIsTrinityMode and sceAgcGetIsTrinityMode report true, and scePsmlMfsrInit is called again (the default skips it below FW 9.00).",
       "warning": "PS5 Pro only. On a base PS5 or Slim, or on a Pro firmware where the game's PSSR path fails, the game shows a black screen. PSSR may also need a newer libScePsml fakelib and the PSSR model file.",
       "sources": [
@@ -760,7 +1133,7 @@
           ],
           "stub": "byte1",
           "when": "always",
-          "note": "*(bool*)out = 1, return 0"
+          "note": "*(bool*)out = 1, return 1 (as sceAgcGetIsTrinityMode on a real PS5 Pro)"
         },
         "3WVD91e12ZQ": {
           "kind": "none",
@@ -775,6 +1148,7 @@
     },
     "gpu_scratch": {
       "name": "GPU compute scratch fix (firmware below 12)",
+      "group": "Libraries",
       "description": "Uses the fakelib set's libSceAgcDriver variant that hooks command-buffer submission and gives compute shaders a 24 MB scratch area (older firmware sets none up), and turns every s_trap 1 (asserts in the SDK's ray-tracing BVH shaders) into s_nop in the game's modules and ShaderData.bin.",
       "warning": "Not needed by most games. Use it when a game hangs or shows a black screen during GPU work on firmware below 12. Needs a fakelib set with a gpu_scratch variant (fakelibs/4, fakelibs/4.03).",
       "sources": [
@@ -795,6 +1169,7 @@
     },
     "playgo_0_6": {
       "name": "PlayGo 0.6 (experimental)",
+      "group": "Libraries",
       "description": "Replaces libScePlayGo.sprx with the official 0.6 build, adding synchronized lifecycle handling and empty-list compatibility. Keeps the current library unless selected.",
       "warning": "Console compatibility is unverified. Available in the 4, 4.03, 7, 9.60, 10 and 11 store sets. Select either this option or PlayGo 0.6 logging. Uses an existing /app0/playgo_stub.dat when present; no config is generated.",
       "sources": ["https://github.com/drakmor/pgo_stub/releases/tag/0.6"],
@@ -803,11 +1178,113 @@
     },
     "playgo_0_6_log": {
       "name": "PlayGo 0.6 logging (experimental)",
+      "group": "Libraries",
       "description": "Uses the official 0.6 logging build under the runtime name libScePlayGo.sprx. Writes /app0/playlgo.log (upstream spelling) for one diagnostic run.",
       "warning": "Console compatibility is unverified. Logging changes timing and writes /app0/playlgo.log (upstream spelling). Available in the 4, 4.03, 7, 9.60, 10 and 11 store sets. Select either this option or normal PlayGo 0.6; collect the log and disable this option after testing. No config is generated.",
       "sources": ["https://github.com/drakmor/pgo_stub/releases/tag/0.6"],
       "fixes": {},
       "fakelib_variant": "playgo_0_6_log"
+    },
+    "psml_kpn9": {
+      "name": "PSSR model as KPN9_v070.psp (experimental)",
+      "group": "PS5 Pro",
+      "description": "Uses the fakelib set's libScePsml variant that loads the PS5 Pro PSSR model from /app0/KPN9_v070.psp (its FW 13.60 system name) instead of /app0/k9.psp. The same FW 13.60 model file is added under that name.",
+      "warning": "Not console-tested. Only matters on a PS5 Pro for a game that uses PSSR. Available in the 4 and 9.60 store sets.",
+      "sources": ["FINDINGS.md §4"],
+      "fixes": {},
+      "fakelib_variant": "psml_kpn9"
+    },
+    "np_error_dialogs": {
+      "name": "Hide PSN error dialogs",
+      "group": "Online",
+      "description": "Keeps the system 'Something went wrong' box for PlayStation Network and network errors off the screen: sceErrorDialogOpen returns success without opening the dialog when the error code's facility is NP (0x8055xxxx) or libSceNet (0x8041xxxx), and the next sceErrorDialogUpdateStatus / sceErrorDialogGetStatus reports the dialog as finished, so the game continues as if the user had dismissed it. Other error codes open the real dialog. Applies to every target firmware. Requires Known fixes enabled.",
+      "warning": "Opt-in. Not console-tested. Hides genuine PSN and network errors too; only for consoles that cannot reach PSN. Covers games that report online errors through the system error dialog (libSceErrorDialog); a game's own message box is unchanged, and a game that waits for PSN before continuing still waits. Keeps one byte of state in the last data page.",
+      "sources": ["YOTEI4"],
+      "fixes": {
+        "M2ZF-ClLhgY": {
+          "kind": "adapter",
+          "name": "sceErrorDialogOpen",
+          "area": "system dialogs",
+          "sources": ["YOTEI4"],
+          "insns": [
+            "4885ff  ; test rdi, rdi",
+            "7420  ; je 0x25 (no param: real call)",
+            "8b4f04  ; mov ecx, dword ptr [rdi + 4] (SceErrorDialogParam.errorCode)",
+            "c1e910  ; shr ecx, 16 (facility)",
+            "81f955800000  ; cmp ecx, 0x8055 (NP)",
+            "7408  ; je 0x1b (suppress)",
+            "81f941800000  ; cmp ecx, 0x8041 (libSceNet)",
+            "750a  ; jne 0x25 (real call)",
+            "c605{state+0x0}01  ; mov byte ptr [rip + state+0x0], 1 (dialog suppressed)",
+            "31c0  ; xor eax, eax (SCE_OK)",
+            "c3  ; ret",
+            "c605{state+0x0}00  ; mov byte ptr [rip + state+0x0], 0 (real dialog: clear)"
+          ],
+          "when": "always",
+          "proven": false,
+          "contiguous": true,
+          "state": "np_error_dialog",
+          "state_size": 16,
+          "note": "NP (0x8055xxxx) and net (0x8041xxxx) error codes are not shown: returns 0 and marks the dialog as suppressed; other codes clear the mark and open the real dialog",
+          "rationale": "Ghost of Yotei's NP sign-in code queues every failed NpManager/NpAuth result for sceErrorDialogOpen (FINDINGS 6a: NP-104602-3 = 0x8055A011, the code ShellCore gives pending NP requests when a sign-in fails, which a console that cannot reach PSN produces at every boot). The game only expects the dialog to finish, so answering at the import boundary leaves its logic unchanged and works for any game that uses the system error dialog. Facility, not code: ShellCore's display-code table maps the whole 0x8055A0xx server-request range to NP-1045xx..1046xx."
+        },
+        "WWiGuh9XfgQ": {
+          "kind": "adapter",
+          "name": "sceErrorDialogUpdateStatus",
+          "area": "system dialogs",
+          "sources": ["YOTEI4"],
+          "insns": [
+            "803d{state+0x0}00  ; cmp byte ptr [rip + state+0x0], 0",
+            "740d  ; je 0x16 (nothing suppressed: real call)",
+            "c605{state+0x0}00  ; mov byte ptr [rip + state+0x0], 0",
+            "b803000000  ; mov eax, 3 (SCE_ERROR_DIALOG_STATUS_FINISHED)",
+            "c3  ; ret"
+          ],
+          "when": "always",
+          "proven": false,
+          "contiguous": true,
+          "state": "np_error_dialog",
+          "state_size": 16,
+          "note": "after a suppressed sceErrorDialogOpen the first status poll reports FINISHED and clears the mark; otherwise the real function",
+          "rationale": "Games poll the status until the dialog finishes (Ghost of Yotei accepts only RUNNING = keep waiting, FINISHED = done); with no real dialog open the system would report NONE or INITIALIZED, on which some games spin. Reporting FINISHED once completes the game's dialog state machine the way a user dismissal does."
+        },
+        "t2FvHRXzgqk": {
+          "kind": "adapter",
+          "name": "sceErrorDialogGetStatus",
+          "area": "system dialogs",
+          "sources": ["YOTEI4"],
+          "insns": [
+            "803d{state+0x0}00  ; cmp byte ptr [rip + state+0x0], 0",
+            "740d  ; je 0x16 (nothing suppressed: real call)",
+            "c605{state+0x0}00  ; mov byte ptr [rip + state+0x0], 0",
+            "b803000000  ; mov eax, 3 (SCE_ERROR_DIALOG_STATUS_FINISHED)",
+            "c3  ; ret"
+          ],
+          "when": "always",
+          "proven": false,
+          "contiguous": true,
+          "state": "np_error_dialog",
+          "state_size": 16,
+          "note": "same as sceErrorDialogUpdateStatus for games that poll the non-updating status query",
+          "rationale": "Part of the Hide PSN error dialogs option; either status call may be the one a game polls after sceErrorDialogOpen."
+        },
+        "ekXHb1kDBl0": {
+          "kind": "adapter",
+          "name": "sceErrorDialogClose",
+          "area": "system dialogs",
+          "sources": ["YOTEI4"],
+          "insns": [
+            "c605{state+0x0}00  ; mov byte ptr [rip + state+0x0], 0"
+          ],
+          "when": "always",
+          "proven": false,
+          "contiguous": true,
+          "state": "np_error_dialog",
+          "state_size": 16,
+          "note": "closing a dialog clears the suppressed mark, then the real function runs",
+          "rationale": "Part of the Hide PSN error dialogs option: a game that closes a suppressed dialog without polling its status must not see the next real dialog reported as finished at once."
+        }
+      }
     }
   },
   "patterns": [

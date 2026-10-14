@@ -3,12 +3,16 @@ using System.Text.Json;
 
 namespace Ps5Backport.Core;
 
-/// <summary>One adapter instruction: hex bytes, or "call the real function through its GOT slot".</summary>
-public sealed record Insn(byte[] Bytes, bool CallGot, string Asm)
+/// <summary>One adapter instruction: hex bytes, or "call the real function through its GOT slot".
+/// <see cref="StateAt"/> &gt;= 0: the 4 bytes there are a rip-relative displacement to the fix's runtime state
+/// block + <see cref="StateOffset"/>, written in fixes.json as "8905{state+0x4}".</summary>
+public sealed record Insn(byte[] Bytes, bool CallGot, string Asm, int StateAt = -1, int StateOffset = 0)
 {
     public const string CallGotToken = "call_got";
     public int Length => CallGot ? 6 : Bytes.Length;
-    public string Hex => CallGot ? CallGotToken : Convert.ToHexStringLower(Bytes);
+    public string Hex => CallGot ? CallGotToken
+        : StateAt < 0 ? Convert.ToHexStringLower(Bytes)
+        : Convert.ToHexStringLower(Bytes.AsSpan(0, StateAt)) + $"{{state+0x{StateOffset:x}}}" + Convert.ToHexStringLower(Bytes.AsSpan(StateAt + 4));
 
     /// <summary>"4989d0  ; mov r8, rdx" -> bytes + asm note.</summary>
     public static Insn Parse(string entry)
@@ -16,15 +20,26 @@ public sealed record Insn(byte[] Bytes, bool CallGot, string Asm)
         int semi = entry.IndexOf(';');
         string hex = (semi < 0 ? entry : entry[..semi]).Trim();
         string asm = semi < 0 ? "" : entry[(semi + 1)..].Trim();
-        return hex == CallGotToken ? new Insn([], true, asm) : new Insn(Convert.FromHexString(hex), false, asm);
+        if (hex == CallGotToken)
+            return new Insn([], true, asm);
+        var m = System.Text.RegularExpressions.Regex.Match(hex, @"^([0-9a-fA-F]*)\{state\+0x([0-9a-fA-F]+)\}([0-9a-fA-F]*)$");
+        if (!m.Success)
+            return new Insn(Convert.FromHexString(hex), false, asm);
+        byte[] before = Convert.FromHexString(m.Groups[1].Value), after = Convert.FromHexString(m.Groups[3].Value);
+        return new Insn([.. before, 0, 0, 0, 0, .. after], false, asm, before.Length,
+                        int.Parse(m.Groups[2].Value, NumberStyles.HexNumber, CultureInfo.InvariantCulture));
     }
 }
 
-/// <summary>A known fix for one imported library function (data/fixes.json).</summary>
+/// <summary>A known fix for one imported library function (data/fixes.json).
+/// <see cref="Contiguous"/>: the adapter is placed in one piece (its instructions may branch inside it).
+/// <see cref="State"/>: name of a zero-initialised runtime block of <see cref="StateSize"/> bytes, shared by
+/// every fix of a module that names it.</summary>
 public sealed record Fix(
     string Nid, string Kind, string Name, string Area, IReadOnlyList<string> Sources,
     string Stub, string NewNid, IReadOnlyList<Insn> Insns, string ExportNid,
-    string When, bool PostCall, bool Proven, string Note, string Rationale, string Below = "", string NewLibrary = "")
+    string When, bool PostCall, bool Proven, string Note, string Rationale, string Below = "", string NewLibrary = "",
+    bool Contiguous = false, string State = "", int StateSize = 0)
 {
     public const string KindStub = "stub", KindSwap = "swap", KindAdapter = "adapter", KindRedirect = "redirect",
                         KindPltStub = "plt_stub", KindNone = "none";
@@ -41,10 +56,14 @@ public sealed record FixPattern(string Name, byte[] Find, byte[] Replace, IReadO
                                 bool Code = false, IReadOnlyList<string>? Sources = null, string Note = "");
 
 /// <summary>An opt-in group of fixes (data/fixes.json "options"), never applied by default.
-/// <see cref="FakelibVariant"/>: files in the fakelib set's &lt;variant&gt;/ subfolder replace the same-named fakelibs.</summary>
+/// <see cref="FakelibVariant"/>: files in the fakelib set's &lt;variant&gt;/ subfolder replace the same-named fakelibs.
+/// <see cref="Group"/>: the area the option is listed under in the app (see <see cref="Knowledge.OptionGroups"/>).</summary>
 public sealed record FixOption(string Key, string Name, string Description, string Warning,
                                IReadOnlyList<string> Sources, IReadOnlyDictionary<string, Fix> Fixes,
-                               string FakelibVariant, IReadOnlyList<FixPattern> Patterns);
+                               string FakelibVariant, IReadOnlyList<FixPattern> Patterns, string Group = FixOption.DefaultGroup)
+{
+    public const string DefaultGroup = "Other";
+}
 
 public sealed record StubBody(string Name, byte[] Bytes, string Asm, string Note);
 
@@ -72,6 +91,8 @@ public sealed class Knowledge
     public IReadOnlyList<Fix> FixList { get; }
     /// <summary>Key -> opt-in fix group, in file order.</summary>
     public IReadOnlyDictionary<string, FixOption> Options { get; }
+    /// <summary>Option groups in display order: data/fixes.json "option_groups", then any other group in option order.</summary>
+    public IReadOnlyList<string> OptionGroups { get; }
     /// <summary>Byte patterns applied with the known fixes (data/fixes.json "patterns").</summary>
     public IReadOnlyList<FixPattern> Patterns { get; }
     public IReadOnlyDictionary<string, StubBody> Stubs { get; }
@@ -97,6 +118,7 @@ public sealed class Knowledge
         UmtxOp = original.UmtxOp;
         FixList = original.FixList.Select(CopyFix).ToArray();
         Fixes = original.Fixes.ToDictionary(p => p.Key, p => CopyFix(p.Value), StringComparer.Ordinal);
+        OptionGroups = original.OptionGroups.ToArray();
         Options = original.Options.ToDictionary(p => p.Key, p => p.Value with
         {
             Sources = p.Value.Sources.ToArray(),
@@ -133,7 +155,8 @@ public sealed class Knowledge
                     Str(f, "stub"), Str(f, "new_nid"),
                     f.TryGetProperty("insns", out var insns) ? insns.EnumerateArray().Select(i => Insn.Parse(StringValue(i))).ToList() : [],
                     Str(f, "export_nid"), Str(f, "when", Fix.WhenMissing), Bool(f, "post_call", false), Bool(f, "proven", true),
-                    Str(f, "note"), Str(f, "rationale"), Str(f, "below"), Str(f, "new_library"));
+                    Str(f, "note"), Str(f, "rationale"), Str(f, "below"), Str(f, "new_library"),
+                    Bool(f, "contiguous", false), Str(f, "state"), f.TryGetProperty("state_size", out var size) ? size.GetInt32() : 0);
             }
             var list = root.GetProperty("fixes").EnumerateObject().Select(ReadFix).ToList();
             FixList = list;
@@ -146,8 +169,11 @@ public sealed class Knowledge
                         p.Value.TryGetProperty("sources", out var os) ? os.EnumerateArray().Select(s => Source(StringValue(s))).ToList() : [],
                         p.Value.GetProperty("fixes").EnumerateObject().Select(ReadFix).ToDictionary(f => f.Nid, StringComparer.Ordinal),
                         Str(p.Value, "fakelib_variant"),
-                        p.Value.TryGetProperty("patterns", out var pats) ? pats.EnumerateArray().Select(ReadPattern).ToList() : []);
+                        p.Value.TryGetProperty("patterns", out var pats) ? pats.EnumerateArray().Select(ReadPattern).ToList() : [],
+                        Str(p.Value, "group", FixOption.DefaultGroup));
             Options = options;
+            var declared = root.TryGetProperty("option_groups", out var og) ? og.EnumerateArray().Select(StringValue).ToList() : [];
+            OptionGroups = declared.Concat(options.Values.Select(o => o.Group)).Distinct(StringComparer.Ordinal).ToList();
             Patterns = root.TryGetProperty("patterns", out var defaults) ? defaults.EnumerateArray().Select(ReadPattern).ToList() : [];
 
             FixPattern ReadPattern(JsonElement x) => new(
@@ -232,6 +258,8 @@ public sealed class Knowledge
         var selected = options.ToList();
         if (selected.Contains("auto_pro", StringComparer.Ordinal) && selected.Contains("force_pro", StringComparer.Ordinal))
             throw new ArgumentException("Automatic Pro mode cannot be combined with Force PS5 Pro mode. Select one console mode.");
+        if (selected.Contains("audio_port_compat", StringComparer.Ordinal) && selected.Contains("audio_bed_71", StringComparer.Ordinal))
+            throw new ArgumentException("Audio 7.1 bed cannot be combined with Audio port compatibility. Select one audio bed fix.");
         var table = new Dictionary<string, Fix>(Fixes, StringComparer.Ordinal);
         foreach (string key in selected)
         {
@@ -285,6 +313,8 @@ public sealed class Knowledge
                 context = $"fixes.json option '{option.Key}'";
                 if (string.IsNullOrWhiteSpace(option.Key))
                     throw new ArgumentException("option key must not be empty");
+                if (string.IsNullOrWhiteSpace(option.Group))
+                    throw new ArgumentException("option group must not be empty");
                 if (option.FakelibVariant.Length > 0)
                     _ = FakelibStore.VariantFolder(DataDir, option.FakelibVariant);
                 foreach (var fix in option.Fixes.Values)
@@ -292,6 +322,11 @@ public sealed class Knowledge
                 foreach (var pattern in option.Patterns)
                     ValidatePattern(pattern);
             }
+            context = "fixes.json";
+            foreach (var group in FixList.Concat(Options.Values.SelectMany(o => o.Fixes.Values))
+                                         .Where(f => f.State.Length > 0).GroupBy(f => f.State, StringComparer.Ordinal))
+                if (group.Select(f => f.StateSize).Distinct().Count() > 1)
+                    throw new ArgumentException($"state '{group.Key}': every fix must declare the same state_size");
             context = "stubs.json";
             foreach (var stub in Stubs.Values)
                 if (string.IsNullOrWhiteSpace(stub.Name) || stub.Bytes.Length == 0)
@@ -342,6 +377,10 @@ public sealed class Knowledge
             case Fix.KindAdapter:
                 if (fix.Insns.Count == 0 || fix.Insns.Any(i => i.Length == 0))
                     throw new ArgumentException($"fix '{fix.Nid}': adapter needs nonempty instructions");
+                if ((fix.State.Length > 0) != (fix.StateSize > 0) || fix.StateSize < 0)
+                    throw new ArgumentException($"fix '{fix.Nid}': state and state_size go together (state_size > 0)");
+                if (fix.Insns.Any(i => i.StateAt >= 0 && (fix.State.Length == 0 || i.StateOffset >= fix.StateSize)))
+                    throw new ArgumentException($"fix '{fix.Nid}': {{state+N}} needs a state block larger than N");
                 break;
             case Fix.KindNone when allowNone:
                 break;

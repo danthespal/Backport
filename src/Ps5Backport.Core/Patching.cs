@@ -94,6 +94,76 @@ public static class Patching
     static long? FirstCave(SceElf elf, long size) =>
         CaveRuns(elf, size).Select(r => (long?)r.Offset).FirstOrDefault();
 
+    /// <summary>
+    /// One place for <paramref name="size"/> bytes of code: an int3 run (as <see cref="FindCave"/>), else
+    /// consecutive untouched 64-byte blocks of the text extension joined into one run (their `ret`s are
+    /// overwritten), extending .text once when allowed. File offset, or null.
+    /// </summary>
+    internal static long? FindContiguousCave(SceElf elf, long size)
+    {
+        for (int attempt = 0; attempt < 2; attempt++)
+        {
+            if (FirstCave(elf, size) is long off)
+                return off;
+            var text = elf.TextSegment();
+            long end = text.Offset + text.Filesz, start = end - elf.TextExtended;
+            long runStart = -1;
+            for (long b = start; elf.TextExtended > 0 && b < end; b += ExtensionBlock)
+            {
+                long blockEnd = Math.Min(b + ExtensionBlock, end);
+                bool pristine = elf.Data[b] == Ret && !elf.Data.AsSpan((int)b + 1, (int)(blockEnd - b - 1)).ContainsAnyExcept(Int3);
+                if (!pristine)
+                {
+                    runStart = -1;
+                    continue;
+                }
+                if (runStart < 0)
+                    runStart = b;
+                if (blockEnd - 1 - (runStart + 2) >= size)      // keep the first ret and one guard int3 on each side
+                    return runStart + 2;
+            }
+            if (!(attempt == 0 && elf.AllowTextExtension && ExtendText(elf) > 0))
+                break;
+        }
+        return null;
+    }
+
+    // --- runtime state -------------------------------------------------------------
+    /// <summary>PS5 page size: segments are mapped in 16 KB pages.</summary>
+    public const long PageSize = 0x4000;
+
+    /// <summary>
+    /// Zero-initialised read-write memory for a fix's runtime state (not console-tested): the unused tail of
+    /// the last page of a writable segment, past its memsz. The loader maps whole pages and zero-fills the
+    /// bss part, so those bytes exist at runtime; no header changes. Skipped: pages covered by PT_GNU_RELRO
+    /// (read-only after relocation) or shared with another mapped (nonzero-flags) PT_LOAD. A flags-0 PT_LOAD
+    /// that starts inside that page (PS5 eboots keep their dynamic tables in one) cannot be mapped there
+    /// without unmapping the bss below it, so it does not count. One block per name and module.
+    /// </summary>
+    public static ulong AllocateState(SceElf elf, string name, int size)
+    {
+        if (elf.StateBlocks.TryGetValue(name, out var existing))
+            return existing.Vaddr;
+        foreach (var seg in elf.Phdrs.Where(p => p.Type == SceElf.PtLoad && (p.Flags & SceElf.PfW) != 0 && p.Memsz > 0)
+                                     .OrderByDescending(p => p.Vaddr))
+        {
+            ulong end = seg.Vaddr + (ulong)seg.Memsz;
+            ulong pageEnd = (end + PageSize - 1) & ~(ulong)(PageSize - 1);
+            ulong at = elf.StateBlocks.Values.Where(b => b.Vaddr >= end && b.Vaddr < pageEnd)
+                          .Select(b => b.Vaddr + (ulong)b.Size).DefaultIfEmpty(end).Max();
+            at = (at + 15) & ~15UL;
+            if (at + (ulong)size > pageEnd)
+                continue;
+            bool clash = elf.Phdrs.Any(p => p != seg && p.Memsz > 0 && p.Vaddr < pageEnd && p.Vaddr + (ulong)p.Memsz > end &&
+                                            (p.Type == SceElf.PtGnuRelro || (p.Type == SceElf.PtLoad && p.Flags != 0)));
+            if (clash)
+                continue;
+            elf.StateBlocks[name] = (at, size);
+            return at;
+        }
+        throw new PatchException($"no writable page tail left for {size} bytes of runtime state '{name}'");
+    }
+
     // --- PLT-level primitives ----------------------------------------------------
     /// <summary>Virtual address of an import's PLT entry (checked to be an untouched jmp through its GOT slot).</summary>
     public static ulong PltEntry(SceElf elf, Import imp)
@@ -136,14 +206,25 @@ public static class Patching
     /// Write branch-free instructions, split across as many int3 caves as needed (eboots only have
     /// &lt;=16-byte padding); pieces are joined with `jmp rel32`. With <paramref name="tailJmp"/> the chain
     /// ends with `jmp [GOT]` (pre-call adapter); without, the instructions must contain call_got and end
-    /// with `ret` (post-call adapter). Returns the vaddr of the first piece.
+    /// with `ret` (post-call adapter). Returns the vaddr of the first piece. <paramref name="contiguous"/>:
+    /// one piece only, so the instructions may branch inside it. <paramref name="stateVaddr"/>: target of the
+    /// instructions' {state+N} displacements.
     /// </summary>
-    public static ulong PlaceChain(SceElf elf, IReadOnlyList<Insn> insns, ulong gotVaddr, bool tailJmp = true)
+    public static ulong PlaceChain(SceElf elf, IReadOnlyList<Insn> insns, ulong gotVaddr, bool tailJmp = true,
+                                   bool contiguous = false, ulong stateVaddr = 0)
     {
         int tail = tailJmp ? 6 : 0;
         var pieces = new List<(long Offset, List<Insn> Insns, bool IsLast)>();
         int k = 0;
-        while (true)
+        if (contiguous)
+        {
+            long need = insns.Sum(i => (long)i.Length) + tail;
+            long off = FindContiguousCave(elf, need)
+                ?? throw new PatchException($"no padding or code-space left for a {need}-byte adapter placed in one piece");
+            pieces.Add((off, insns.ToList(), true));
+            elf.Data.AsSpan((int)off, (int)need).Fill(0x90);                     // reserve
+        }
+        while (!contiguous)
         {
             long lastNeed = insns.Skip(k).Sum(i => (long)i.Length) + tail;
             long minNeed = k < insns.Count ? insns[k].Length + 5 : tail;
@@ -177,6 +258,14 @@ public static class Patching
             {
                 if (insn.CallGot)
                     body.AddRange([0xFF, 0x15, .. Rel32(va + (ulong)body.Count + 6, gotVaddr)]);
+                else if (insn.StateAt >= 0)
+                {
+                    if (stateVaddr == 0)
+                        throw new PatchException("instruction refers to a runtime state block, but the fix has none");
+                    byte[] bytes = insn.Bytes.ToArray();
+                    Rel32(va + (ulong)body.Count + (ulong)bytes.Length, stateVaddr + (ulong)insn.StateOffset).CopyTo(bytes, insn.StateAt);
+                    body.AddRange(bytes);
+                }
                 else
                     body.AddRange(insn.Bytes);
             }
@@ -201,12 +290,13 @@ public static class Patching
         uint nameOff = elf.U32(symOff);
         long start = elf.StringTableOffset + nameOff;
         string full = elf.CStr(start);
-        // refuse when another symbol's name shares these bytes (string-table suffix merging)
-        int count = elf.Symbols().Count;
-        for (int i = 0; i < count; i++)
+        // refuse when another symbol's name shares these bytes (string-table suffix merging, either way round:
+        // the other name starts inside this one, or this name is the tail of a longer one)
+        var names = elf.Symbols();
+        for (int i = 0; i < names.Count; i++)
         {
             uint other = elf.U32(elf.SymtabOffset(i));
-            if (i != imp.SymIndex && nameOff <= other && other < nameOff + full.Length)
+            if (i != imp.SymIndex && other < nameOff + full.Length && nameOff < other + (uint)names[i].Name.Length)
                 throw new PatchException($"{imp.Nid}: symbol name is shared with symbol #{i}");
         }
         if (!full.StartsWith(imp.Nid, StringComparison.Ordinal))
@@ -413,11 +503,13 @@ public static class FixApplier
                 Patching.RenameImport(elf, imp, fix.NewNid, fix.NewLibrary);
                 return $"swap -> {renamedTo}";
             case Fix.KindAdapter:
-                ulong cave = Patching.PlaceChain(elf, fix.Insns, imp.GotVaddr, tailJmp: !fix.PostCall);
+                ulong state = fix.State.Length > 0 ? Patching.AllocateState(elf, fix.State, fix.StateSize) : 0;
+                ulong cave = Patching.PlaceChain(elf, fix.Insns, imp.GotVaddr, tailJmp: !fix.PostCall, fix.Contiguous, state);
                 if (fix.NewNid.Length > 0)
                     Patching.RenameImport(elf, imp, fix.NewNid, fix.NewLibrary);
                 Patching.RedirectPlt(elf, imp, cave);
-                return $"adapter{(fix.NewNid.Length > 0 ? $" -> {renamedTo}" : " (argument fix)")} via cave 0x{cave:x}";
+                return $"adapter{(fix.NewNid.Length > 0 ? $" -> {renamedTo}" : " (argument fix)")} via cave 0x{cave:x}" +
+                       (state != 0 ? $", state '{fix.State}' at 0x{state:x}" : "");
             case Fix.KindRedirect:
                 ulong target = LocalExport(elf, fix.ExportNid)
                     ?? throw new PatchException($"{fix.Nid}: this module does not export {fix.ExportNid}");

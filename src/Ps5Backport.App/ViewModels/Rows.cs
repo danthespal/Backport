@@ -34,15 +34,25 @@ public sealed class WarningRow(string detail)
     };
 }
 
-/// <summary>One optional patch on the Overview tab (data/fixes.json "options"); chosen per game, never saved.</summary>
-public sealed partial class OptionRow(FixOption o) : ObservableObject
+/// <summary>One optional patch on the Overview tab (data/fixes.json "options"); chosen per game, never saved.
+/// <paramref name="select"/>: shows this patch in the details strip.</summary>
+public sealed partial class OptionRow(FixOption o, Action<OptionRow>? select = null) : ObservableObject
 {
     public string Key => o.Key;
     public string Name => o.Name;
     public string Description => o.Description;
     public string Warning => o.Warning;
+    public string Group => o.Group;
     [ObservableProperty] public partial bool IsEnabled { get; set; }
+    /// <summary>Shown in the details strip.</summary>
+    [ObservableProperty] public partial bool IsSelected { get; set; }
+
+    [CommunityToolkit.Mvvm.Input.RelayCommand]
+    void Select() => select?.Invoke(this);
 }
+
+/// <summary>One column of the optional patches panel: an area (data/fixes.json option "group") and its patches.</summary>
+public sealed record PatchGroup(string Name, IReadOnlyList<OptionRow> Options);
 
 /// <summary>One line of the Modules tab.</summary>
 public sealed class ModuleRow(ModuleResult m)
