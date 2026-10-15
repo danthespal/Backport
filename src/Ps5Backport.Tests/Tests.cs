@@ -442,7 +442,7 @@ namespace Ps5Backport.Tests
         [Fact]
         public async Task NidLookup_BothDirectionsWithKnowledge()
         {
-            Repo.Need("firmware_db", "7.01.json");
+            Repo.Need("firmware_db", "7.00.json");
             var vm = new MainViewModel(new AppSettings { FirmwareDbDir = Path.Combine(Repo.Root, "firmware_db") }) { Page = AppPage.Tools };
             await vm.PageLoad;
             string trinity = Ps5Backport.Core.Nid.Compute("sceKernelIsTrinityMode");
@@ -450,7 +450,7 @@ namespace Ps5Backport.Tests
             Assert.Equal(3, vm.Tools.NidResults.Count);
             var byName = vm.Tools.NidResults[0];
             Assert.Equal(trinity, byName.Nid);
-            Assert.Contains("from FW 7.01", byName.Known);
+            Assert.Contains("from FW 7.00", byName.Known);
             Assert.Contains("known fix: stub (proven)", byName.Known);
             Assert.Equal("La9uyZv4Kvw", vm.Tools.NidResults[1].Nid);              // a NID only the knowledge base knows
             Assert.Contains("known fix", vm.Tools.NidResults[1].Known);
@@ -577,9 +577,66 @@ namespace Ps5Backport.Tests
             Assert.Equal(["force_pro"], vm.Result!.Options);
             Assert.Equal(0, vm.UnresolvedCount);
             Assert.Contains(vm.Warnings, w => w.StartsWith("option Force PS5 Pro mode:"));
+            // the probe ran: every row has a verdict; AC's single pad call passes "1 or 3", so nothing was pre-selected
+            Assert.All(vm.PatchOptions, o => Assert.True(o.HasVerdict));
+            Assert.Equal("applicable", vm.PatchOptions.Single(o => o.Key == "pad_vibration_compat").Verdict);
+            Assert.Contains("probe:", vm.PatchOptionsSummary);
+            Assert.False(vm.IsAnalysisStale);
 
             vm.LoadGame(game);
             Assert.All(vm.PatchOptions, o => Assert.False(o.IsEnabled));
+            Assert.All(vm.PatchOptions, o => Assert.False(o.HasVerdict));
+            Assert.DoesNotContain("probe:", vm.PatchOptionsSummary);
+        }
+
+        /// <summary>Analyze probes the game first and pre-selects only a "needed" option; the pre-selection is part of the
+        /// analysis (not stale), appears in the result and the log, and not-applicable rows are dimmed.</summary>
+        [Fact]
+        public async Task Analyze_PreselectsNeededOptions_FromTheProbe()
+        {
+            string root = Path.Combine(Path.GetTempPath(), "ps5backport-gui-probe-" + Guid.NewGuid().ToString("N"));
+            Directory.CreateDirectory(root);
+            try
+            {
+                string game = Directory.CreateDirectory(Path.Combine(root, "game")).FullName;
+                string reference = Directory.CreateDirectory(Path.Combine(root, "reference")).FullName;
+                const string pad = "W2G-yoyMF5U";
+                byte[] module = SyntheticBinary.Elf(imports: true);
+                System.Text.Encoding.ASCII.GetBytes(pad + "#A#A\0").CopyTo(module, 0x201);
+                SyntheticBinary.W64(module, 0x130, Core.SceElf.DtJmpRel);
+                SyntheticBinary.W64(module, 0x140, Core.SceElf.DtPltRelSz);
+                SyntheticBinary.W64(module, 0x480, 0x426);
+                Convert.FromHexString("FF255A0000006800000000").CopyTo(module, 0x420);
+                module[0x380] = Core.Patching.Ret;
+                module.AsSpan(0x381, 0x1f).Fill(Core.Patching.Int3);
+                Convert.FromHexString("BE04000000E8").CopyTo(module, 0x3a0);                         // mov esi, 4; call PLT
+                BitConverter.GetBytes(0x420 - (0x3a5 + 5)).CopyTo(module, 0x3a6);
+                File.WriteAllBytes(Path.Combine(game, "eboot.bin"), module);
+                Core.FirmwareDb.Save(new Core.FirmwareExports("4", "test", false, new() { ["libScePad"] = new() { pad } }), Path.Combine(reference, "4.00.json"));
+
+                using var vm = new MainViewModel(new AppSettings { FirmwareDbDir = reference });
+                vm.Game = new Core.GameInfo(game, "Synthetic game", "PPSA99999", "", "", "01.000.000", "13.60", "11.00", null, null);
+                vm.SelectedFirmware = "4";
+                vm.OutputFolder = Path.Combine(root, "out");
+                Assert.All(vm.PatchOptions, o => Assert.False(o.HasVerdict));
+                await vm.AnalyzeCommand.ExecuteAsync(null);
+                Assert.True(vm.Result is not null, string.Join("\n", vm.Log.Visible.Select(e => e.ToString())));
+
+                var padRow = vm.PatchOptions.Single(o => o.Key == "pad_vibration_compat");
+                Assert.True(padRow.IsEnabled);
+                Assert.Equal(("needed", "needed", true, 1.0), (padRow.Verdict, padRow.VerdictLabel, padRow.IsNeeded, padRow.RowOpacity));
+                Assert.Contains("esi = 4 (above 3) at 1 of 1 call site(s), e.g. eboot.bin 0x3a5", padRow.Evidence);
+                Assert.Equal(["pad_vibration_compat"], vm.PatchOptions.Where(o => o.IsEnabled).Select(o => o.Key));
+                Assert.Equal(["pad_vibration_compat"], vm.Result!.Options);
+                Assert.False(vm.IsAnalysisStale);
+                var autoPro = vm.PatchOptions.Single(o => o.Key == "auto_pro");
+                Assert.Equal(("not applicable", true, 0.55), (autoPro.VerdictLabel, autoPro.IsNotApplicable, autoPro.RowOpacity));
+                Assert.Equal("console choice", vm.PatchOptions.Single(o => o.Key == "boot_notice").VerdictLabel);
+                Assert.Contains("probe: 1 needed", vm.PatchOptionsSummary);
+                Assert.Contains(vm.Log.Visible, e => e.Message.StartsWith("Probe: pre-selected Pad vibration mode compatibility"));
+                Assert.Contains("probe needed", vm.ReportText);
+            }
+            finally { Directory.Delete(root, true); }
         }
 
         [Fact]
@@ -1076,6 +1133,24 @@ namespace Ps5Backport.Tests
             SyntheticBinary.W64(data, 0x50, ulong.MaxValue - (ulong)data.Length + 2);
             if (memoryOnly) SyntheticBinary.W64(data, 0x60, 0);
             Assert.Throws<InvalidDataException>(() => new SceElf(data));
+        }
+
+        [Fact]
+        public void Elf_RejectsLoadSegmentWithFileSizeLargerThanMemorySize()
+        {
+            byte[] data = SyntheticBinary.Elf();
+            SyntheticBinary.W64(data, 0x68, (ulong)data.Length - 1);
+            Assert.Throws<InvalidDataException>(() => new SceElf(data));
+        }
+
+        [Fact]
+        public void Elf_AcceptsLoadSegmentWithMemorySizeLargerThanFileSize()
+        {
+            byte[] data = SyntheticBinary.Elf();
+            SyntheticBinary.W64(data, 0x68, (ulong)data.Length + 0x1000);
+            var elf = new SceElf(data);
+            Assert.Equal(data.Length - 1L, elf.Off((ulong)data.Length - 1));
+            Assert.Throws<InvalidDataException>(() => elf.Off((ulong)data.Length));
         }
 
         [Fact]
@@ -2041,7 +2116,7 @@ namespace Ps5Backport.Tests
             try
             {
                 // no --stub-nid: GT7's eboot stubs and libc fixes come from data/fixes.json
-                var result = Samples.Backport(game, output, "4", Samples.RefStubs, extraFakelib: fakelib, options: ["save_mount_compat"]);
+                var result = Samples.Backport(game, output, "4", Samples.RefStubs, extraFakelib: fakelib);
                 var mods = result.Modules.ToDictionary(m => m.Path);
                 Assert.DoesNotContain(result.Modules, m => m.Error.Length > 0);
                 Assert.Equal("PPSA01317", result.TitleId);
@@ -2051,7 +2126,7 @@ namespace Ps5Backport.Tests
                 Assert.Equal(7, eboot.StubbedNow.Count);
                 Assert.Equal(29, eboot.Counts.First(c => c.Key == "unknown").Value);
                 Assert.All(eboot.StubbedNow, s => Assert.True(s.KnownFix));
-                // GT7's call-site savedata patch is replaced by the generic sceSaveDataMount3 argument fix
+                // GT7's call-site savedata patch is replaced by the generic sceSaveDataMount3 argument fix (a default rule below FW 5.00)
                 Assert.Contains(eboot.Fixed, f => f.Nid == "ZP4e7rlzOUk");
                 // libc: all six GT7 fixes, plus four stubs learned from CONTROL; only sceKernelDebugWriteCppExceptionInfo remains unknown
                 var libc = mods["sce_module/libc.prx"];
@@ -2134,7 +2209,7 @@ namespace Ps5Backport.Tests
             var elf = SceElf.Load(Samples.Work("NOT_BACKPORT_elf", "eboot.elf"));
             const string nid = "ZP4e7rlzOUk";   // sceSaveDataMount3
             var imp = elf.Imports().First(i => i.Nid == nid && i.Plt);
-            var table = k.FixTable(["save_mount_compat"]);
+            var table = k.FixTable([]);   // sceSaveDataMount3 is a default rule below FW 5.00
             FixApplier.Apply(elf, [nid], k, table);
             var (executed, _, jumped) = Samples.Trace(elf, imp, table[nid]);
             Assert.Equal(imp.GotVaddr, jumped);
@@ -2386,13 +2461,13 @@ namespace Ps5Backport.Tests
             try
             {
                 var result = Samples.Backport(Path.Combine(ac, "default"), output, "4.50", Repo.Need("firmware_db"),
-                                              store: Path.Combine(Repo.Root, "fakelibs"), options: ["force_pro", "gpu_scratch", "save_mount_compat", "save_prepare_compat"]);
+                                              store: Path.Combine(Repo.Root, "fakelibs"), options: ["force_pro", "gpu_scratch", "save_prepare_compat"]);
                 // gpu_scratch reproduces AC's own files: ShaderData.bin of 4xx+, the hooked AgcDriver of 10xx+
                 Assert.Equal(File.ReadAllBytes(Path.Combine(ac, "4xx+", "ShaderData.bin")), File.ReadAllBytes(Path.Combine(output, "ShaderData.bin")));
                 Assert.Equal(File.ReadAllBytes(Path.Combine(ac, "10xx+", "fakelib", "libSceAgcDriver.sprx")),
                              File.ReadAllBytes(Path.Combine(output, "fakelib", "libSceAgcDriver.sprx")));
                 var mods = result.Modules.ToDictionary(m => m.Path);
-                Assert.Equal(["force_pro", "gpu_scratch", "save_mount_compat", "save_prepare_compat"], result.Options);
+                Assert.Equal(["force_pro", "gpu_scratch", "save_prepare_compat"], result.Options);
                 var data = Assert.Single(result.DataFiles);
                 Assert.Equal(("ShaderData.bin", "s_trap 1 -> s_nop", 168, true), (data.Path, data.Pattern, data.Count, data.Written));
                 var pattern = Assert.Single(mods["eboot.bin"].Patterns);
@@ -3744,7 +3819,7 @@ namespace Ps5Backport.Tests
             Assert.Equal(Fix.KindPltStub, table["NH6xARDOVv8"].Kind);           // sceKernelGetOperationMode -> mode 3
             Assert.Equal(Fix.KindStub, k.Fixes["NH6xARDOVv8"].Kind);            // default untouched
             Assert.Throws<ArgumentException>(() => k.FixTable(["no_such_option"]));
-            var mount3 = k.Options["save_mount_compat"].Fixes["ZP4e7rlzOUk"];                                 // systemBlocks -1 -> 0: SDK < 5.00 only
+            var mount3 = k.Fixes["ZP4e7rlzOUk"];                                                             // systemBlocks -1 -> 0: a default rule, SDK < 5.00 only
             Assert.True(mount3.Due("4") && mount3.Due("4.50"));
             Assert.False(mount3.Due("5") || mount3.Due("5.02") || mount3.Due("10.01"));
             Assert.True(k.Options["save_prepare_compat"].Fixes["sDCBrmc61XU"].Due("12.00"));                   // no limit
@@ -3798,6 +3873,7 @@ namespace Ps5Backport.Tests
                           "scePsmlMfsrInit", "sceUserServiceGetGamePresets", "sceVideoOutGetOutputStatusWithVrr"],
                          k.FixList.Where(f => !f.Proven).Select(f => f.Name).Order(StringComparer.Ordinal));
             Assert.True(k.Fixes["NH6xARDOVv8"].Proven);   // GetOperationMode stub: proven by both games
+            Assert.True(k.Fixes["ZP4e7rlzOUk"].Proven);   // SaveDataMount3 adapter: PPSA32935 FW 4 cook saves and reloads on 13.60
         }
 
         /// <summary>The AnyPS5 candidates' NIDs are the hashes of their names.</summary>
@@ -4291,7 +4367,7 @@ namespace Ps5Backport.Tests
                 applied += result.Applied.Length + result.Stubs.Length;
             }
             Golden.Match(Path.Combine("patch", "all-known-fixes.txt"), sb.ToString());
-            Assert.True(applied >= 17, $"only {applied} fixes applied");   // optional save-data adapters are excluded
+            Assert.True(applied >= 18, $"only {applied} fixes applied");   // the optional save-preparation adapter is excluded
         }
 
         [Fact]
@@ -4597,7 +4673,7 @@ namespace Ps5Backport.Tests
         }
 
         [Theory]
-        [InlineData(false, 18)]
+        [InlineData(false, 19)]
         [InlineData(true, 21)]
         public void DryRun_WritesNothing_AndReportsOnlySelectedAdapters(bool optionalAdapters, int expectedFixes)
         {
@@ -4605,12 +4681,13 @@ namespace Ps5Backport.Tests
             string output = Path.Combine(Path.GetTempPath(), "ps5backport-dry-" + Guid.NewGuid().ToString("N"));
             var k = new Knowledge(Repo.Need("data"));
             var o = new BackportOptions { Firmware = "4", ReferenceDir = Repo.Need("firmware_db"), FakelibStore = Path.Combine(Repo.Root, "fakelibs"), DryRun = true,
-                Options = optionalAdapters ? ["save_mount_compat", "save_prepare_compat", "audio_speaker_compat"] : [] };
+                Options = optionalAdapters ? ["save_prepare_compat", "audio_speaker_compat"] : [] };
             var dry = Pipeline.Backport(game, output, o, k, cancel: TestContext.Current.CancellationToken);
             Assert.False(Directory.Exists(output));
             Assert.All(dry.Modules, m => Assert.False(m.Written));
             Assert.Equal(expectedFixes, dry.Modules.Sum(m => m.Fixed.Count + m.StubbedNow.Count));
-            foreach (string nid in new[] { "ZP4e7rlzOUk", "sDCBrmc61XU", "DImz2Ft9E2g" })
+            Assert.Contains(dry.Modules, m => m.Fixed.Any(f => f.Nid == "ZP4e7rlzOUk"));   // sceSaveDataMount3: default below FW 5.00
+            foreach (string nid in new[] { "sDCBrmc61XU", "DImz2Ft9E2g" })
                 Assert.Equal(optionalAdapters, dry.Modules.Any(m => m.Fixed.Any(f => f.Nid == nid)));
             // with the exact 4.00 export list only one PSVR2 function is really missing (behind the sceHmd2Initialize check);
             // SetAllowPositionalReprojection is stubbed by its rule
@@ -4963,6 +5040,57 @@ namespace Ps5Backport.Tests
             Write(file, json);
             var error = Assert.Throws<InvalidDataException>(() => new Knowledge(DataDir));
             Assert.Contains(file + ".json", error.Message);
+        }
+
+        /// <summary>A misspelt key used to be ignored (a misspelt "below" made a rule unconditional, "proven" defaulted to true).
+        /// Every record type reports an unknown key with its file, path and the allowed keys.</summary>
+        [Theory]
+        [InlineData("fixes", "$.fixes.test-nid", "belo", "fixes", "test-nid")]
+        [InlineData("fixes", "$.fixes.test-nid", "proovn", "fixes", "test-nid")]
+        [InlineData("fixes", "$", "fixe")]
+        [InlineData("fixes", "$.options.off", "warnng", "options", "off")]
+        [InlineData("fixes", "$.options.off.fixes.test-nid", "contiguos", "options", "off", "fixes", "test-nid")]
+        [InlineData("fixes", "$.patterns[0]", "fnd", "patterns", "0")]
+        [InlineData("stubs", "$.stubs.ret0", "hx", "stubs", "ret0")]
+        [InlineData("candidates", "$.candidates.candidate", "valu", "candidates", "candidate")]
+        [InlineData("introduced", "$.introduced.test-nid", "firmwar", "introduced", "test-nid")]
+        [InlineData("known_builds", "$.builds[0]", "stat", "builds", "0")]
+        [InlineData("sony_builds", "$.evidence.J00000002", "firmwar", "evidence", "J00000002")]
+        public void UnknownKey_FailsAtLoadWithPathAndAllowedKeys(string file, string expectedPath, string key, params string[] path)
+        {
+            Edit("fixes", root =>
+            {
+                root["options"] = JsonNode.Parse("""{"off":{"fixes":{"test-nid":{"kind":"none","sources":[]}},"fakelib_variant":"test_variant"}}""");
+                root["patterns"] = JsonNode.Parse("""[{"name":"p","find":"90","replace":"cc","files":["x.bin"]}]""");
+            });
+            Edit("known_builds", root => root["builds"] = JsonNode.Parse("""[{"module":"libSceAmpr","build_date":"Aug 24 2026","state":"ok"}]"""));
+            Edit("sony_builds", root => root["evidence"] = JsonNode.Parse("""{"J00000002":{"firmware":"13.60","source":"test"}}"""));
+            Edit(file, root =>
+            {
+                JsonNode node = root;
+                foreach (string step in path)
+                    node = node is JsonArray array ? array[int.Parse(step)]! : node[step]!;
+                node[key] = "x";
+            });
+            var error = Assert.Throws<InvalidDataException>(() => new Knowledge(DataDir));
+            Assert.Contains(file + ".json", error.Message);
+            Assert.Contains($"unknown key '{key}' at {expectedPath}", error.Message);
+            Assert.Contains("allowed:", error.Message);
+        }
+
+        [Fact]
+        public void CommentKeys_StartingWithUnderscore_AreAllowedEverywhere()
+        {
+            Edit("fixes", root =>
+            {
+                root["_about"] = "root comment";
+                root["fixes"]!["test-nid"]!["_why"] = "record comment";
+                root["options"] = JsonNode.Parse("""{"off":{"_todo":"x","fixes":{"test-nid":{"kind":"none","sources":[],"_note":"y"}}}}""");
+            });
+            Edit("stubs", root => root["stubs"]!["ret0"]!["_seen"] = "GT7");
+            var knowledge = new Knowledge(DataDir);
+            Assert.Single(knowledge.Fixes);
+            Assert.Empty(knowledge.FixTable(["off"]));
         }
 
         [Theory]
@@ -5872,6 +6000,19 @@ namespace Ps5Backport.Tests
 
     public sealed class UbisoftOfflinePopupsTests
     {
+        /// <summary>The probe's recogniser agrees with Apply and changes nothing; the layout stays recognisable after the patch.</summary>
+        [Fact]
+        public void Recognize_MatchesApplyWithoutChangingBytes()
+        {
+            var elf = Fixture();
+            byte[] before = elf.Data.ToArray();
+            Assert.True(UbisoftOfflinePopups.Recognize(elf, TestContext.Current.CancellationToken));
+            Assert.Equal(before, elf.Data);
+            Assert.Equal(2, UbisoftOfflinePopups.Apply(elf, TestContext.Current.CancellationToken));
+            Assert.True(UbisoftOfflinePopups.Recognize(elf, TestContext.Current.CancellationToken));
+            Assert.False(UbisoftOfflinePopups.Recognize(new SceElf(SyntheticBinary.Elf()), TestContext.Current.CancellationToken));
+        }
+
         [Fact]
         public void RelocatedLibrary_ChangesOnlyTwoSeverities_AndIsIdempotent()
         {
@@ -6020,6 +6161,19 @@ namespace Ps5Backport.Tests
 
     public sealed class UnitySkuFallbackTests
     {
+        /// <summary>The probe's recogniser agrees with Apply and changes nothing; the redirect removes the recognised layout.</summary>
+        [Fact]
+        public void Recognize_MatchesApplyWithoutChangingBytes()
+        {
+            var elf = Fixture();
+            byte[] before = elf.Data.ToArray();
+            Assert.True(UnitySkuFallback.Recognize(elf, TestContext.Current.CancellationToken));
+            Assert.Equal(before, elf.Data);
+            Assert.Equal(1, UnitySkuFallback.Apply(elf, TestContext.Current.CancellationToken));
+            Assert.False(UnitySkuFallback.Recognize(elf, TestContext.Current.CancellationToken));
+            Assert.False(UnitySkuFallback.Recognize(new SceElf(SyntheticBinary.Elf()), TestContext.Current.CancellationToken));
+        }
+
         [Fact]
         public void LinkedRelocatedCode_UsesGuardedFallback_AndIsIdempotent()
         {

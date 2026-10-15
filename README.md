@@ -29,6 +29,8 @@ Game, console and diagnostic investigations (crashes, save failures, AGC/Psml ex
 - [Dependency review](#dependencies)
 - [Historical confirmed audit fixes](#historical-audit)
 - [Reference projects and binary research](#reference-research)
+- [AnyPS5 improvement plan and reference priorities](#anyps5-plan)
+- [Later engine changes (13–14 October)](#later-changes)
 - [Engineering milestones](#engineering-milestones)
 - [Former document index and provenance](#document-provenance)
 
@@ -113,9 +115,9 @@ Investigation results will be recorded here after physical checks. Existing sett
 
 ## Cleanup and historical evidence
 
-The preceding `work` cleanup removed all private/generated fixtures at the user's explicit request. [work/CONFIRMED_FINDINGS.md](work/CONFIRMED_FINDINGS.md) retains the confirmed Crow Country startup diagnosis, Rogue authentication/popup/save-checkpoint results, AMPR differences, 38 historical xUnit summaries, measurements and 60 evidence identities. It is the authoritative consolidation of those deleted raw captures; it distinguishes later console confirmations from earlier pending/failed candidates.
+The 10 October `work` cleanup removed the private/generated fixtures at the user's explicit request; its consolidation (`work/CONFIRMED_FINDINGS.md`: Crow Country, Rogue, AMPR differences, historical xUnit summaries, measurements and evidence identities) is now Part 2 of [FINDINGS.md](FINDINGS.md).
 
-Private fixture directories formerly under `work/NOT_BACKPORT_elf`, `CONTROL_elf` and `GT7_*_elf` are absent. Strict Private/All verification requires recreating the necessary fixtures. Historical `work/...` paths in the sections below identify deleted records, not presently available artifacts; baseline assemblies, logs and diagnostic restore ZIPs must not be assumed to survive. Public verification remains the fixture-independent lane. New verification/packaging commands may recreate generated folders under `work`.
+The private fixtures `work/NOT_BACKPORT_elf`, `CONTROL_elf` and `GT7_*_elf` were recreated on 11 October and are kept, together with `work/agc-4.03-patch/` and `work/fakelib-backups/`. Other historical `work/...` paths in the sections below identify deleted records, not presently available artifacts; baseline assemblies, logs and diagnostic restore ZIPs must not be assumed to survive. Public verification remains the fixture-independent lane. New verification/packaging commands may recreate generated folders under `work`.
 
 `build/DISTRIBUTION.md` is the short document intentionally shipped with both executables. It is retained outside the root and still appears as `DISTRIBUTION.md` in build/publish outputs. Engineering/private reference documentation is not bundled with recipients' applications.
 
@@ -173,174 +175,73 @@ Saved paths/window settings and diagnostic logs stay in the recipient's per-user
 <a id="verification"></a>
 ## Verification
 
-Former source: `VERIFICATION.md`. Historical results retain their original scope.
+Condensed on 14 October 2026 from the former `VERIFICATION.md` and the Phase 3–8 records. Per-run test counts are in [Engineering milestones](#engineering-milestones) and FINDINGS.md Part 2 §6.
 
-All 27 former test/helper C# files are now merged into `src/Ps5Backport.Tests/Tests.cs`, with named regions preserving their original organization. Historical references to those filenames identify the corresponding regions. Test classes, methods, assertions, private-lane traits and golden files are preserved. The optional verification projects link this same file: `BACKPORT_SYNTHETIC_ONLY` selects the synthetic fixtures, and `BACKPORT_PARSER_TESTS_ONLY` selects those fixtures plus the generated parser tests. Ordinary solution builds include the complete suite.
+### Requirements and commands
 
-Consolidation verification: all 428 discovered test cases (including IDs and theory rows) match the pre-merge baseline. The 310 public tests passed before consolidation and passed the required public verification script in both Debug and Release after consolidation; private tests remain present but require the deleted fixtures to be restored before running. Debug/Release solution builds and all four linked-source verification projects compile with zero warnings and errors.
-
-### Test redundancy review — 10 October 2026
-
-Reviewed the 253 original test methods, their assertions and assertion helpers, repeated theory inputs, and overlapping scenarios. Removed only two cases with completely retained deterministic coverage:
-
-- `FirmwareTests.SdkFor_KnownBackports`: both SDK pairs for `4` and `4.03` are already checked by `FirmwareTests.Firmware_MatchesGolden` against the same independent constants in `golden/firmware.txt`.
-- `BackPorkPatchTests.AllPatches_AreInPlace`: `BpsTests.Edits_MatchGolden_ForBackPorkPatches` already checks both sizes for every patch, including all 12 `6xx`/`7xx` entries with equal source/target sizes. It additionally checks CRCs, actions and edits, rejects an empty corpus, and detects changes to corpus membership.
-
-No identical test bodies, duplicate `InlineData` rows, constant boolean assertions, self-comparisons or unawaited async assertions were found. No tests were confirmed to target removed features or provide no meaningful checks. Legacy Python parity tests exercise the current C# implementation using fixed expectations; old settings-key tests protect configuration compatibility. The three tests without direct assertions call verified assertion/golden helpers. `MutationWorker` and `InterruptionWorker` are child-process entry points required by parser-budget and recovery tests, even though their ordinary suite invocations return without activating the worker.
-
-UI/headless, CLI, engine, mutation and real-binary checks were retained where they cover different integration boundaries or inputs. Deleting fixtures does not make their regression tests obsolete. The full private lane cannot be verified until its missing fixtures are restored; the retained BackPork golden test was verified with its still-available fixtures. Before removal, the public baseline passed 310 cases in 7.2 seconds. Removing these two short cases is not expected to materially reduce runtime. Discovery is now 426 cases (251 methods), with only the two intended cases removed; the public lane contains 309 cases.
-
-After removal, the required public verification passed all 309 cases with zero failures or skips in Debug (7.3 seconds) and Release (7.0 seconds). Both builds reported zero warnings and errors; both retained golden tests also passed. Temporary syntax-review and verification records were removed after recording these results here.
-
-### Local verification — Phase 3
-
-Implemented and verified on 10 October 2026. Install **.NET SDK 10.0.401** and PowerShell 7. `global.json` now selects that exact SDK; updating it is an intentional review step. The observed test runtime was Microsoft.NETCore.App 10.0.12 on Windows x64/NTFS. Runtime servicing patches remain allowed; each run records the actual SDK/runtime/OS in `dotnet-info.txt`.
-
-#### Required commands
-
-From the repository root:
+Install **.NET SDK 10.0.401** (pinned by `global.json`; changing it is a deliberate review step) and PowerShell 7. From the repository root:
 
 ```powershell
-# Required lane: tracked data and synthetic/public tests; no private fixtures needed.
-pwsh -NoProfile -File scripts/verify.ps1
-
-# Complete local verification, including private golden/integration fixtures.
-pwsh -NoProfile -File scripts/verify.ps1 -Lane All
-
-# Just the private integration lane, when maintaining the fixture corpus.
-pwsh -NoProfile -File scripts/verify.ps1 -Lane Private
-
-# Optional faster iteration; final verification normally builds both configurations.
-pwsh -NoProfile -File scripts/verify.ps1 -Configuration Debug
+pwsh -NoProfile -File scripts/verify.ps1                         # Public lane: tracked data + synthetic tests, no private fixtures
+pwsh -NoProfile -File scripts/verify.ps1 -Lane All               # Public + private golden/integration fixtures
+pwsh -NoProfile -File scripts/verify.ps1 -Lane Private           # Private lane only, when maintaining the fixture corpus
+pwsh -NoProfile -File scripts/verify.ps1 -Configuration Debug    # Faster iteration; final verification builds both
 ```
 
-The entry point uses locked restore, builds Debug and Release, runs the selected lane, treats skipped tests/warnings as failures, checks that the result contains tests, and records xUnit XML plus environment information under Git-ignored `work/verification/<timestamp>-<id>/`. It refuses `PS5BP_RECORD=1`; verification never regenerates goldens. It enables the documented .NET CLI, Microsoft Testing Platform, and Avalonia build-telemetry opt-outs for its child processes and restores the caller's environment afterward. Native/filesystem regression tests require normal local temporary-file permissions; a restricted sandbox can cause access errors.
+For day-to-day work, run only the affected test class: `dotnet test --solution Ps5Backport.slnx --filter-class Ps5Backport.Tests.<Class>`.
 
-Public/private separation uses `[Trait("Lane", "Private")]` on fixture-dependent classes or individual tests. Public is everything else. Some mixed classes have private class fixtures or shared fixture helpers, so the whole class is private. New tests must follow the same boundary. Tracked `data/`, `firmware_db/`, and text goldens are mandatory: missing tracked data fails rather than silently skipping.
+`verify.ps1` does a locked restore, builds Debug and Release, runs the lane, and fails on any warning, skipped test or empty result. It writes xUnit XML and `dotnet-info.txt` under ignored `work/verification/<timestamp>-<id>/`. It refuses `PS5BP_RECORD=1`, so it never regenerates goldens, and sets the .NET CLI, Microsoft Testing Platform and Avalonia build-telemetry opt-outs for its child processes only. Native/filesystem tests need normal temporary-file permissions; a restricted sandbox produces "Access to the path is denied" failures. No hosted CI is configured, and nothing is uploaded.
 
-Private verification requires the local, uncommitted `.original/`, `work/` ELF fixtures and `fakelibs/` corpus. The script fails setup if the main private roots are missing, then sets `PS5BP_REQUIRE_PRIVATE=1`, so any additional missing fixture also fails. Shared sample fixtures require every configured sample root; store checks no longer silently omit absent sets. Direct unfiltered test execution outside this script can still report optional private-fixture skips; its result is not a strict private-lane verification record.
+### Lanes, fixtures and goldens
 
-No hosted CI job has been enabled. These commands are suitable for a trusted local/private runner. Deciding where this private repository may be hosted or exporting its fixtures/source is a separate permission and infrastructure decision. No fixture or report upload is part of either script.
+- **Public** is every test without `[Trait("Lane", "Private")]`. Fixture-dependent classes or tests carry the trait; a class with private class fixtures or shared fixture helpers is private as a whole. Missing tracked `data/`, `firmware_db/` or text goldens fail rather than skip.
+- **Private** needs the local, uncommitted `.original/`, the `work/*_elf` fixtures and the `fakelibs/` store. The script fails setup if the main roots are missing and sets `PS5BP_REQUIRE_PRIVATE=1`, so any other missing fixture fails too. A direct `dotnet test` outside the script can still skip missing private fixtures; that is not a strict private-lane result.
+- **Goldens** live in `src/Ps5Backport.Tests/golden/`. After an intended output change, re-record with `PS5BP_RECORD=1 dotnet test --solution Ps5Backport.slnx` and review the diff.
+- **Layout.** `src/Ps5Backport.Tests/Tests.cs` holds the 27 former test files as named regions. Newer features have their own files (`CrashLogTests.cs`, `OptionalAudioTests.cs`, `SceDynamicTableTests.cs`, …). Optional verification projects link the same sources: `BACKPORT_SYNTHETIC_ONLY` selects the synthetic fixtures, `BACKPORT_PARSER_TESTS_ONLY` those plus the generated parser tests.
+- The 10 October redundancy review removed exactly two tests whose coverage was fully retained elsewhere (`FirmwareTests.SdkFor_KnownBackports`, `BackPorkPatchTests.AllPatches_AreInPlace`). `MutationWorker` and `InterruptionWorker` are child-process entry points for the parser-budget and recovery tests, not dead tests.
 
-#### Generated and malformed-input checks
+### Generated and malformed-input checks
 
-`GeneratedParserTests` integrates **FsCheck.Xunit.v3 3.4.0** with xUnit 4.0.1 after a successful compatibility spike. Five properties each run 200 cases with fixed replay seeds and generation sizes capped at 64. They cover firmware normalization/BCD/range rejection, independently generated BPS literal patches and checksum corruption, and synthetic ELF/SELF round trips and truncation. Fixed regressions cover invalid signs, whitespace inside components, non-ASCII digits and integer overflow, while preserving existing surrounding-whitespace and missing-minor behavior. FsCheck shrinking is available when a property fails; retain the minimized input as a deterministic regression rather than merely changing its seed.
-
-`ParserBudgetTests` runs a deterministic local mutation corpus in isolated child processes, using generated ELF, SELF and BPS seeds only. Each format has 512 cases: bit changes, truncation, oversized fields and appended bytes. BPS checksums are repaired where possible to exercise parsing beyond the checksum gate. ELF cases exercise model construction, symbols/imports/exports, names, SDK metadata and classification.
+- `GeneratedParserTests` (FsCheck.Xunit.v3 3.4.0): five properties × 200 cases with fixed replay seeds and sizes capped at 64. They cover firmware normalisation/BCD/range rejection, BPS literal patches and checksum corruption, and ELF/SELF round trips and truncation. When a property fails, keep the shrunk input as a deterministic regression; don't just change the seed.
+- `ParserBudgetTests`: 512 deterministic mutations each of generated ELF, SELF and BPS seeds (bit flips, truncation, oversized fields, appended bytes; BPS checksums repaired where possible), run in child processes. Malformed input must produce `InvalidDataException`; any other exception fails with format, seed and case number.
 
 | Budget | Limit |
 | --- | --- |
-| Input and decoded target size in the harness | 64 KiB |
-| Observed thread allocation per case | 8 MiB |
-| Worker corpus elapsed time | 10 seconds |
-| Parent-enforced child lifetime | 30 seconds |
-| Runtime-enforced child managed heap | 256 MiB |
+| Input and decoded target size | 64 KiB |
+| Thread allocation per case | 8 MiB |
+| Worker corpus time | 10 s |
+| Parent-enforced child lifetime | 30 s |
+| Child managed heap | 256 MiB |
 
-Unexpected exceptions fail with format, deterministic seed and case number; malformed input is expected to produce `InvalidDataException`. Timeouts terminate the child process tree. The managed-heap limit is not a total native-memory/working-set limit, and these small synthetic seeds are not exhaustive coverage of every real binary structure. This is a regression corpus, not a security certification or long-running fuzz service.
+The heap limit is not a native-memory limit, and the small seeds are a regression corpus, not exhaustive fuzzing. Core exposes budgeted overloads `Self.Unwrap(bytes, maximumOutputBytes)` and `Bps.Apply(patch, source, maximumOutputBytes)` that check sizes before allocating; the existing overloads keep their size policy.
 
-Core now exposes caller-budget overloads `Self.Unwrap(bytes, maximumOutputBytes)` and `Bps.Apply(patch, source, maximumOutputBytes)`. They check before allocating decoded output. Existing overloads preserve the prior supported-size policy; the application has not gained an arbitrary new maximum game size. SELF span metadata readers now reject truncated headers/entry tables/digests as data errors. The allocation-limit regression uses a bounded oversized target and checks allocations, so the test itself does not require a huge allocation.
+**Provider-ownership regression.** Excluding a module's own exports from the pooled provider set once also removed a NID exported by a different module, so cooking and library checks reported it missing. Cooking now counts distinct owners per NID, and a module cannot act as its own provider.
 
-#### Provider-ownership regression
+### Optional evaluation tools
 
-The synthetic reproduction showed a real bug: excluding a current module's exported NIDs from a pooled set also removed a NID exported by a different module. Both whole-game cooking and library checks could then classify it as missing/unknown. Cooking now counts distinct module owners per exported NID; a NID remains provided if at least one other module owns it. Library checks union other modules' exports directly. A control case verifies that a module cannot act as its own provider. Existing private golden comparisons remain unchanged and pass.
+All live under `verification/`, have their own lock files, write to ignored `work/`, and are run explicitly. Only `UiProfile` is in the solution (the headless tests need it built in the matching configuration).
 
-#### Optional mutation-testing evaluation
+| Tool | Command | What it does |
+| --- | --- | --- |
+| Mutation testing | `scripts/evaluate-mutations.ps1` | dotnet-stryker 5.0.0 on `Firmware.cs` only (public test subset, 2 workers, 180 s limit). Last result: 20 killed, 3 survived (redundant input checks), 0 uncovered. Not a whole-engine score. |
+| Performance | `scripts/measure-performance.ps1 [-IncludePrivate] [-BaselineDirectory DIR]` | Analyze/Cook timing and memory on synthetic (and optionally private) games; with a baseline it runs both engines in the same harness and rejects payload/report hash mismatches. See [Performance](#performance). |
+| Benchmark | `dotnet run --project verification/Benchmarks/Ps5Backport.Benchmarks.csproj -c Release -- --filter '*FirmwareMetadata*'` | BenchmarkDotNet 0.15.8, firmware-metadata loading only. |
+| UI memory | `scripts/measure-ui-memory.ps1 -Game DIR` | Fresh headless Skia processes after a Release app build; 120 s child timeout; aggregate process memory only. |
+| UI filter profile | `dotnet verification/UiProfile/bin/Release/net10.0/UiProfile.dll OUT.json` | 10,000-row import filter profile. |
+| Decoder | `scripts/evaluate-decoder.ps1 [-IncludePrivate]` | Iced 1.21.0 comparison against the reference scanner and emitted code. See [Instruction decoder](#instruction-decoder). |
+| CLI/catalog/schema | `scripts/evaluate-phase8.ps1 [-Python PATH]` | System.CommandLine 2.0.12 and SQLite/JSON-schema comparisons; needs an existing Python with jsonschema 4.26.0. See [CLI, catalog and schema decisions](#cli-catalog-schema-decisions). |
+| Game analysis | `scripts/analyze-game.ps1 -Profile verification/GameAnalysis/profiles/<ID>.json [-Output DIR]` | Standardised import analysis per game profile; `-SelfTest` runs its synthetic checks. See `verification/GameAnalysis/README.md`. |
 
-```powershell
-pwsh -NoProfile -File scripts/evaluate-mutations.ps1
-```
+### Runtime assets and packages
 
-This installs/uses **dotnet-stryker 5.0.0** under ignored `work/phase3/tools`, restores the dedicated public-only `verification/MutationTests` project in locked mode, and writes local JSON/text results under `work/phase3/stryker`. It uses two workers and a 180-second overall process limit (configurable from 30–600 seconds), with per-mutant timeouts. The project links the same generated tests rather than maintaining a second copy. It stays outside the application solution and default verification lane.
-
-The experiment targets Basic mutations in `Firmware.cs` only. Stryker's MTP runner is preview, and its xUnit MTP integration cannot use the normal selective test-case filter, which is why this small isolated project is used. The first run exposed missing invalid-token/range tests; focused regressions were added and the evaluation rerun. Final target results: **20 killed, 3 survived, 0 uncovered, 0 timeouts**, with **4 compile-error and 2 ignored** target mutants. Three survivors are redundant-input-check changes: subsequent digit/number parsing still rejects the same malformed inputs. They are documented rather than chased with an arbitrary global score target. Stryker also reported instrumentation compile errors outside the selected file and its aggregate table counts ignored mutants confusingly; the target JSON statuses are the evidence used here. Do not treat its displayed aggregate score as a whole-engine quality measure.
-
-Keep Stryker optional for focused reviews. Expand to binary arithmetic/range checks only after understanding instrumentation compatibility and reviewing survivors; the initial scope is deliberately small. No dashboard/report upload is enabled.
-
-#### Recorded acceptance
-
-- Full local suite: **315 tests**, zero failures/skips in both Debug and Release; both builds had zero warnings/errors.
-- Fixture-free local source copy, initially containing no bin/obj or private roots: locked restore and both builds passed. Final public lane: **204 tests**, zero failures/skips in each configuration. This used the existing NuGet cache/feed, not a disconnected empty package cache.
-- Private coverage: the complementary **111 tests** passed as part of full verification. Requesting the private lane in the fixture-free copy failed setup immediately with a named missing root.
-- A deliberately changed package request in that disposable copy caused locked restore to fail with NU1004; the project file was restored afterward.
-- Five FsCheck properties provide 1,000 generated cases per suite run; child workers add 1,536 binary mutations. These cases are additional work inside xUnit test methods, not separate xUnit test-count entries.
-- Existing goldens/rules/private binaries were not edited, and `git diff --check` passed. Phase 4 completion is recorded below.
-
-Primary tool documentation: [NuGet lock files](https://learn.microsoft.com/en-us/nuget/consume-packages/package-references-in-project-files#locking-dependencies), [FsCheck v3 integration](https://www.nuget.org/packages/FsCheck.Xunit.v3/3.4.0), [Stryker configuration and MTP limitations](https://stryker-mutator.io/docs/stryker-net/configuration/).
-
-#### Phase 4 verification
-
-On 10 October 2026, `scripts/verify.ps1 -Lane All` passed locked restore, zero-warning Debug/Release builds and **342 tests per configuration**, with zero failures/skips. There are 27 new lifecycle/snapshot/staleness/cancellation/UI cases (231 public, 111 private cases overall). Existing byte/report goldens passed unchanged. Records: `work/verification/20261010-020320-70e2650e82ae4af8bfb628a0399f0b57`.
-
-Synthetic scan cancellation measurements and operation/shutdown semantics are in [OPERATION_LIFECYCLE.md](#operation-lifecycle). View-model closing ownership and delayed progress are covered; native desktop closing/picker interaction remains part of Phase 6. No new dependency or golden recording was required.
-
-#### Phase 5 verification and optional profiling
-
-Full local verification on 10 October 2026 passed **345 tests in each Debug/Release configuration**, zero failures/skips and zero-warning builds (234 public + 111 private). Records: `work/verification/20261010-021831-33e89269039d464ab0860f7771c58575`. New cases verify signer allocation/input preservation/round-trip behavior and captured firmware selection. Existing byte/report goldens pass unchanged.
-
-`scripts/measure-performance.ps1` restores/builds the optional package-free harness in locked mode, creates public synthetic inputs when absent, and records local Analyze/Cook measurements. `-IncludePrivate` uses the existing fixture/store corpus. With `-BaselineDirectory`, identical harnesses execute preserved/current engines and the script rejects mismatched input/payload/report hashes. Keep the baseline Core DLL intact. Runs produce real payloads and require disk space; raw private measurements stay under ignored `work/`. Avoid competing verification/build work during timing comparisons.
-
-`verification/Benchmarks/Ps5Backport.Benchmarks.csproj` pins BenchmarkDotNet 0.15.8 and stays outside the solution. It measures only confirmed duplicate firmware parsing. Restore in locked mode before running. `scripts/measure-ui-memory.ps1` measures fresh headless Skia UI processes after a Release app build, retains frames and enforces a 120-second child timeout. It reports aggregate process memory, not exact native allocations or GPU/desktop memory.
-
-See [PERFORMANCE_REPORT.md](#performance) for commands, full measurements, observer limitations, cancellation, the two-pass experiment and deferred ownership/cache/concurrency decisions. The production pipeline does not gain a hard RAM cap or parallel workers.
-
-#### Phase 6 diagnostics and interaction verification
-
-Full local verification passed **357 tests per Debug/Release configuration**, zero failures/skips and zero-warning builds (246 public, 111 private). Records: `work/verification/20261010-024610-a1fb4e8e72c34cf3aa7826bdb9f51e65`. Existing byte/report goldens pass unchanged.
-
-The solution now builds the package-free `verification/UiProfile` worker in both configurations. Five mandatory headless scenarios run actual controls/bindings/input and the production close policy in isolated processes with 30-second parent timeouts. Seven diagnostics cases verify rotation, failure isolation, correlation, exception persistence, and bounded UI retention. The worker exits after its checks because local headless renderer disposal blocked; this does not certify renderer disposal.
-
-After a Release build, `dotnet verification/UiProfile/bin/Release/net10.0/UiProfile.dll work/phase6/filter-after.json` records the optional 10,000-row filter profile. Run once without competing timing work. Baseline measurements require preserved Phase 5 assemblies; do not substitute current assemblies and label them a baseline.
-
-Native Windows keyboard search/traversal, Escape picker cancellation, accessible names, busy bindings, normal/maximized layouts and movement between both displays were checked. Scope and unverified minimum-size/native busy-close/higher-DPI/GPU cases are documented in [LOCAL_DIAGNOSTICS.md](#diagnostics-and-ui). Headless verification cannot prove desktop focus, OS pickers, GPU behavior or mixed-DPI transitions.
-
-#### Phase 7 optional decoder evaluation
-
-Full local verification on 10 October 2026 passed **357 tests in each Debug/Release configuration**, zero failures/skips and zero-warning builds. Private byte/report goldens passed unchanged. Records: `work/verification/20261010-031031-82cadd74618248d5b350078a07cefaa4`. Phase 7 adds no mandatory xUnit cases or application dependencies; its only production edit is a correction to the scanner's XML comment.
-
-`pwsh -NoProfile -File scripts/evaluate-decoder.ps1` restores the isolated Iced 1.21.0 project in locked mode, builds Release and runs 530 specified reference cases plus emitter checks against public rule data. `-IncludePrivate` additionally compares three existing ELF fixtures without modifying them. Missing private inputs fail explicitly. The project stays outside `Ps5Backport.slnx`; ordinary solution verification does not run this optional experiment.
-
-Eight named stubs, 45 adapter byte blocks, return constants, GOT targets, PLT redirection and split pre/post-call chains passed encoding/operand checks. These checks do not certify console ABI or general code-boundary recovery. Warm timing/allocation, pre/active cancellation, input hashes, count differences and private inspection contexts stay in the local record `work/phase7/20261010-031012/evaluation.json`. No golden recording or private upload occurred.
-
-See [INSTRUCTION_DECODER_REPORT.md](#instruction-decoder) for the accuracy cases, measurement limits, dependency review and decision against replacing production scanning with segment-linear decoding. Run performance experiments separately from builds/tests.
-
-#### Phase 8 optional decision-gate verification
-
-Full local verification passed **357 tests in each Debug/Release configuration**, zero failures/skips and zero-warning builds on 10 October 2026. Private byte/report goldens remain unchanged. Records: `work/verification/20261010-032020-04ec1872bf4d4006b2e800c901635003`. Phase 8 changes no production code, application package/version, rule or golden file.
-
-`pwsh -NoProfile -File scripts/evaluate-phase8.ps1` restores the isolated System.CommandLine 2.0.12 project in locked mode, builds Release, asserts/records 18 parser observations and three copied-data semantic observations, and measures existing catalog load/query costs. The Python companion asserts SQLite semantic round-trip (including a synthetic empty module), equivalent query hits, 52 existing schema records and six specified edge cases. Final local records: `work/phase8/20261010-032209/`. Do not count those experiment cases as new xUnit tests.
-
-The script requires an existing Python environment with jsonschema 4.26.0 (`-Python` selects its executable); it installs nothing. It records Python/SQLite/schema and dependency versions but does not content-hash lock or advisory-certify that environment. SQLite stays in memory. Synthetic copied knowledge files stay under the ignored report directory; original catalog/rule hashes are verified. Backport/report tokens are parsed without executing file-modifying handlers; only safe NID/usage commands are invoked. No private binary input or upload is needed.
-
-The project/schema stay outside the application solution and ordinary verification. System.CommandLine and SQLite migrations were deferred; the single-record schema is a partial authoring experiment, not a mandatory full runtime contract. [PHASE8_DECISION_REPORT.md](#cli-catalog-schema-decisions) records pros/cons, concrete compatibility/authoring findings, measurements, limitations and future migration requirements. Existing semantic validation and file publication/recovery remain necessary.
-
-#### Runtime asset copying and shared builds
-
-On 10 October 2026, full verification passed **360 tests in each Debug/Release configuration**, zero failures/skips and zero-warning builds (249 public + 111 private). Records: `work/verification/20261010-033423-a569d4839f4c4c9e8ab08dd05df6f48c`. Existing private byte/report goldens passed unchanged. Three new public cases compare original/copied assets in both executable outputs and launch a copied CLI outside the repository from an unrelated working directory to exercise automatic rule/catalog lookup.
-
-`build/RuntimeAssets.targets` is imported by App and CLI. Build and publish copy `data/**/*.json`, `firmware_db/**/*.json` and DISTRIBUTION.md with PreserveNewest; source files remain unchanged. Both executables and Core declare the Windows x64 restore target, with corresponding lock-file targets added and existing package versions/content hashes retained. Optional decoder/Phase 8 project locked restores also passed.
-
-`scripts/package.ps1` successfully published self-contained Windows x64 packages for Debug and Release, retained resolved package metadata/bundled notices and created ZIPs. Final archives: `work/packages/Release/20261010-033706-490465cc127d4688959495ffc52126eb/PS5BackportStudio-Release-win-x64.zip` and `work/packages/Debug/20261010-033743-93315a97fcd04d5eb594d3b5bc19c5ce/PS5BackportStudio-Debug-win-x64.zip`.
-
-The final Release ZIP was extracted to a fresh temporary directory outside the repository. Both clients' 50 JSON assets matched source hashes; included .NET runtime binaries/notices were present; the self-contained CLI found default catalogs and the self-contained Studio rendered a headless snapshot with its native dependencies. Its PNG was visually inspected. No console/game was launched; native desktop interaction and execution on a machine with no .NET installation were not re-certified by this packaging smoke check. Runtime configuration identifies the included Microsoft.NETCore.App 10.0.12. The extraction was cleaned up after both processes exited.
-
-Sharing instructions and the distinction between ordinary framework-dependent builds and self-contained packages are in [DISTRIBUTION.md](#build-and-sharing). Those initial archives excluded local module stores and symbols; the user's subsequent inclusion request is recorded below. Local settings/logs and other private fixtures remain excluded. No archive was uploaded.
-
-##### Requested fakelib and symbol inclusion
-
-Debug/Release build and publish now also copy the locally available fakelib `.sprx`, `.prx`, `.psp` companion files and `manifest.json` files, preserving firmware/variant paths and excluding `.ps5bp-*` publication folders. The existing local store contributed 46 files (30 modules, four companion files and 12 manifests). The 13,060,794-byte `.original/reference/sce_symbols_new/aerolib.csv` is copied beside each executable. Both clients use the shared lookup that prefers the packaged symbol file and falls back to the repository reference path. Source-only builds tolerate missing optional local inputs; the sharing script requires binaries and symbols.
-
-Full verification again passed **360 tests per configuration**, zero failures/skips and zero-warning builds. Records: `work/verification/20261010-034236-d3245083451d4c61882b080500452d7d`. Build-output hash checks cover the available local inputs. The isolated public CLI test uses synthetic store metadata and an ELF/symbol pair to prove default discovery without private fixtures. Existing CLI golden checks explicitly select the original repository store to preserve their recorded paths; no goldens were regenerated.
-
-Replacement self-contained archives: `work/packages/Release/20261010-034408-25eacecb3e3c403e98a5ccc52f62fb8c/PS5BackportStudio-Release-win-x64.zip` and `work/packages/Debug/20261010-034427-4f3b8182634744fbb7632e0586bcdc8c/PS5BackportStudio-Debug-win-x64.zip`. Both were extracted outside the repository and run from an unrelated working directory. All 50 catalog/rule JSONs, 46 fakelib files and the symbol CSV matched source hashes in both clients; the included runtime/notices were present. Default CLI catalog lookup and fakelib verification exited successfully, and both Studio executables rendered headless snapshots. The Release image was visually inspected and shows the packaged store. Temporary extractions were cleaned up. No archive or private input was uploaded; native desktop interaction, console compatibility and execution on a machine without .NET remain outside these checks.
+`build/RuntimeAssets.targets` (imported by App and CLI) copies `data/**/*.json`, `firmware_db/**/*.json`, `data/aerolib.csv`, `DISTRIBUTION.md` and the local fakelib `.sprx`/`.prx`/`.psp`/`manifest.json` files (excluding `.ps5bp-*` folders) beside both executables on build and publish. Public tests compare the copied assets with the sources and launch a copied CLI from an unrelated directory to check automatic lookup. `scripts/package.ps1` was smoke-tested on 10 October by extracting each package outside the repo: every JSON, fakelib and symbol file matched its source hash, and both clients ran. That did not test a machine without .NET, native desktop interaction or console behaviour. See [Build and sharing](#build-and-sharing).
 
 ---
 
 <a id="operation-lifecycle"></a>
 ## Operation lifecycle
 
-Former source: `OPERATION_LIFECYCLE.md`. Historical results retain their original scope.
-
-### Phase 4: operation lifecycle and pipeline boundaries
+From the former `OPERATION_LIFECYCLE.md` (Phase 4, 10 October 2026).
 
 The shared engine now captures each request independently, identifies terminal outcomes explicitly, and binds a successful analysis to the inputs and settings that produced it. Transformation order and legacy byte/report formats remain unchanged. No new framework or runtime dependency was added.
 
@@ -362,7 +263,7 @@ Cook repeats preflight and checks an existing receipt before acquiring the outpu
 
 **No transformed-byte cache was introduced.** Analyze still executes the complete dry-run transformation; Cook performs the complete transformation again against guarded current inputs. A receipt authorizes reuse of the analysis context only. Moving the output destination does not invalidate analysis. Receipts are process-local and are not a persistent cache, signature, or security boundary.
 
-Analysis now hashes/guards inputs as cooking does. That adds I/O and temporarily prevents cooperative writers from replacing relevant files on Windows. Inventory changes are rejected. The memory and I/O costs should be measured in Phase 5 before adding persistent caches or a two-pass module engine.
+Analysis now hashes/guards inputs as cooking does. That adds I/O and temporarily prevents cooperative writers from replacing relevant files on Windows. Inventory changes are rejected. Phase 5 measured these costs; see [Performance](#performance).
 
 #### Pipeline boundaries
 
@@ -384,37 +285,20 @@ Directory/module discovery checks cancellation between files/directories. Patter
 
 AMPR index staging/traversal now accepts cancellation and uses the same pre-commit cancellation rule. Closing the window blocks new workers, requests cancellation of backport/index work, awaits their cleanup, and waits for already-owned firmware/store/tool workers. Conversion stops before the next file; an in-flight conversion finishes its atomic write. The window then saves settings and closes. It does not kill a worker mid-write.
 
-Cancellation is cooperative. Synchronous reads, hashes, signing, individual filesystem calls and some per-fix/parser work can still delay it. Publication deliberately defers cancellation once the protected rename/commit sequence begins, as documented in `PUBLICATION_RECOVERY.md`. A publication that commits during a late cancel remains completed. The window can therefore remain open briefly while cleanup/commit or an existing page worker finishes. Native closing/picker behavior still needs the desktop interaction checks planned for Phase 6.
+Cancellation is cooperative. Synchronous reads, hashes, signing, individual filesystem calls and some per-fix/parser work can still delay it. Publication deliberately defers cancellation once the protected rename/commit sequence begins, (see [Publication and recovery](#publication-and-recovery)). A publication that commits during a late cancel remains completed. The window can therefore remain open briefly while cleanup/commit or an existing page worker finishes.
 
-#### Local measurements
+#### Measurements and coverage
 
-Windows, .NET 10.0.12, Release, synthetic 64-MiB inputs; measurements were taken on this workspace's host. Baseline single runs: dense one-byte replacement **614.1 ms**, code-reference scan **73.4 ms**. After adding checks, three runs:
+On 64 MiB synthetic inputs, cancellation inside a dense one-byte replacement scan or a code-reference scan was observed within 0.05–1.5 ms, and full-scan times stayed within run-to-run noise (about 610–650 ms and 77–90 ms). This is no whole-operation cancellation guarantee.
 
-| Scan | Complete scan (ms) | Cancellation request to observed cancellation (ms) |
-| --- | --- | --- |
-| Dense replacement | 645.7, 607.7, 612.4 | 1.511, 0.173, 0.179 |
-| Code references | 89.8, 80.3, 77.1 | 0.135, 0.069, 0.052 |
-
-These justify checkpoints inside measurable uninterrupted scans; they do not establish a throughput improvement or a whole-operation cancellation SLA. The single-run baseline is insufficient for a statistical overhead comparison. Local harness/results are under `work/phase4/latency/`; no private binaries were used.
-
-#### Verification and remaining work
-
-Synthetic regressions cover one-shot execution, completed/failed/cancelled outcomes, cancellation before start/during patching, running-disposal refusal, detached options/rule bytes, stale module/reference/metadata/settings/rules/names/library inputs, current-analysis cooking, legacy report shape, boundary matches/alignment, bounded scan cancellation, delayed UI progress, close while busy, and stale UI settings.
-
-Final verification on 10 October 2026: `pwsh -NoProfile -File scripts/verify.ps1 -Lane All` passed **342 tests in each Debug/Release run**, with zero failures/skips/warnings. This includes 27 new Phase 4 cases, 231 public and 111 private cases overall, and existing private byte/report golden comparisons. `git diff --check` passed. Rules, goldens and private binaries remain unchanged. Local records: `work/verification/20261010-020320-70e2650e82ae4af8bfb628a0399f0b57`.
-
-Phase 5 will measure allocation, working set, metadata hashing and representative whole-game throughput. Phase 6 will extend native/headless interaction coverage and diagnostics. None of this establishes console behavior beyond the existing fixtures.
+Synthetic regressions cover one-shot execution, completed/failed/cancelled outcomes, cancellation before start and during patching, refusal to dispose while running, detached options and rule bytes, stale module/reference/metadata/settings/rules/names/library inputs, cooking from a current analysis, legacy report shape, boundary matches, bounded scan cancellation, delayed UI progress, close while busy, and stale UI settings.
 
 ---
 
 <a id="publication-and-recovery"></a>
 ## Publication and recovery
 
-Former source: `PUBLICATION_RECOVERY.md`. Historical results retain their original scope.
-
-### Publication and recovery — Phase 2
-
-Implemented on 10 October 2026. Applies to whole-game cooking, fakelib batch imports (including variants), and AMPR index updates. Analysis remains write-free. Existing standalone binary/file tools are outside this directory-publication protocol.
+From the former `PUBLICATION_RECOVERY.md` (Phase 2, 10 October 2026). Applies to whole-game cooking, fakelib batch imports (including variants), and AMPR index updates. Analysis remains write-free. Existing standalone binary/file tools are outside this directory-publication protocol.
 
 #### What completion means
 
@@ -426,7 +310,7 @@ Each published directory has `backport_publication.json` version 1: a transactio
 
 Cooking also writes `backport_run.json` version 1. It records engine informational version/revision, runtime, title/content version, effective transform options, explicit selected NIDs/options, exact-versus-lower-bound reference status, reference NID-set hash, name-map hash, source module inventory, and relevant input lengths/hashes. Inputs include the loaded knowledge documents, top-level JSON/C firmware references, selected library inventories/manifests, library app0 files, source modules, param.json, and pattern/app0-related source files. Absence is recorded where it influences the result. The new evidence sidecar uses category labels and relative paths rather than private absolute paths. Existing legacy reports and library metadata retain their existing path/attribution fields; published output is not automatically anonymized.
 
-Relevant inputs are guarded with read-only file handles during cooking and rechecked before publication. Inventory additions/removals are also checked. A loaded knowledge object whose disk files have changed must be reloaded. This deliberately costs file reads, hashing, and open handles; it does not hash every unrelated game asset. Performance measurement and caching remain Phase 5 work.
+Relevant inputs are guarded with read-only file handles during cooking and rechecked before publication. Inventory additions/removals are also checked. A loaded knowledge object whose disk files have changed must be reloaded. This deliberately costs file reads, hashing, and open handles; it does not hash every unrelated game asset.
 
 #### Filesystem policy
 
@@ -463,9 +347,9 @@ AMPR indexing uses the same staged replacement. It verifies an existing completi
 
 The prior output is moved to a `.backup` sibling during the swap and deleted once the replacement is committed (recovery of a committed-but-interrupted run deletes it too). Deletion is best-effort: if a file is locked, the `.backup` stays, Core returns its path in `GameResult.PreviousOutputBackup` and the UI logs a warning. Incomplete module runs are retained as `.incomplete` siblings; the UI logs that diagnostic path. Store/index replacements discard their previous directories the same way.
 
-There is no automatic age/count eviction in Phase 2: avoid silently deleting a user's recovery copy. After verifying and accepting the current output, the owner can remove a specifically identified old backup or diagnostic folder. Validate its exact path and ensure no operation is using it first. Stable lock files stay in place, including while unlocked; deleting them could let concurrent processes acquire different lock objects. Committed cleanup that fails is retried by recovery. Journal write temporaries left by an abrupt process exit may require manual inspection/cleanup.
+There is no automatic age/count eviction: avoid silently deleting a user's recovery copy. After verifying and accepting the current output, the owner can remove a specifically identified old backup or diagnostic folder. Validate its exact path and ensure no operation is using it first. Stable lock files stay in place, including while unlocked; deleting them could let concurrent processes acquire different lock objects. Committed cleanup that fails is retried by recovery. Journal write temporaries left by an abrupt process exit may require manual inspection/cleanup.
 
-Budget space for the current destination plus a full staged replacement and all retained backups. Variant imports and AMPR updates copy the whole set/overlay. Hashing and flushing add I/O. This favors correctness and recovery over minimal disk usage; measuring and optimizing these costs is later work. Transaction artifacts are Git-ignored.
+Budget space for the current destination plus a full staged replacement and all retained backups. Variant imports and AMPR updates copy the whole set/overlay. Hashing and flushing add I/O. This favors correctness and recovery over minimal disk usage. Transaction artifacts are Git-ignored.
 
 #### What verification demonstrates
 
@@ -478,21 +362,17 @@ The protocol was tested with process interruption and simulated failure classes 
 <a id="diagnostics-and-ui"></a>
 ## Diagnostics and UI
 
-Former source: `LOCAL_DIAGNOSTICS.md`. Historical results retain their original scope.
+From the former `LOCAL_DIAGNOSTICS.md` (Phase 6, 10 October 2026).
 
-### Phase 6 — local diagnostics and UI verification
+### Behaviour
 
-Completed 10 October 2026 within the verification scope below. Native checks cover the available desktop configuration; higher/mixed-DPI and exact GPU/native allocation measurements remain follow-ups.
+Desktop and CLI backports use the same optional Core diagnostic sink. JSON-lines events carry a UTC timestamp, operation, run ID, stage/module, measured duration, terminal state, error category and exception type/context. A pre-cancelled operation still records its cancellation. Module failures keep their exception context even when the engine returns a failed result instead of throwing. AMPR index runs have their own correlation IDs, and desktop activity, errors and shutdown are recorded too.
 
-#### Delivered behavior
+Stage durations are intervals between progress boundaries, including orchestration overhead, not per-function CPU time. A snapshot that fails before an engine run exists is logged without a run ID. Ordinary non-backport CLI commands log caught failures, not a full timeline.
 
-Desktop and CLI backports use the same optional Core diagnostic sink. JSON-lines events include a UTC timestamp, operation, run ID, stage/module, measured duration, terminal state, error category and exception type/context. A pre-cancelled operation enters the engine far enough to record cancellation before doing work. Module failures retain their exception context even when the engine returns a failed result rather than throwing. AMPR index runs have their own correlation IDs; desktop activity/errors and shutdown events also persist.
+The close policy has one implementation, shared by production and the headless checks: cancel and await owned workers, save settings, record closure, then release the log. The opening record includes logical window size, render scale and screen count.
 
-Stage durations measure intervals between existing progress boundaries. They include orchestration and diagnostic overhead and are not individual CPU-function measurements. Snapshot construction can fail before an engine run exists; desktop/CLI catch diagnostics record those exceptions without an engine run ID. Normal non-backport CLI commands record caught failures, rather than a complete success timeline for every command.
-
-The desktop's close policy now has one implementation used by production and headless checks: cancel and await owned workers, save settings, record closure, then release the log. Settings-save and worker exceptions retain their context. The opening record includes logical window size, render scale and detected screen count.
-
-#### Retention and privacy
+### Retention and privacy
 
 | Storage | Policy |
 | --- | --- |
@@ -503,49 +383,22 @@ The desktop's close policy now has one implementation used by production and hea
 | Event files per client | `events.jsonl`, then `events.1.jsonl` through `events.3.jsonl`, at most 1 MiB each |
 | Writer lease | Empty `writer.lock`, exclusively held until sink disposal |
 
-The application-owned event budget is 4 MiB per client, 8 MiB when both clients have populated all generations. Rotation discards the oldest generation before moving the others. Existing unrelated files are not removed. Records are complete JSON lines; embedded newlines are escaped. File messages are limited to 2,048 characters and exception context to 4,096, with smaller limits for identifiers.
+That is at most 4 MiB per client. Rotation drops the oldest generation, and unrelated files are never removed. Records are complete JSON lines with escaped newlines; file messages are limited to 2,048 characters and exception context to 4,096.
 
-Clear empties the UI history and its counts; it leaves disk history intact. Copy exports only the visible UI rows. There is no automatic log upload or remote telemetry. Records can contain private game names, absolute paths and exception messages; review them before sharing. No game binary payloads or settings snapshots are deliberately logged. Logs inherit the user's directory permissions; they are not encrypted or automatically redacted.
+Clear empties the UI history and counts but leaves the disk logs; Copy exports only the visible rows. Nothing is uploaded. Logs can contain game names, absolute paths and exception messages, so review them before sharing. They are not encrypted or redacted.
 
-Writes are synchronous, serialized and close the event stream after each record. Useful records survive ordinary window closure without a background flush queue. This is not a power-loss or forced-process-termination durability guarantee. Storage/link/access failures disable that sink and surface a warning without failing the backport or altering its exit state. A competing second instance of the same client continues with a warning and without file logging; desktop and CLI have separate leases. Caller-provided invalid log paths are outside the application's normal fixed-directory flow.
+Writes are synchronous and close the stream after each record, so records survive an ordinary close; this is no power-loss guarantee. A storage or access failure disables the sink with a warning without failing the backport. A second instance of the same client runs on with a warning and no file log; desktop and CLI have separate leases.
 
-#### Filtering measurements and tradeoffs
+### Filtering
 
-The same headless harness displayed 10,000 synthetic import rows in the actual MainWindow, then applied full-list, empty-list and single-row queries. Before measurements used preserved Phase 5 Release assemblies; after measurements used Phase 6 Release assemblies. Records are local in `work/phase6/filter-before.json` and `filter-after.json`.
+Import and log filters replace the visible collection in one batch. A selected import stays selected while visible; otherwise the inspector clears. Name/library searches are case-insensitive and NID searches case-sensitive, and queries are trimmed. On 10,000 rows a full-list update went from 10,001 collection notifications to 1, from about 2.7 MB to 82 KB of UI-thread allocation, and from 16–17 ms to 0.7–1.5 ms. That is a focused view-model measurement, not a frame-rate claim. No debounce or background filtering was added.
 
-| Full-list filter update | Before | After |
-| --- | --- | --- |
-| Collection notifications | 10,001 | 1 |
-| UI-thread allocated bytes | 2,722,048–2,722,120 | 82,104–82,240 |
-| Observed elapsed milliseconds | 16.02–17.33 | 0.71–1.51 |
+### Test coverage and native checks
 
-Import and log filtering now replace the visible collection in one batch. An import remains selected if still visible; otherwise its inspector clears. Name/library searches remain case-insensitive, NID searches remain case-sensitive, and queries still trim whitespace. No debounce timer or background filtering was added: the measured batching benefit did not justify asynchronous ordering complexity.
-
-These are five updates in one process per version, including dispatcher yields, not a statistical benchmark or a native frame-rate/SLA claim. Current-thread allocations omit other threads and native/GPU allocations. Row/query inputs and notification counts are controlled; process scheduling and warm-up affect timings. Smaller queries have much smaller differences. The required collection reset can still cause layout work; the interaction tests check actual table selection after reset. The synchronous file sink also adds small I/O overhead; no throughput improvement is attributed to logging.
-
-#### Automated evidence
-
-`pwsh -NoProfile -File scripts/verify.ps1 -Lane All` passed locked restore and **357 tests in each Debug/Release configuration**, with zero warnings, errors, failures or skips: 246 public and 111 private cases. Records: `work/verification/20261010-024610-a1fb4e8e72c34cf3aa7826bdb9f51e65`.
-
-Seven diagnostics regressions cover rotation/newest-record retention, competing writers and lease release, file failure without operation failure, run/stage/module/error correlation, pre-cancellation, escaped/bounded error strings surviving UI Clear, and 2,400-entry UI eviction/counts/filter batching.
-
-Five isolated headless scenarios use the real MainWindow bindings and the production close policy: busy command availability and keyboard cancellation; close while analyzing and cleanup; search input/table selection/inspector/accessibility name; rejection of stale analysis without output; settings-save failure preserved after closure. The parent enforces a 30-second child timeout and kills only its own worker tree if necessary.
-
-`verification/UiProfile` is a required verification project in the solution, referenced by the test project without importing its assembly. This ensures Debug/Release workers are built in the matching configuration. It adds no package version or test framework; it uses the existing Avalonia.Headless package and [Avalonia's custom-framework HeadlessUnitTestSession approach](https://docs.avaloniaui.net/docs/testing/setting-up-the-headless-platform). The isolated process exits after assertions/measurements because headless renderer/session disposal blocked in the local profiling experiment. Production desktop shutdown is tested separately; worker process exit is not evidence that headless renderer disposal is reliable.
-
-Existing private byte/report golden comparisons pass unchanged. Rules, goldens and private binary fixtures were not edited for Phase 6. `git diff --check` passes.
-
-#### Native desktop observations and limits
-
-A separate Release application copy under `work/phase6/native/` was opened on Windows so desktop checks would not lock build outputs. The observed 1280 × 820 logical window at render scale 1 (100%) rendered the header, navigation, result tabs and log correctly. The Windows accessibility tree exposes readable navigation names, command labels, target firmware and retention descriptions. The native folder picker opened with its title, folder edit, selection and cancellation controls. Completed dry-run results and structured analysis/shutdown events were observed; records remained readable after the windows closed. Two screens were detected.
-
-Initial interaction attempts were interrupted by external input and closure; the user confirmed closing those windows. Coordinated checks then verified Tab from the Imports tab into the named search edit, native text input, Escape cancellation of the folder picker with controls restored, and continued Tab navigation. After picker cancellation, focus is reported on the window and the next Tab goes to Settings in the navigation rail; focus does not automatically return to the invoking button. This is a recorded keyboard behavior, not a claim of complete screen-reader accessibility certification.
-
-Normal and maximized layouts were inspected. The window moved to the second display and maximized correctly there: captured work areas were 1920 × 1032 at origin (0, 0) and 2560 × 1392 at origin (1920, 0). It was returned to its original normal geometry before closure. Native Analyze disabled Open/Analyze/Cook and exposed Cancel. The dry run completed before the subsequent close click, so this proves native busy bindings and clean idle closure, not native close-while-busy. The headless worker separately verifies close-while-busy and awaited cancellation.
-
-The UI test copy finished closing, and recent events were copied to ignored `work/phase6/native-events.jsonl` as local evidence. No Cook was invoked by these checks. The resize drag did not change window dimensions, so minimum-size layout is not certified. No higher/mixed-DPI transition was verified, and no system display settings were changed to manufacture coverage. Exact native allocation and GPU memory attribution from the Phase 5 follow-up remains unmeasured; aggregate process counters cannot establish that breakdown.
-
-Follow-up coverage: minimum-size layout; native close during a sufficiently long Analyze; 125%/150% and mixed-DPI display transitions on a suitable setup; dedicated screen-reader review if supported accessibility is to be advertised; exact GPU/native allocation profiling if a concrete native-memory issue arises. Headless results do not substitute for those guarantees.
+- **Diagnostics tests (7):** rotation, competing writers and lease release, file failure without operation failure, run/stage/module/error correlation, pre-cancellation, bounded error strings surviving Clear, and 2,400-entry UI eviction and filter batching.
+- **Headless scenarios (5)** in isolated `verification/UiProfile` processes (30 s timeout), using the real MainWindow bindings and close policy: busy commands and keyboard cancel, close while analysing, search/selection/inspector/accessible name, stale-analysis rejection, and settings-save failure on close. The worker exits after its checks because headless renderer disposal blocked, so renderer disposal is not tested.
+- **Native Windows checks (10 October):** 1280 × 820 at 100% scale rendered correctly. The accessibility tree exposes readable navigation, command and option names. Tab reaches the import search, and Escape cancels the folder picker; focus then returns to the window, not the invoking button. Normal and maximised layouts work, including moving to and maximising on the second display. Analyze disables Open/Analyze/Cook and exposes Cancel.
+- **Not verified:** minimum-size layout, native close during a long Analyze, 125%/150% and mixed-DPI transitions, full screen-reader review, and GPU/native allocation profiling.
 
 ---
 
@@ -960,447 +813,153 @@ The scratch analyzer is now a reusable developer program at `verification/GameAn
 <a id="performance"></a>
 ## Performance and memory
 
-Former source: `PERFORMANCE_REPORT.md`. Historical results retain their original scope.
+Condensed from the former `PERFORMANCE_REPORT.md` (Phase 5, 10 October 2026). Full paired tables are in FINDINGS.md Part 2 "Paired engine measurements".
 
-### Phase 5 — measured performance and memory review
+### Accepted changes
 
-Completed 10 October 2026. Two focused engine changes were accepted: parse firmware metadata once per run, and sign ELF segments directly from the caller's existing buffer. The engine's ordering, transformation rules, publication transaction and legacy reports remain compatible. Larger ownership/concurrency proposals were evaluated and left out of production for the reasons below.
+- **One firmware parse per run.** The pipeline loads the firmware databases once and shares that run-owned list between reference selection and introduction lookups. There is no process-global cache, so a run can never reuse a previous run's database. Cost: the run still holds the databases and their lazily built NID sets.
+- **No segment copies during signing.** `Self.Sign` reads segment and version bytes as read-only slices of the existing ELF and copies them once into the output. Input and output buffers still coexist during signing, so callers must keep the input stable.
 
-#### Workloads and measurement method
+Payload and normalised report hashes were identical before and after for every workload. Allocation fell about **33%** for a public large Cook (579.6 → 387.6 MiB) and **18%** for a private large Cook (2,398 → 1,974 MiB). Private analyses saved about 109 MiB each. This is not a universal RAM reduction: private small Analyze had a *higher* working-set/LOH peak (666 → 704 MiB), and a private large Cook still reaches about 1.8–1.9 GiB working set. Timings were not controlled well enough (three iterations, no disk-cold control) to claim speed-ups. The focused metadata benchmark showed duplicate loads at 236 ms / 218.5 MiB versus one load at 125 ms / 109.9 MiB, with very wide timing intervals.
 
-All comparisons ran locally on Windows 11 10.0.26300.9550, AMD Ryzen 9 7950X, 32 logical processors, SDK 10.0.401 and .NET 10.0.12, Release/x64. The Phase 4 engine DLL was preserved before editing; the same final measurement harness ran against both engines. Engine DLL SHA-256:
+Method notes: Release x64, .NET 10.0.12, Ryzen 9 7950X. Iteration 1 is process-cold and iterations 2–3 warm, with a full GC before each. LOH is the highest post-GC size, and process counters include native/runtime/observer memory, so subtracting managed bytes does not give native allocation.
 
-- Before: `2b02ddb4051641ce40542e0827d78d72e1117a0211c46c3b443fd4a673dbf2b7`.
-- After: `d3d15971e849ebf8866f8d2285658c0087a204b837239b47974edae2beea9746`.
+### Deferred, with reasons
 
-| Workload | Input and options |
-| --- | --- |
-| Public small | Four synthetic ELF modules, approximately 2 MiB each; SDK 9 → FW 4; Analyze and Cook |
-| Public large | Twelve synthetic ELF modules, approximately 16 MiB each; SDK 9 → FW 4; Analyze and Cook |
-| Private small | Existing PPSA01317 default fixture; FW 4 with the existing fakelib store; Analyze |
-| Private large | Existing PPSA28183 default fixture; FW 4.50, existing store, `force_pro` and `gpu_scratch`; Analyze and Cook |
+- **Two-pass loading.** In a loading-only experiment it doubled allocation (192 → 384 MiB) and time (124 → 235 ms) in exchange for holding about 16 MiB of decoded modules instead of 192 MiB. It would also need compact post-transform state to keep provider ownership, partial-failure behaviour, final imported NIDs, added-library exports and `/app0/` references. Revisit only with an explicit memory budget and a full-pipeline prototype.
+- **Module-symbol cache.** `SceElf.Data` is mutable, and import renames, symbol definitions and byte patterns would all need cache invalidation. The current code re-parses after changes, so invalidation can't be missed. One large fixture's symbol parse is about 8.9 MiB.
+- **ArrayPool, scratch ELF files, Channels, parallel transforms.** Large pooled arrays retain memory, scratch files add cleanup and recovery duties, and parallel workers multiply buffers and complicate deterministic ordering and cancellation. No measured bottleneck justified them. Production stays one serial transform/sign worker with all provider modules retained, and has no hard memory cap.
 
-The public reference database is synthetic. Private cases use the repository firmware databases and rules. Each pair uses identical inputs/options and a separate output folder. Module input hashes, normalized JSON/text report hashes and all cooked payload hashes are compared; every final pair matched. Publication manifests/evidence and output-path spellings are excluded from payload/report comparisons. Existing golden tests independently check legacy behavior.
+### Cancellation and UI memory
 
-Three iterations per engine/case were recorded: first is **process cold**, the next two **process warm**. OS cache, antivirus, storage and background scheduling were not controlled; no disk-cold or statistically robust speed claim is made. Full GC occurs before each iteration, not inside the operation. Comparisons ran sequentially after verification finished. Initial exploratory runs that overlapped tests are not used in the tables.
+Cancelling at the start of loading a 16 MiB synthetic module was observed within 3–6 ms; bigger SELF reads, signing and protected publication can take longer. Headless Avalonia/Skia processes analysing the public small game peaked at about 361–369 MiB working set. These counters mix managed and native Skia/runtime memory and say nothing about GPU memory or leaks across repeated operations.
 
-The harness records wall time and allocated bytes at progress boundaries, total managed allocation through `GC.GetTotalAllocatedBytes`, generation collection counts, runtime EventCounters and 5-ms Windows process-memory samples. The sampler stops before report serialization/output hashing, and payload hashes stream from disk. This avoids attributing verification buffers to engine memory. EventCounters have a one-second interval and cannot reliably characterize subsecond cases. Progress boundaries are orchestration intervals: the last loading interval includes provider/VR metadata; the last patching interval includes data/app0 handling and final evidence checks. They are not exclusive function profiles.
-
-`PeakManagedBytes` includes uncollected garbage. LOH is the highest recorded **post-GC** size, not cumulative LOH allocation or an exact instantaneous peak. Working set and private bytes include native memory, code, runtime and observer overhead; subtracting managed bytes would not provide a valid native-allocation measurement. Samples can miss short spikes. Earlier attribution of high allocation to `Process.Refresh()` was not substantiated; direct Windows counters still showed the high footprint. Final records use the corrected sampler.
-
-#### Whole-operation results
-
-Warm columns are the mean of iterations 1 and 2. MiB = 1,048,576 bytes. Timing precision is rounded to milliseconds to avoid implying stronger accuracy than these small samples support.
-
-| Case | Process-cold ms before → after | Warm ms before → after | Warm allocated MiB before → after | Warm peak working set MiB before → after |
-| --- | ---: | ---: | ---: | ---: |
-| Public small Analyze | 106 → 106 | 27 → 84 | 8.7 → 8.7 | 46 → 46 |
-| Public small Cook | 634 → 708 | 538 → 493 | 26.0 → 17.9 | 68 → 59 |
-| Public large Analyze | 524 → 552 | 442 → 434 | 192.9 → 192.9 | 232 → 232 |
-| Public large Cook | 3,522 → 3,565 | 3,741 → 3,619 | 579.6 → 387.6 | 628 → 436 |
-| Private small Analyze | 1,703 → 1,519 | 1,417 → 1,340 | 1,078.7 → 970.5 | 666 → 704 |
-| Private large Analyze | 2,019 → 1,760 | 1,924 → 1,622 | 1,781.3 → 1,672.7 | 1,572 → 1,418 |
-| Private large Cook | 6,874 → 6,683 | 6,425 → 6,247 | 2,398.0 → 1,974.1 | 2,198 → 1,865 |
-
-Public small Analyze had an after-run scheduling outlier (26 and 142 ms). A separately retained five-iteration check measured cold 110.7 → 110.7 ms and warm ranges 24.0–26.2 → 24.4–26.9 ms. No repeatable small-analysis slowdown was found; the initial outlier remains visible in the table and raw records.
-
-The accepted changes reduced allocation by about **33%** in public large Cook and **18%** in private large Cook. Private analyses saved approximately **109 MiB** per run. They do not universally reduce peak working set: private small Analyze had fewer collections but higher observed managed/LOH/working-set peaks. GC scheduling and retained garbage matter; allocation savings must not be advertised as a universal RAM reduction. Whole-run timings suggest benefits in some private cases, but the evidence supports memory/allocation claims more strongly than speed percentages.
-
-| Case | Warm peak private MiB before → after | Warm peak managed MiB before → after | Last warm post-GC LOH MiB before → after | Last warm GC counts Gen0/1/2 before → after |
-| --- | ---: | ---: | ---: | --- |
-| Public small Analyze | 20 → 20 | 9 → 9 | 6 → 8 | 1/1/1 → 1/1/1 |
-| Public small Cook | 39 → 31 | 26 → 18 | 6 → 8 | 1/1/1 → 1/1/1 |
-| Public large Analyze | 208 → 208 | 194 → 194 | 176 → 176 | 2/2/2 → 2/2/2 |
-| Public large Cook | 607 → 412 | 579 → 387 | 176 → 176 | 2/2/2 → 2/2/2 |
-| Private small Analyze | 649 → 686 | 572 → 648 | 466 → 564 | 26/21/3 → 20/16/3 |
-| Private large Analyze | 1,600 → 1,475 | 1,542 → 1,390 | 1,435 → 1,246 | 23/19/4 → 15/12/2 |
-| Private large Cook | 2,223 → 1,890 | 2,157 → 1,789 | 2,051 → 1,738 | 23/19/4 → 15/12/1 |
-
-#### Accepted changes: advantages and costs
-
-**One firmware parse per run.** Pipeline now loads databases once and shares that run-owned list between reference selection and introduction lookups. Exact/lower-bound selection and genstub fallback are preserved. It is read-only within the pipeline, with no process-global cache or filesystem timestamp heuristic. Existing evidence handles/revalidation still detect changed inputs. New tests prove selection and that the internal overload uses its captured metadata while a fresh public load observes a changed file.
-
-Advantages: removes duplicate JSON parsing/set construction, saves approximately 109 MiB on the real metadata corpus, and cannot reuse a database from a previous run. Cost: the run still retains the databases and lazily built NID sets; this does not solve all metadata allocation or make the public mutable `FirmwareExports` API immutable.
-
-**No segment copies during signing.** `Self.Sign` uses read-only memory slices of the existing ELF for segment and version bytes, then copies them into the final output once. The independent final output and digest/layout behavior are preserved; no pooled buffer escapes to callers.
-
-Advantages: removes approximately one payload-sized allocation per signed ELF, with unchanged payload/report hashes and private goldens. A synthetic 16-MiB regression checks the input stays unchanged, the round trip is correct, and allocation is bounded by the returned output plus 1 MiB of metadata. Cost: input and final output buffers still coexist during signing, and file I/O/signing remain synchronous cancellation boundaries. Callers must continue to keep input stable during this synchronous operation.
-
-#### Focused benchmark
-
-Only the confirmed duplicate firmware parse received a BenchmarkDotNet benchmark. The optional project is outside the application solution and its dependencies are locked. [BenchmarkDotNet's MemoryDiagnoser](https://benchmarkdotnet.org/articles/configs/diagnosers.html) supplies managed allocation/GC measurements; [the pinned package](https://www.nuget.org/packages/BenchmarkDotNet/0.15.8) is 0.15.8.
-
-| Firmware metadata operation | Mean | Managed allocation |
-| --- | ---: | ---: |
-| Duplicate loads | 236.2 ms | 218.52 MiB |
-| One run-owned load | 124.9 ms | 109.93 MiB |
-
-ShortRun used one process launch, three warmups and three measured iterations. The 99.9% timing intervals are very wide (174.8/280.5-ms error margins); the apparent 47% microbenchmark timing improvement is **not** a whole-engine or statistically precise speed guarantee. Allocation approximately halved. BenchmarkDotNet temporarily selected its high-performance power plan and reported restoration afterward. The initial benchmark project-name discovery failure was corrected by matching the csproj and assembly names; the final run executed both benchmarks successfully.
-
-#### Two-pass loading, metadata caches, pooling and concurrency
-
-The isolated loading experiment compares retaining decoded modules against rereading one module at a time. Both collect the same exports and parse imports; the second-pass version hashes each read and refuses a changed input. It uses the public large corpus and does not transform, publish, resolve selected store variants or implement the production app0 logic.
-
-| Loading-only experiment | Elapsed | Allocated | Decoded ownership required by the strategy |
-| --- | ---: | ---: | --- |
-| Retain modules | 123.7 ms | 192.1 MiB | Approximately 192 MiB across all modules |
-| Two passes | 234.7 ms | 384.1 MiB | Approximately 16 MiB for the current decoded module, plus compact metadata |
-
-These are one exploratory run, not a controlled full-pipeline benchmark. Ownership values describe references required by the strategy, **not** measured heap peaks: garbage can remain until collection, and encoded SELF buffers/signing output add costs. The experiment proves the extra-read/allocation tradeoff on this corpus; it does not prove production equivalence.
-
-Decision: **defer production two-pass loading**. It doubles decoding allocation/read traffic in this experiment and would require compact post-transformation state to preserve provider ownership, partial-failure behavior, final imported NIDs, added-library exports and `/app0/` references. Source hashing between passes is necessary but insufficient for those semantic guarantees. Retaining modules remains faster/simpler for this workload; future low-memory support needs an explicit budget and full pipeline prototype before adoption.
-
-Decision: **do not add a module-symbol cache yet**. Public `SceElf.Data` is mutable. Renaming imports, defining symbols and arbitrary byte patterns would require cache invalidation, including partial failures and external mutation. Current code reparses metadata after changes, so invalidation cannot be missed. A single large fixture's symbol parse was approximately 8.9 MiB; repeated parsing is an identified follow-up, but this phase did not establish a safe cache that warrants changing the API/ownership contract. No cache was introduced whose validity depends on undocumented assumptions.
-
-Decision: **defer ArrayPool, scratch ELF files, Channels and parallel transforms**. The signer removes redundant copies without rental lifetimes. Pooling very large arrays could retain substantial memory; scratch files add cleanup/recovery/disk obligations; parallel workers multiply decoded/signing buffers and complicate deterministic ordering and cancellation. No measured throughput bottleneck justified those changes. The retained production policy is one serial transformation/signing worker, with all decoded provider modules still retained. There is no new arbitrary input limit or claimed hard working-set budget. The measured private Cook still reaches roughly 1.8–1.9 GiB working set; low-memory operation remains a limitation, not a completed feature.
-
-#### Cancellation and UI memory
-
-Cancellation requested at the beginning of loading the first 16-MiB synthetic module was observed after 3.34–5.99 ms before and 3.71–5.41 ms after (three observations each). The load completes before the next checkpoint. These are local observations, not an SLA; bigger SELF reads/unwraps, signing and protected publication can take longer. The Phase 4 bounded-scan cancellation tests remain green.
-
-Three separate headless Avalonia/Skia processes loaded/analyzed the public small game with the normal repository metadata/store, then rendered a 1280×820 frame. Process time was 2,185–2,208 → 1,755–1,811 ms; peak total working set was approximately 367–369 → 361–365 MiB, and sampled private bytes approximately 319–321 → 313–321 MiB. A final frame was inspected and showed completed analysis without errors. Timestamped logs make image hashes differ; they are evidence records, not pixel-equality assertions.
-
-These process counters include managed and native Skia/runtime memory together. They do **not** isolate native allocations, GPU memory, native desktop compositor effects, multi-monitor behavior or leaks over repeated operations in one UI process. Exact native allocation profiling and native desktop interaction remain Phase 6 follow-ups; subtracting the separate engine's managed numbers would be misleading.
-
-#### Reproduction, records and verification
+### Reproduction
 
 ```powershell
-# Public synthetic measurements; restores the optional harness in locked mode.
-pwsh -NoProfile -File scripts/measure-performance.ps1
-
-# This session's exact paired comparison; baseline artifacts remain local/ignored.
+pwsh -NoProfile -File scripts/measure-performance.ps1                       # public synthetic workloads
 pwsh -NoProfile -File scripts/measure-performance.ps1 -IncludePrivate `
-  -BaselineDirectory work/phase5/baseline -InputRoot work/phase5/inputs `
-  -ReportDirectory work/phase5/final
-
-# Optional focused benchmark, outside the solution.
+  -BaselineDirectory <preserved old engine> -InputRoot <inputs> -ReportDirectory <out>
 dotnet restore verification/Benchmarks/Ps5Backport.Benchmarks.csproj --locked-mode
-dotnet run --project verification/Benchmarks/Ps5Backport.Benchmarks.csproj -c Release --no-restore -- `
-  --filter '*FirmwareMetadata*' --artifacts work/phase5/benchmarks
-
-# After building the Release app, sample a headless UI process.
-pwsh -NoProfile -File scripts/measure-ui-memory.ps1 -Game work/phase5/inputs/small
+dotnet run --project verification/Benchmarks/Ps5Backport.Benchmarks.csproj -c Release --no-restore -- --filter '*FirmwareMetadata*'
+pwsh -NoProfile -File scripts/measure-ui-memory.ps1 -Game <game folder>     # after a Release app build
 ```
 
-Comparisons require the **same harness** beside the preserved old engine and its runtime files; do not overwrite the baseline Core DLL when updating the harness. Existing input roots are reused, not silently regenerated. Cooking produces actual local payloads and retained transaction records; budget disk space for repeated runs. Raw records can contain private paths, module names and report details. They remain under ignored `work/`; no upload or hosted performance service is enabled. Baseline artifacts are machine-local, not a substitute for a tagged/reproducible release baseline.
-
-Evidence locations:
-
-- Final paired JSON, phase intervals, runtime counters, cancellation and loading experiment: `work/phase5/final/`.
-- Supplemental small Analyze check: `work/phase5/final/supplement-{before,after}-small-analyze.json`.
-- Focused benchmark: `work/phase5/benchmarks/results/FirmwareMetadataBenchmarks-report-github.md`.
-- Headless UI frames/process records: `work/phase5/ui-before/` and `work/phase5/ui-after/`.
-- Full verification: `work/verification/20261010-021831-33e89269039d464ab0860f7771c58575/`.
-
-`scripts/verify.ps1 -Lane All` passed locked solution restore, Debug/Release builds with **zero warnings/errors**, and **345 tests per configuration**, zero failures/skips (234 public + 111 private). All original byte/report goldens passed unchanged. There are three new cases: the signer allocation/input/round-trip regression and two firmware-selection/captured-metadata cases. The optional measurement and benchmark projects also build without warnings. No rule, golden or private binary file was changed.
-
-Phase 5 is complete as a measurement/optimization and adoption-decision phase. The deferred production memory-budget/cache/concurrency work and exact native-memory profiling are explicitly recorded above; they are not implemented guarantees.
+A paired comparison needs the same harness beside a preserved copy of the old engine and its runtime files. Don't overwrite that baseline Core DLL. Cooking writes real payloads, so budget disk space. Raw records can contain private paths and stay under ignored `work/`. Run timing work on its own, not alongside builds or tests.
 
 ---
 
 <a id="instruction-decoder"></a>
 ## Instruction-decoder evaluation
 
-Former source: `INSTRUCTION_DECODER_REPORT.md`. Historical results retain their original scope.
+Condensed from the former `INSTRUCTION_DECODER_REPORT.md` (Phase 7, 10 October 2026).
 
-### Instruction-decoder evaluation — Phase 7
+**Decision:** keep Iced 1.21.0 as an optional evaluation tool (`verification/DecoderEvaluation`, outside the solution). Don't replace the production byte-pattern reference scanner or patch emitter with segment-linear decoding: it removes some false positives but introduces misses after embedded data and padding. Neither zero nor positive reference counts prove runtime reachability.
 
-10 October 2026. Decision: retain Iced as an optional local evaluation tool; do not replace the production reference scanner or patch emitter. The experiment demonstrates useful instruction validation, but linear decoding of entire executable segments is not a safe reference-count migration.
+The candidate decodes 64-bit instructions from executable segment starts and resolves direct CALL/JMP and RIP-relative MOV/LEA/indirect CALL/JMP. FS/GS-based operands stay unresolved (they need runtime segment bases). There is no control-flow graph and no register propagation.
 
-#### What changed
+### Accuracy
 
-`verification/DecoderEvaluation` pins Iced 1.21.0 with a lock file and references Core. It stays outside `Ps5Backport.slnx` and has no references from the application, CLI or main tests. `scripts/evaluate-decoder.ps1` runs synthetic checks by default; `-IncludePrivate` also reads three existing local ELF fixtures. Reports stay under ignored `work/phase7/`. No binary input, rule, golden, patch algorithm or application package version was changed.
+All 530 specified reference cases passed (18 named, 512 generated NOP-offset variants). Expected values come from explicit synthetic byte layouts, not from either implementation.
 
-One production XML comment was corrected: the byte-pattern scanner can miss direct references as well as over-count them. Neither zero nor positive counts prove runtime reachability. Its behavior remains unchanged.
-
-The candidate decodes 64-bit instructions from executable segment starts, resolving direct CALL/JMP and IP-relative MOV/LEA/indirect CALL/JMP operands. It retains the current target-map and lazy-PLT exclusions. FS/GS-based loads and branches remain unresolved because their actual addresses require runtime segment bases. It neither follows a control-flow graph nor propagates register values. Optional manually supplied code ranges are used only where synthetic instruction boundaries are independently known.
-
-#### Accuracy and failure modes
-
-All **530 reference cases** passed: 18 named edge cases and 512 deterministic generated variants. “Passed” means each scanner produced its specified observation; it does not mean either scanner found every reference. Expected results come from explicit synthetic byte layouts, branch displacement arithmetic and annotated code/data ranges, rather than treating either implementation as an oracle.
-
-| Case | Expected static reference | Current heuristic | Linear decoder | Interpretation |
-| --- | ---: | ---: | ---: | --- |
-| Ordinary CALL/JMP, GOT branches, MOV/LEA and permitted prefix | 1 | 1 | 1 | Seven basic encodings agree |
-| Address-size prefix at a virtual address above 4 GiB | 1 | 0 | 1 | Decoder correctly resolves EIP-relative address truncation |
-| CALL-looking bytes inside MOV's immediate | 0 | 1 | 0 | Boundaries prevent a false reference |
-| Invalid LOCK-prefixed indirect CALL | 0 | 1 | 0 | Decoder rejects this encoding |
-| FS-based load | Unresolved | 1 | 0 | Decoder avoids assuming a zero runtime segment base |
-| RET followed by call-looking embedded data | 0 | 1 | 1 | Linear decoding still treats data as code; annotated range yields 0 |
-| Short jump over one data byte to a real CALL | 1 | 1 | 0 | Linear decoding loses alignment; annotated ranges yield 1 |
-| Truncated CALL | 0 | 0 | 0 | Decoder reports invalid input and makes progress |
-| Register-indirect CALL | Unresolved | 0 | 0 | Neither scanner resolves runtime register contents |
-| Prefixed PLT self-reference | 0 | 1 | 0 | Decoder excludes the instruction's true start |
-| Short jump to a PLT entry | 1 | 0 | 1 | Decoder recognizes a currently unsupported direct branch |
-
-Generated variants place either a valid RIP-relative MOV or a call-looking immediate after 0–64 NOP bytes. These exercise offset handling and input preservation; they are not broad instruction-set fuzzing. Cancellation is checked before/through decoding; invalid instructions do not stall the reader. Every analyzed input is hashed before and after to reject mutations.
-
-##### Existing local corpus
-
-| Fixture | Executable bytes | Heuristic references | Linear references | Invalid decoded instructions |
-| --- | ---: | ---: | ---: | ---: |
-| Original eboot | 66,119,468 | 426,106 | 426,104 | 1 |
-| Original libc | 1,128,430 | 3,063 | 3,063 | 5 |
-| Existing backported libc | 1,128,430 | 3,062 | 3,062 | 5 |
-
-The eboot disagrees on two NIDs, each by one reference. Prefix-aware site comparison removes differences that are merely different starts within the same prefixed instruction. Local inspection then found:
-
-- One unmatched jump pattern begins inside the displacement of a RIP-relative store with an immediate value. Manually separating its opcode, ModRM, four-byte displacement and four-byte immediate supports a heuristic false positive.
-- The other jump follows a RET, zero padding and an aligned start, with INT3 padding afterward. Segment-linear decoding consumes the jump opcode as the end of an earlier instruction. Its manually calculated displacement reaches the mapped PLT entry, supporting a likely decoder false negative.
-
-The surrounding bytes were inspected locally; private byte contexts and addresses are retained only in the ignored report. These are supported interpretations, not independently recovered function boundaries for the entire corpus. Matching libc counts also do not certify every site. Existing three eboot reference-count regression expectations remain unchanged and are asserted by the evaluation.
-
-No independent disassembler was available in the local command inventory. Synthetic byte-field calculations and corpus context inspection provide independent checks, but do not constitute a second full disassembly. A future migration needs stronger code-boundary evidence, including symbols/unwind metadata where available, explicit handling of ambiguous regions and independently reviewed disagreement fixtures.
-
-#### Follow-up: conditional tail calls (13 October 2026)
-
-The Phase 7 comparison limited the decoder to the scanner's own instruction classes (CALL/JMP, MOV/LEA, indirect CALL/JMP), so both sides missed the same forms. A scratch Iced 1.21.0 run over the 18 original sample eboots (`default/eboot.bin` + PPSA28997) counted **every** direct branch and RIP-relative operand. The scanner had missed 31,813 references. 98% of them were `jcc rel32` (`0F 80`–`8F`) straight to a PLT entry, which is how compilers emit conditional tail calls; the rest were `cmp`/`add r64, [rip+GOT]` (`3B`/`03`). As a result, 138 imports were reported with `refs=0` while code branches to them; 17 of these are missing on FW 4.00. Example: GT7's only call to `sceTextToSpeech2Cancel` is `je` at `0x180bc02`. The old test called it "never referenced".
-
-`Imports.CodeReferences` now also matches those three opcode forms. The byte scanner is kept, consistent with the Phase 7 decision. Against the full decoder on the same corpus: 8,087,524 vs 8,087,512 references, **12 over-counts** (the same 12 as before the change) and **0 under-counts**. No import is wrongly reported at 0 any more. Scan time is unchanged (~18 s for the 18 eboots in both). Golden changes: `analysis/PPSA01317_default`, `PPSA01317_4xx+_USA` and `PPSA34547_4xx+` (only `refs` tokens, all increases), and `backport/notbackport-4-no-store` (report hashes plus `dbOlWdppb4o refs=0 → 2`). Patched binaries are unchanged. 674/674 tests pass with 0 skips. Iced remains an optional evaluation tool, not a dependency.
-
-#### Generated-code checks
-
-Iced decoded all eight named stub bodies and 45 configured adapter byte blocks without invalid/truncated instructions. Named stubs end at RET. Additional checks verify two nonzero EAX return constants, three GOT jump targets including the positive rel32 limit, a PLT redirect's direct target/NOP and unchanged GOT value, and two adapters split across guarded caves.
-
-The chained checks follow emitted inter-cave jumps, verify R8/RDX operands, the GOT CALL and the final GOT jump or RET, and preserve both INT3 guards in every synthetic cave. They decoded 17 instructions across the two chains. This validates encoding and selected operands/control flow. It does not prove stack alignment, complete register preservation, pointer validity, console firmware compatibility or game ABI correctness. Data-pattern replacements are not decoded indiscriminately as executable code.
-
-#### Measured costs
-
-Release, .NET runtime 10.0.12 on the local machine. Each workload has one first sample followed by three warm samples, alternating scanner order. Input construction, hashing, GC preparation and disagreement inspection are outside timing. The first sample occurs after synthetic checks and is **not process-cold**. Allocation uses the current thread and includes target dictionaries and scanner setup; it excludes corpus loading and report construction. This is a focused scanner comparison, not a whole-game performance benchmark.
-
-| Workload | Heuristic warm mean (range), ms | Iced warm mean (range), ms | Warm allocated bytes, heuristic → Iced |
+| Case | Expected | Heuristic scanner | Linear decoder |
 | --- | ---: | ---: | ---: |
-| Synthetic 1 MiB | 3.54 (3.47–3.66) | 11.32 (10.60–12.12) | 608 → 1,160 |
-| Synthetic 16 MiB | 58.41 (53.83–61.27) | 91.42 (87.27–98.96) | 608 → 1,160 |
-| Original eboot | 131.74 (131.11–132.50) | 425.51 (403.06–463.21) | 4,247,544 → 4,248,096 |
-| Original libc | 2.45 (2.41–2.49) | 8.48 (8.37–8.57) | 39,992 → 40,544 |
-| Existing backported libc | 2.31 (2.27–2.36) | 8.47 (8.08–9.12) | 39,992 → 40,544 |
+| Ordinary CALL/JMP, GOT branches, MOV/LEA, permitted prefix | 1 | 1 | 1 |
+| Address-size prefix above 4 GiB | 1 | 0 | 1 |
+| CALL-looking bytes inside a MOV immediate | 0 | 1 | 0 |
+| Invalid LOCK-prefixed indirect CALL | 0 | 1 | 0 |
+| FS-based load | unresolved | 1 | 0 |
+| RET followed by call-looking embedded data | 0 | 1 | 1 |
+| Short jump over one data byte to a real CALL | 1 | 1 | 0 |
+| Truncated CALL | 0 | 0 | 0 |
+| Register-indirect CALL | unresolved | 0 | 0 |
+| Prefixed PLT self-reference | 0 | 1 | 0 |
+| Short jump to a PLT entry | 1 | 0 | 1 |
 
-The decoder costs approximately 1.6–3.7 times the scanner time in these workloads, with 552 additional steady scanner-setup bytes. It reads the original array through a bounded reader without copying executable segments or retaining all decoded instructions. Optional site inspection has additional memory/time costs outside this table. These results support selective validation, not a performance improvement claim.
+On the private corpus the two agreed on libc (3,063 references original, 3,062 backported). On the original eboot fixture (66 MB of code, 426,106 references) they differed by two references: one was a scanner false positive inside a store's displacement, the other a decoder false negative after RET/padding. The decoder costs about 1.6–3.7× the scanner's time with negligible extra allocation.
 
-During the 16-MiB scan, cancellation was observed approximately 0.17 ms after the timer actually requested it. The nominal 5-ms timer fired after 22.10 ms, illustrating scheduling delay; this is one local observation, not a latency guarantee. Pre-cancelled scans also threw. Cancellation checks occur at most approximately 64 KiB of decoded bytes apart; target-map construction precedes the first candidate check.
+**Emitted-code checks.** Iced decoded all 8 named stubs and 45 adapter byte blocks without invalid or truncated instructions, and verified return constants, GOT jump targets (including the rel32 limit), a PLT redirect and two adapters split across guarded caves. This validates encoding and selected operands. It does not validate stack alignment, register preservation or console ABI.
 
-#### Dependency review
+### Conditional tail calls (13 October 2026)
 
-[Iced 1.21.0's package metadata](https://www.nuget.org/packages/Iced/1.21.0) and its cached NuSpec identify MIT licensing and no external dependency packages. The loaded managed DLL is 1,896,448 bytes (approximately 1.81 MiB). Its package pins repository commit `601c40570d6c986c8e1a6a2e483dd2fdf5ade552`; the lock records its content hash. Retain its copyright/license notice if distributing the evaluation tool.
+Phase 7 had limited the decoder to the scanner's own instruction classes, so both missed the same forms. A full Iced pass over the 18 original sample eboots found 31,813 references the scanner missed: 98% were `jcc rel32` (`0F 80`–`8F`) straight to a PLT entry (conditional tail calls), and the rest `cmp`/`add r64, [rip+GOT]` (`3B`/`03`). 138 imports were reported with `refs=0` while code branched to them (17 of them missing on FW 4.00). For example, GT7's only call to `sceTextToSpeech2Cancel` is a `je` at `0x180bc02`. `Imports.CodeReferences` now matches those three forms. Against the decoder on that corpus it reports 8,087,524 vs 8,087,512 references: 12 over-counts and 0 under-counts, at unchanged scan time. Only `refs` tokens in four goldens changed; patched binaries are unchanged.
 
-The [official C# documentation](https://github.com/icedland/iced/blob/master/src/csharp/Intel/README.md) documents decoder/operand and instruction-information capabilities. The experiment uses decoded operands directly; it does not adopt the assembler, encoder, formatter configuration or automated register-liveness framework into production.
+### Before adopting a production decoder
 
-The local transitive NuGet vulnerability query succeeded on 10 October 2026 against the configured feeds and reported no flagged packages for this optional project. This is dated advisory evidence, not a security certification. Core/CLI remain free of external package dependencies; Iced does not enter the application's dependency graph.
-
-#### Pros, cons and adoption gate
-
-| Proposal | Pros | Cons / decision |
-| --- | --- | --- |
-| Optional decoder audit | Correct prefix/operand semantics; explains byte-pattern disagreements; very small per-scan allocation overhead | Slower; needs trustworthy boundaries; keep as the completed evaluation tool |
-| Decoder checks for emitted code | Known starts and lengths; catches invalid/truncated instructions and wrong registers/targets | Cannot certify console ABI; retain optional checks, consider making them mandatory only when changing emitters |
-| Replace reference scanner with segment-linear decoding | Reduces immediate/displacement false matches and supports more encodings | Introduces missed code after embedded data/padding; reject this migration |
-| Full control-flow recovery/dataflow engine | Could address alignment and some indirect references | Substantially greater complexity; incomplete symbols, jump tables and runtime state still create uncertainty; defer until an actual patching problem requires it |
-
-Before adopting a production decoder, define count compatibility, trusted starts, ambiguous/unreachable-region policy and conservative treatment of unresolved references. Add reviewed regression fixtures for disagreements, demonstrate an improvement without new false negatives, budget the extra scan time, and rerun all private byte/report goldens. Console ABI/runtime validation remains a separate requirement. Phase 8 is an optional decision gate, not an automatic library migration.
-
-#### Reproduction and acceptance
+Define count compatibility, trusted code starts, a policy for ambiguous and unreachable regions, and conservative handling of unresolved references. Add reviewed disagreement fixtures, show an improvement with no new false negatives, budget the extra scan time, and rerun the private byte/report goldens. A full control-flow/dataflow engine is deferred until a real patching problem needs it.
 
 ```powershell
-pwsh -NoProfile -File scripts/evaluate-decoder.ps1
-pwsh -NoProfile -File scripts/evaluate-decoder.ps1 -IncludePrivate
-dotnet list verification/DecoderEvaluation/DecoderEvaluation.csproj package --include-transitive --vulnerable
-pwsh -NoProfile -File scripts/verify.ps1 -Lane All
+pwsh -NoProfile -File scripts/evaluate-decoder.ps1                  # synthetic + emitter checks
+pwsh -NoProfile -File scripts/evaluate-decoder.ps1 -IncludePrivate  # also the three ELF fixtures (fails if absent)
 ```
-
-Run timing work separately from builds/tests. Public evaluation needs repository rule data and the locked package restore, but no private fixtures. The private option intentionally fails if its named fixtures are absent. It never unwraps or writes a source module. The script temporarily opts out of .NET CLI telemetry and restores the prior setting. No dashboard, upload or native application launch is involved.
-
-Final experiment record: `work/phase7/20261010-031012/evaluation.json`. Accuracy/emitter checks passed; locked restore and the optional Release build had zero warnings/errors. Full solution verification passed **357 tests in each Debug/Release configuration**, zero failures/skips and zero-warning builds, with unchanged private byte/report goldens. Records: `work/verification/20261010-031031-82cadd74618248d5b350078a07cefaa4`. `git diff --check` passed. Acceptance is an explicit non-adoption decision for linear production scanning, supported by measured benefits, identified regressions and recorded costs.
 
 ---
 
 <a id="cli-catalog-schema-decisions"></a>
 ## CLI, catalog and schema decisions
 
-Former source: `PHASE8_DECISION_REPORT.md`. Historical results retain their original scope.
+Condensed from the former `PHASE8_DECISION_REPORT.md` (Phase 8, 10 October 2026). Evaluated in `verification/Phase8Evaluation` (outside the solution; `scripts/evaluate-phase8.ps1`). No production change was adopted.
 
-### Optional CLI/catalog/schema decisions — Phase 8
-
-10 October 2026. Phase 8 completes the optional decision gate. Keep the current CLI implementation and JSON catalogs. Retain the schema authoring experiment as a useful follow-up, without declaring its partial schema a complete versioned runtime contract. No production code, package version, rules, binary fixtures or golden files changed in this phase.
-
-#### Evidence and scope
-
-The isolated `verification/Phase8Evaluation` project compares the existing private CLI parser with System.CommandLine 2.0.12 without exposing a new production API. Reflection reads the actual parser rather than a copied implementation. Its candidate defines only `backport`, `report` and `nid` and selected options; commands that could modify files are parsed, never invoked. Eighteen cases assert specified parser acceptance/error observations and record values. Safe NID/usage invocations also record the current exit code and both output streams.
-
-The .NET worker measures the existing firmware loader and loaded-set queries, then tests three synthetic knowledge changes in copies under ignored `work/phase8/`. A Python companion builds an in-memory SQLite representation of the existing firmware metadata, asserts semantic export round-trip and query equivalence, and validates 52 real fix records plus six schema edge cases. Original catalog/rule hashes are checked for changes. No private game/system binaries are needed or opened.
-
-These are comparison prototypes and compatibility blockers, not a migrated CLI, production database, complete schema or whole-application performance benchmark. The optional project is outside `Ps5Backport.slnx`; no application/test project references it. Its package lock resolves System.CommandLine alone, plus project references to CLI/Core.
-
-#### System.CommandLine: defer migration
-
-The current token parser occupies approximately 35 lines; command implementation and help text are much larger. A framework can centralize command metadata, validation, generated help and completion, but it does not remove the command handlers. Those capabilities are described in the [official overview](https://learn.microsoft.com/en-us/dotnet/standard/commandline/).
-
-| Behavior | Existing parser | Candidate | Migration consequence |
-| --- | --- | --- | --- |
-| `--firmware 4` / `--firmware=4` | Accepts both | Accepts both | Compatible basic cases |
-| Repeated scalar firmware values | Last value wins | Reports multiple arguments | Needs explicit compatibility handling or a documented behavior change |
-| Repeated `--option` / `--provider` | Ordered lists | Ordered arrays with configured one-value-per-token options | Preserve ordering and repeat behavior |
-| Global `--aerolib` before/after command | Accepted | Accepted with a recursive option | Must configure inheritance |
-| `--extend-text=false` | Presence is true | Boolean value is false | Flag semantics differ |
-| `--` token | Ordinary positional; later options still parsed | Ends option parsing | Arity and dash-prefixed argument behavior differ |
-| Unknown option with a value | Stored and potentially ignored by handler | Reports unrecognized tokens | Existing typo handling needs an explicit policy |
-| `--help` | Missing-value error, exit 1 | Selects built-in HelpAction | Output stream/text/exit behavior changes |
-| `nid -h` | Computes a NID for the string `-h` | Selects HelpAction | Cannot silently introduce a short help alias |
-| Option followed by another option-like token | Can consume the token as its value | This tested string option also consumes it | A framework alone does not resolve every malformed-input problem |
-
-The [official syntax documentation](https://learn.microsoft.com/en-us/dotnet/standard/commandline/syntax) explains option/argument syntax; compatibility must be verified against this application's contract rather than assumed from those conventions. The existing `--extend-text` flag remains accepted, with extension already enabled by default; `--no-extend-text` is the effective disable control.
-
-Concrete maintenance opportunity: duplicated help/dispatch metadata and permissive unknown-option handling. The prototype demonstrates significant compatibility work, not an immediate reduction in maintenance cost. Therefore retain the existing implementation. Unknown options and boolean/help conventions are known quirks, not newly introduced features or a recommendation to rely on them.
-
-Before a migration, approve a documented CLI contract, expand characterization to every command/subcommand, aliases, option applicability, repeated values, `--`, malformed inputs and stdout/stderr/exit codes, and then prototype a compatibility adapter. Preserve existing valid command goldens and payloads. Intentional error-policy changes should have separate regression expectations rather than rewriting goldens to accept framework defaults. Do not add completions, response-file expansion or new aliases implicitly.
-
-#### SQLite: no measured reason to migrate
-
-The local catalog contains **43 firmware JSON files, 16,547,646 bytes**, and 861,897 NID memberships summed across firmware union sets. Current operations are whole-catalog loading, exact/lower-bound firmware selection, set membership/diffs, and human-inspectable import/export. Phase 5 already removed duplicate loading within an operation. Fakelib manifests preserve unknown fields and describe external module files; diagnostic history uses bounded rotated files rather than a queryable database.
-
-| Measurement | Observation |
-| --- | --- |
-| Existing .NET load plus materialized union sets, first sample | 320.94 ms; 174,956,208 allocated bytes |
-| Three subsequent .NET samples | 328.86 / 285.01 / 180.47 ms; approximately 173.10 MB allocated each |
-| 43,000 existing .NET set-membership queries | 12.78 ms |
-| Python JSON parse/set construction | 100.76 ms first; 171.95–214.90 ms subsequent samples |
-| Python in-memory SQLite import/index construction | 1,649.41 ms |
-| Same 43,000 queries within Python | Loaded sets: 6.31–7.02 ms; indexed SQLite statements: 51.76–64.83 ms |
-
-The .NET and Python needle sets differ; compare only equivalent queries within each environment. The Python SQL and set hits were equal in all three iterations. The semantic round-trip recovered metadata and module/NID sets from the database alone, with a dedicated synthetic empty-module assertion; arrays were normalized to sorted unique NIDs. It does not promise byte-identical JSON, property ordering, duplicate preservation, full fakelib manifest migration or an application schema.
-
-The SQL query uses one prepared-path execution per membership check. Bulk queries could give different results. The database is in memory: opening a persisted index, query-plan alternatives, disk size, WAL/checkpoint behavior, concurrent writers, crash recovery and .NET provider overhead were not measured. The subsequent JSON samples include allocation/GC effects and are not isolated storage-throughput figures. No process-cold or whole-game latency claim is made.
-
-SQLite could support persistent indexed history, provenance joins and relational constraints if those become product requirements. None is established by the current workload. Keep JSON and per-operation in-memory indexes. If catalog loading becomes an observed UI bottleneck, first evaluate loading only the needed firmware or retaining a safely invalidated read-only snapshot; do not assume either is correct without selection/fingerprint tests.
-
-[SQLite's usage guidance](https://www.sqlite.org/whentouse.html) describes its embedded-database strengths and single-writer constraint. A database transaction would protect database state, not atomically publish the application's external ELF/SELF files. Existing staging, locks, evidence and recovery remain necessary in any future database design.
-
-Before revisiting: demonstrate expensive real catalog/history queries or concurrent edit requirements; compare a .NET persisted index with current JSON on the same queries and machine; define invalidation, unknown-field retention, import/export and firmware ordering; test migrations/rollback, competing writers, recovery and unchanged patch/report output. Do not make the database the sole copy of inspectable source metadata.
-
-#### Formal JSON schemas: useful authoring safeguard, incomplete runtime proposal
-
-Seven knowledge files total **47,665 bytes**. The runtime already checks duplicate keys, string/null types, fix kinds, conditions, firmware strings, stub references, adapter bodies and safe/equal-length patterns. Some documents are regenerated by existing tools; fixes/stubs remain hand-authored JSON. There is no established versioned external interchange contract in this repository.
-
-The experimental Draft 2020-12 schema covers a single fix record, enumerated kinds/conditions, types and unknown-field rejection. It validates all **52 current default/option records**. Six specified cases demonstrate accepted typed data, rejection of misspelled fields/wrong types/conditions, and two limits that still require Core validation.
-
-| Synthetic change | Prototype schema | Current Core on a copied complete data set |
+| Proposal | Decision | Main reason |
 | --- | --- | --- |
-| `proovn: false`, with `proven` absent | Rejects unknown field | Accepts and defaults `Proven` to true |
-| Unknown stub name | Accepts its string shape | Rejects unresolved stub |
-| Empty adapter instruction array | Accepts its array shape | Rejects empty adapter |
+| System.CommandLine | Defer | Significant compatibility work (table below) for little maintenance gain; the current parser is about 35 lines. |
+| SQLite catalog | Keep JSON | Existing set-membership queries are cheap; no relational or history requirement exists. |
+| Full versioned JSON schemas | Strongest follow-up | Catches authoring typos Core accepts, but needs a defined contract. |
 
-The first row is a concrete authoring risk: a typo can change whether a rule is treated as proven. The test deliberately mutated a copied existing stub record; it found no such typo in repository data. The partial schema is useful when editing records, but must not be presented as a full safety check. It permits `none` without distinguishing option/default context and does not cover entire files, NID keys, sources, patterns, cross-document references or instruction semantics. It does not change Core's compatibility with unknown fields.
+### CLI behaviour a migration would have to preserve
 
-The [Draft 2020-12 validation specification](https://json-schema.org/draft/2020-12/json-schema-validation) defines structural validation and separates format annotations/assertions. Use explicit field constraints and retain semantic validation; do not assume a format label enforces PS5 firmware/NID semantics or that validation after parsing can recover duplicate JSON keys.
-
-Decision: keep the prototype optional; defer a mandatory full/versioned schema until its supported contract and compatibility policy are specified. This is the strongest follow-up candidate of the three proposals. A focused implementation should cover fixes/stubs first, identify allowed annotations/extensions, version schema identities without silently rewriting existing data, support local editor association, and test unknown-field typos alongside current Core semantics. Only add a runtime validator package if runtime interchange requires it; an editor/authoring check may suffice.
-
-#### Pros and cons
-
-| Proposal | Benefit | Cost / current decision |
+| Behaviour | Existing parser | System.CommandLine 2.0.12 |
 | --- | --- | --- |
-| System.CommandLine | Central command model, validation/help/completion support | Compatibility adapters and new dependency; defer migration |
-| SQLite catalog/history | Persistent indexing, joins, relational constraints | Invalidation/migration/native-provider ownership; measured existing membership queries are inexpensive; retain JSON |
-| Versioned full JSON schemas | Editor guidance and unknown-field/type safeguards | Contract maintenance and semantic checks still required; retain partial authoring prototype, prioritize a scoped follow-up |
+| `--firmware 4` / `--firmware=4` | Both accepted | Both accepted |
+| Repeated scalar firmware | Last value wins | Error: multiple arguments |
+| Repeated `--option` / `--provider` | Ordered lists | Ordered arrays (needs one-value-per-token config) |
+| Global `--aerolib` before/after the command | Accepted | Needs a recursive option |
+| `--extend-text=false` | Presence means true | Parsed as false |
+| `--` token | Ordinary positional; later options still parsed | Ends option parsing |
+| Unknown option with a value | Stored, possibly ignored | Error: unrecognised token |
+| `--help` | Missing-value error, exit 1 | Built-in help |
+| `nid -h` | NID of the string `-h` | Help |
+| Option followed by an option-like token | Can consume it as the value | Same for the tested string option |
 
-No framework was adopted just to change the application's appearance or dependency list. These decisions preserve the behavior verified through Phases 1–7 while identifying a concrete authoring issue and explicit future acceptance criteria.
+`--extend-text` is on by default; `--no-extend-text` is the effective switch. Before a migration: write down the CLI contract, characterise every command, alias, repeated value, `--`, malformed input and stdout/stderr/exit code, prototype a compatibility adapter, and keep existing goldens unchanged.
 
-#### Dependencies, reproduction and acceptance
+### Catalog: JSON vs SQLite
 
-The optional C# project pins [System.CommandLine 2.0.12](https://www.nuget.org/packages/System.CommandLine/2.0.12); the selected net8.0 asset has no additional package dependencies and is compatible with this net10.0 experiment. Local package metadata declares MIT; the loaded DLL is 151,352 bytes. Its locked transitive NuGet advisory query succeeded on 10 October 2026 and reported no flagged packages. This is dated feed evidence, not a security certification. No application dependency graph changed.
+At the time the catalog was 43 firmware JSON files (16.5 MB, 861,897 NID memberships). The .NET load plus union sets took about 180–330 ms and 173 MB, and 43,000 membership queries took 12.8 ms. In Python, the same queries took 6.3–7.0 ms on loaded sets versus 51.8–64.8 ms as indexed in-memory SQLite statements, and building the SQLite index took 1.65 s. The round trip and query results were equivalent. Persisted databases, WAL, concurrent writers and the .NET provider were not measured. A database transaction would also not make the external ELF/SELF publication atomic, so staging, locks and recovery stay necessary. If catalog loading becomes a UI bottleneck, first try loading only the needed firmware.
 
-The Python companion uses the existing Python 3.11.9 environment, SQLite 3.45.1 and jsonschema 4.26.0. The script requires that jsonschema version, records dependency versions, and installs nothing. Python/transitive packages are not content-hash locked or advisory-certified by this phase; these experiments are not shipped runtime components. jsonschema's local metadata declares MIT. Preserve actual notices if distributing optional tools.
+### JSON schema finding
 
-```powershell
-pwsh -NoProfile -File scripts/evaluate-phase8.ps1
-# If needed, select an existing compatible environment:
-pwsh -NoProfile -File scripts/evaluate-phase8.ps1 -Python C:/path/to/python.exe
-dotnet list verification/Phase8Evaluation/Phase8Evaluation.csproj package --include-transitive --vulnerable
-pwsh -NoProfile -File scripts/verify.ps1 -Lane All
-```
-
-Run comparisons separately from builds/tests. Locked restore and the optional Release build passed with zero warnings/errors. All 18 specified parser observations, three copied-data semantic observations, SQLite round-trip/query-equivalence assertions and 52 schema records plus six edge cases passed. These counts are experiment cases, not added xUnit tests. Final records and full regression results are linked in VERIFICATION.md. Production migration tests are not claimed because no production migration was adopted.
-
-Final comparison records: `work/phase8/20261010-032209/`. Full local verification passed **357 tests in each Debug/Release configuration**, zero failures/skips and zero-warning builds, with unchanged private byte/report goldens. Records: `work/verification/20261010-032020-04ec1872bf4d4006b2e800c901635003`. `git diff --check` passed. Prior phase changes remain preserved.
+A Draft 2020-12 schema for one fix record validated all 52 current records. It caught one real authoring risk: a misspelt `proovn: false` (with `proven` absent) is rejected by the schema but accepted by Core, which then defaults `Proven` to true. No such typo exists in `data/`. Conversely, Core (not the schema) rejects unknown stub names and empty adapters, so a schema would supplement semantic validation, not replace it. A future schema should cover fixes and stubs first, version its identity, allow editor association and test typo handling against Core.
 
 ---
 
 <a id="dependencies"></a>
 ## Dependency review
 
-Former source: `DEPENDENCY_REVIEW.md`. Historical results retain their original scope.
+Condensed from the former `DEPENDENCY_REVIEW.md`; versions checked against the project files on 14 October 2026.
 
-### Dependency review — 10 October 2026
+| Project | External packages |
+| --- | --- |
+| Core, CLI | None (project references only) |
+| App | Avalonia, Avalonia.Desktop, Avalonia.Themes.Fluent, Avalonia.Headless, Avalonia.HarfBuzz 12.1.3; CommunityToolkit.Mvvm 8.4.2 |
+| Tests | xunit.v3 4.0.1, xunit.runner.visualstudio 3.1.4, Microsoft.NET.Test.Sdk 17.14.1, coverlet.collector 6.0.4, FsCheck.Xunit.v3 3.4.0 |
+| verification/MutationTests | xunit.v3 4.0.1, FsCheck.Xunit.v3 3.4.0; local tool dotnet-stryker 5.0.0 |
+| verification/Benchmarks | BenchmarkDotNet 0.15.8 (23 packages, brings its own Iced/Capstone) |
+| verification/DecoderEvaluation, GameAnalysis | Iced 1.21.0 (MIT, no dependencies) |
+| verification/Phase8Evaluation | System.CommandLine 2.0.12 (MIT); Python companion needs jsonschema 4.26.0 and installs nothing |
+| verification/UiProfile, Performance | None beyond the App's Avalonia.Headless |
 
-Scope: the four application solution projects, their resolved direct/transitive NuGet graph, and the isolated mutation-test project's overlapping test dependencies. No application dependency was upgraded in this phase. FsCheck is the only newly adopted test library; Stryker is a pinned optional local tool.
+Every project has a `packages.lock.json` (enabled in `Directory.Build.props`), verification restores in locked mode, and App/CLI/Core also lock the `win-x64` target for self-contained packages. The 10 October transitive `--vulnerable` and `--deprecated` queries reported nothing for any project. That is dated feed evidence only. Licences: MIT for the UI, MVVM, Microsoft and coverage packages; Apache-2.0 for xUnit; BSD-3-Clause for FsCheck; ANGLE ships a BSD-style notice file. Packages keep the actual notices under `licenses/`.
 
-Every project has a `packages.lock.json` with resolved versions and content hashes, including projects with only project references. `Directory.Build.props` enables lock generation; verification explicitly restores in locked mode. `global.json` pins SDK 10.0.401 instead of silently moving to a newer feature band. The observed runtime was 10.0.12; servicing runtime selection is recorded rather than presented as bit-identical environment reproducibility.
+**Telemetry.** Avalonia.BuildServices (transitive) and Microsoft Testing Platform have build/test telemetry. `verify.ps1`, the mutation and performance scripts set `AVALONIA_TELEMETRY_OPTOUT=1`, `TESTINGPLATFORM_TELEMETRY_OPTOUT=1` and `DOTNET_CLI_TELEMETRY_OPTOUT=1` for their child processes. Set them yourself when running `dotnet` commands manually. Application runtime behaviour is unaffected.
 
-#### Resolved graph and checks
+**Update policy.**
 
-| Area | Resolved graph | Direct packages |
-| --- | --- | --- |
-| Core / CLI | No external NuGet packages | Project references only |
-| Desktop UI | 28 direct/transitive packages | Avalonia, Desktop, Themes.Fluent, Headless and HarfBuzz 12.1.3; CommunityToolkit.Mvvm 8.4.2 |
-| Main tests | 55 direct/transitive packages, including UI dependencies | coverlet.collector 6.0.4; Microsoft.NET.Test.Sdk 17.14.1; xunit.runner.visualstudio 3.1.4; xunit.v3 4.0.1; FsCheck.Xunit.v3 3.4.0 |
-| Mutation experiment | Public test subset only | xunit.v3 4.0.1; FsCheck.Xunit.v3 3.4.0; separate local dotnet-stryker 5.0.0 tool |
-
-`dotnet list Ps5Backport.slnx package --include-transitive --vulnerable --format json` and the corresponding `--deprecated` query succeeded against the configured NuGet feeds and reported no flagged packages. This is a dated advisory-feed result, not proof that every managed/native component is free of defects. Bundled native libraries and SDK/tool internals require their own advisory review when upgrading or distributing.
-
-The outdated-package query found available stable updates. Examples: Avalonia 12.1.4, xUnit 4.0.2, xunit.runner.visualstudio 4.0.1, Microsoft.NET.Test.Sdk 18.10.1 and coverlet.collector 10.1.0. These were recorded, not automatically adopted. Some transitive latest versions are major-version changes (SkiaSharp, HarfBuzzSharp, FSharp.Core); independently overriding a framework's native or language-runtime graph without a compatibility experiment is not justified by an outdated badge.
-
-The pinned packages' local NuGet specifications declare MIT licenses for the UI/MVVM/Microsoft/coverage libraries, Apache-2.0 for xUnit, and BSD-3-Clause for FsCheck. Transitive metadata was reviewed too; ANGLE supplies a bundled BSD-style notice file rather than an SPDX expression. Native packages/font assets can contain additional notices: keep the actual package notices when preparing distributions. This phase records metadata and retains dependencies; it does not create an installer or certify a complete distribution-notice bundle.
-
-#### Build/test privacy finding
-
-Avalonia.BuildServices 11.3.2 is an existing transitive build dependency with build-time telemetry; Microsoft Testing Platform includes telemetry-related test packages. The new verification and mutation scripts set `AVALONIA_TELEMETRY_OPTOUT=1`, `TESTINGPLATFORM_TELEMETRY_OPTOUT=1` and `DOTNET_CLI_TELEMETRY_OPTOUT=1` in their child-process environment, then restore caller values. Ordinary commands outside these scripts do not inherit that guarantee; use the same environment settings when running them manually. These settings do not change application runtime behavior. See the publishers' [Avalonia build-service documentation](https://github.com/AvaloniaUI/Avalonia.BuildServices) and [MTP telemetry documentation](https://learn.microsoft.com/en-us/dotnet/core/testing/microsoft-testing-platform-telemetry).
-
-Reports and test environments stay local under ignored `work/`. Neither script uploads source, private binary fixtures, golden results or mutation reports. NuGet restore/advisory queries contact the configured package feeds with ordinary public package requests. No CI host, remote diagnostics service or dependency-update automation was enabled.
-
-#### Update policy
-
-1. Before a release or planned dependency update, rerun vulnerability/deprecation checks with transitive packages included; record feed failures as unavailable evidence, not a clean audit.
-2. Investigate actionable advisories promptly against actual usage/exposure, including native dependencies. Prefer a reviewed compatible patch; if a fix requires a larger migration, record the reason and mitigation rather than silently suppressing the advisory.
-3. Update related framework packages together. Keep UI/runtime and test-tool changes separate when practical, and review upstream release notes, SDK support, licenses/native notices and generated dependency-graph differences.
-4. Intentionally change project versions or the SDK pin, run `dotnet restore Ps5Backport.slnx --force-evaluate` (and the mutation project if its graph changes), and review every lock-file diff. Do not use force-evaluate in ordinary verification.
-5. Run the public lane in both configurations, then full private verification on a trusted local machine. Preserve golden files; investigate any byte/report drift before accepting an upgrade. Mutation-runner upgrades also need a small compatibility rerun.
-6. Review analyzer/runner dependencies independently of production packages; retain the currently tested runner setup until replacing it has demonstrated equivalent discovery, filtering, skip/failure and reporting behavior.
-
-The commands and lock files provide version/restore repeatability. They do not guarantee identical timestamps, informational revisions, native rendering, runtime patch behavior or results on an untested operating system.
-
-#### Phase 5 optional benchmark dependency
-
-The application/Core/CLI/UI/test package versions remain unchanged. The package-free `verification/Performance` harness and optional `verification/Benchmarks` project have lock files and stay outside the application solution. The benchmark pins [BenchmarkDotNet 0.15.8](https://www.nuget.org/packages/BenchmarkDotNet/0.15.8); its resolved graph has 23 external packages. Local package license metadata declares MIT for 21; CommandLineParser and Microsoft.DotNet.PlatformAbstractions carry MIT text in their package license files. Native/tool components can carry additional notices; these tools are not being bundled into an application distribution.
-
-The transitive vulnerability query for the benchmark project succeeded on 10 October 2026 and reported no flagged packages. This dated feed result does not certify every tool/native component. BenchmarkDotNet brings diagnostic/compiler/decoder dependencies (including Iced/Capstone) into the optional measurement process only. The application's import scanner is unchanged; the separate Phase 7 evaluation is recorded below.
-
-BenchmarkDotNet's local ShortRun completed both metadata benchmarks with MemoryDiagnoser; its initial generated-project name mismatch was corrected. It reported temporary power-plan selection/restoration. No dashboard or profiler upload was enabled. Results and licensing review are local under `work/phase5/`. The performance script sets/restores the .NET CLI telemetry opt-out; use the existing documented environment opt-outs for manual restore/build/tool commands too.
-
-#### Phase 6 verification worker
-
-No package versions were added or upgraded. Local logging uses the existing .NET file/JSON APIs. `verification/UiProfile` has a lock file and references the app's existing Avalonia.Headless dependency; it adds no test framework adapter. It is now in the solution because the mandatory headless regression tests need a worker built in the matching Debug/Release configuration. The test project's reference uses `ReferenceOutputAssembly=false`; worker types do not become part of the test or application API. Optional benchmarks/mutation/performance projects retain their previous scope. Locked solution restore and both builds passed on 10 October 2026.
-
-#### Phase 7 optional decoder dependency
-
-`verification/DecoderEvaluation` directly pins Iced 1.21.0 and has its own content-hash lock file. It stays outside the solution and has no application/test consumers. Its resolved external graph contains Iced alone; cached package metadata declares MIT and empty dependency groups. The loaded DLL is 1,896,448 bytes. Keep its license/copyright notice if distributing this optional tool. Application package versions and Core/CLI's package-free dependency graph remain unchanged.
-
-The transitive vulnerability query succeeded against the configured NuGet feeds on 10 October 2026 and reported no flagged packages. Locked restore and Release compilation passed with zero warnings/errors. [INSTRUCTION_DECODER_REPORT.md](#instruction-decoder) records measured costs, precision limitations and the decision against production segment-linear scanning.
-
-#### Phase 8 optional comparisons
-
-`verification/Phase8Evaluation` pins System.CommandLine 2.0.12 in a separate lock file and references CLI/Core. It stays outside the solution and has no application/test consumers. Its selected net8.0 asset has no additional package dependencies; local metadata declares MIT and the loaded DLL is 151,352 bytes. Locked restore/Release compilation passed with zero warnings/errors. The transitive NuGet advisory query succeeded on 10 October 2026 and reported no flagged packages; this is dated feed evidence.
-
-The companion uses existing Python 3.11.9, standard-library SQLite 3.45.1 and jsonschema 4.26.0. The script checks the reviewed jsonschema version and records its dependency versions; it installs nothing. Local jsonschema metadata declares MIT. This Python environment is not content-hash locked or advisory-certified by this phase, and no Python/native database component enters the shipped application. Preserve actual package notices if distributing optional tools.
-
-No production package/version changes were adopted. CLI compatibility blockers, database experiment limitations and partial-schema scope are recorded in [PHASE8_DECISION_REPORT.md](#cli-catalog-schema-decisions). A complete schema/runtime-validator or .NET database-provider adoption would require a separate dependency and migration review.
-
-#### Windows distribution target
-
-App, CLI and Core now declare `win-x64` as a supported restore target for self-contained packaging. Their lock files add the corresponding target sections; existing managed/native package versions and content hashes were retained. The tested package includes Microsoft.NETCore.App 10.0.12 and the existing Windows native UI dependencies. Locked solution restore, both builds and optional decoder/Phase 8 restores passed. No new framework/library was adopted.
-
-The local package command retains resolved NuGet metadata and bundled license/third-party notice files, including the .NET runtime's notices, under each client's `licenses/` folder. Runtime servicing/distribution still requires the existing dependency-update review; a successful package smoke test is not an advisory certification. [DISTRIBUTION.md](#build-and-sharing) documents sharing and optional input boundaries.
-
-At the user's request, local sharing packages also copy the fakelib modules, companion files, manifests and symbol database. These are existing local inputs, not new NuGet dependencies. Originals remain unchanged and ignored by Git; other reference trees, private test fixtures and personal settings/logs are not packaged. The locally generated archives were not uploaded.
+1. Before a planned update, rerun the transitive vulnerability and deprecation checks; a feed failure means no evidence, not a clean result.
+2. Update related framework packages together. Don't override a framework's native or language-runtime graph (SkiaSharp, HarfBuzzSharp, FSharp.Core) just because a newer major exists.
+3. Change versions or the SDK pin deliberately, run `dotnet restore Ps5Backport.slnx --force-evaluate` (never in ordinary verification), and review every lock-file diff.
+4. Run the public lane in both configurations, then the private lane. Investigate any byte/report golden drift before accepting an upgrade.
+5. Treat test-runner and analyzer upgrades separately from production packages.
 
 ---
 
@@ -2486,7 +2045,7 @@ Three variants. All SELFs in `default` are decrypted (PS5-style SELF, unwrap wor
 - `data/fixes.json` `"options"`: opt-in groups, never applied by default; a selected option's fixes replace the default fix for the same NID. CLI `--option KEY` (both engines), report line `options:` plus a WARNING with the option's warning text, JSON `options`.
 - New fix kind **`plt_stub`**: stub body in a cave, the PLT entry jumps to it, the GOT slot is left alone. This is how AC and Yōtei force values, and it works even where the target firmware has the function (a GOT-only stub could be overwritten if the loader binds the slot).
 - First option **`force_pro`**: `sceKernelGetOperationMode` → `opmode_pro` (mode 3), `sceKernelIsTrinityMode` → `ret:1`, `sceAgcGetIsTrinityMode` → `byte1`. Both engines produce byte-identical AC output with it.
-- Experimental C# option **`auto_pro`** (Automatic Pro mode) preserves native console queries supported by the selected target; missing operation-mode/Trinity queries fall back to base-console values, including a one-byte false output for `sceAgcGetIsTrinityMode`. Keeps the default Psml-init guard below FW 9.00. Requires Known fixes. Mutually exclusive with `force_pro` in the GUI and rejected together by the pipeline. A FW 4 cook can retain fixed base answers even on a newer Pro console; this is not a runtime resolver for APIs missing from the target. Replacement-library query behavior and both console paths require console testing. Already patched inputs are not restored to their original queries.
+- Experimental C# option **`auto_pro`** (Automatic Pro mode) preserves native console queries supported by the selected target; missing operation-mode/Trinity queries fall back to base-console values, including a one-byte false output for `sceAgcGetIsTrinityMode`. Keeps the default Psml-init guard below FW 9.00. Requires Known fixes. Mutually exclusive with `force_pro` in the GUI and rejected together by the pipeline. A FW 4 cook gives fixed base answers only on consoles whose firmware also lacks the query; where the firmware exports it (Trinity queries from 7.00, `sceAgcGetIsTrinityMode` from 9.00, `sceKernelGetOperationMode` from 11.00) the loader binds the native function over the GOT pre-fill, so a Pro is detected there (corrected 2026-10-14 after FINDINGS §6b; the original text claimed the fixed answers persisted on newer firmware). This is not a runtime resolver for APIs missing from the target. Replacement-library query behavior and both console paths require console testing. Already patched inputs are not restored to their original queries.
 - **`audio_speaker_compat`** (Audio speaker compatibility) makes the previously automatic `sceAudioOut2GetSpeakerInfo` adapter opt-in, disabled by default. It clears the 3D-audio flag and caps the speaker mask at eight speakers. Enable it to reproduce the previous adapter; disable it to test native speaker reporting. Requires Known fixes. Required missing audio API stubs (including `sceAudioOut2Set3DLatency`) and existing Wwise patterns remain independent. Re-cook both variants from the same source: this option cannot undo input patches. Console compatibility and dialogue loss require A/B testing.
 - **`save_mount_compat`** (Save mount compatibility) and **`save_prepare_compat`** (Save preparation compatibility) make the two derived save-data adapters independently opt-in, disabled by default. Mount changes `systemBlocks = -1` to `0` only below target FW 5.00; preparation changes mode `2` to `1`. Requires Known fixes. Enable both to restore their previous automatic behavior. Leaving them off preserves native arguments, which old firmware may reject; neither toggle undoes patches already present in the source. GUI options and Analyze/Cook use the same fix table.
 
@@ -2919,332 +2478,41 @@ At FW 4 (`fakelibs/4`) and FW 4.03 (`fakelibs/4.03`), every import resolves, 0 e
 
 ---
 
----
+<a id="anyps5-plan"></a>
+## AnyPS5 improvement plan and reference priorities (11–12 October 2026)
 
-## AnyPS5 improvement plan and Phase 1 evidence (2026-10-11)
+Condensed on 14 October 2026. The plan reviewed `.original/reference/AnyPS5` at commit `9a1f6f44ac75ac42aea6fa0d60f99fad1cde7bc4` and allowed only fixes for defects reproduced by a failing test first, while keeping accepted cook output unchanged. Each phase ended with a pass/fail gate; a failed gate stopped work until explained. SCE dynamic tables, provider/reachability, synchronization adapters, AMPR changes and new automatic stubs needed an affected Backport input before they got priority. Reference code alone is not evidence of a Backport improvement. The per-run XML, capture harnesses and `tmp/` verdict files cited by the original entries were deleted with `tmp/` on 12 October.
 
-This is a new, bounded plan, separate from the historical engineering phases below. The reference inspected is `.original/reference/AnyPS5` at commit `9a1f6f44ac75ac42aea6fa0d60f99fad1cde7bc4`; its checkout is clean. The purpose is to correct reproduced defects while preserving accepted cook behavior. No phase can establish that software has no possible leak, exception, deadlock, compatibility issue, or other defect. Acceptance is limited to the inputs and behaviors actually checked. Console runtime compatibility requires console evidence.
+### Phases 1–4: string-table bounds and candidate scope
 
-### Recommended order and progression rules
+**Phase 1: baseline and defect evidence.** Six characterization tests reproduced two defects. The ELF parser accepted a symbol-name offset at the declared `DT_STRSZ` end and a NUL just outside it. Candidate generation broadened a function link label, or an explicitly named missing function, to every constant-return function in the linked file. The cook baseline failed for three GT7 configurations (`notbackport-4`, `notbackport-403-all-options`, `notbackport-4-no-store`) on report hashes only. All 33 payload hashes matched, and Debug and Release were identical. The cause was three NIDs that the newly committed `data/aerolib.csv` now names: `kP2L8t3j-aM` `sceVideoOutAddVrrStatusFlagsPrivilege`, `LibwuIonIBw` `sceVideoOutAddVrrActiveStatusEvent` and `-KRzWekV120` `sceAgcDcbSetIndexSize_0600`. Reversing just those labels reproduced every original golden exactly. With the user's approval, the three goldens were edited by hand (six report hashes, seven labels; payload hashes untouched), and all 7 parity tests passed.
 
-1. **Phase 1 — baseline and defect evidence.** Execute the existing public verification in Debug and Release before production changes; record string-table and candidate-selection defects with synthetic fixtures and valid controls; run the available existing cook goldens without recording replacements. Finish with an explicit pass/fail gate. This phase changes tests and documentation only. An unexplained baseline mismatch blocks Phase 2.
-2. **Phase 2 — bound ELF strings by their declared table.** First resolve the baseline blocker with an evidence-backed explanation; do not treat replacing a golden as proof. Change the malformed-string characterization assertions to require rejection and demonstrate that the current parser fails those expectations. Add boundary, truncation, overflowing declared-size and missing-terminator cases with valid controls. Only then make the smallest parser correction supported by the format contract. Require public verification and unchanged valid cook outputs before accepting it.
-3. **Phase 3 — keep candidate generation within the documented function scope.** First change the link-label case to expect only the named function, and the unmatched explicit-name case to require no broadening; demonstrate those tests fail before editing the generator. Cover repeated names, mixed formatting, explicitly library-wide bullets and missing functions. Then make the smallest extraction/filtering correction. Validate against the pinned AnyPS5 checkout and review every candidate difference before considering a separate catalog change. Keep the live catalog unchanged in this phase. Require public verification and cook equivalence.
-4. **Phase 4 — integration and release gate.** Repeat locked restore, Debug/Release builds and tests, plus available cook goldens, against the final combined changes. Restore the missing fixtures before claiming the full Private/All lane passes. Review rejected-input diagnostics, cancellation, publication cleanup and candidate-generator API behavior. Run applicable native UI checks if UI behavior changes; obtain console evidence for any claimed improvement to console runtime behavior. Record remaining limits and release only after the gates pass.
+**Phase 2: string tables bounded by `DT_STRSZ`.** `SceElf` now validates the declared table against the file, rejects name offsets at or past its end, and searches for NUL only inside it. This applies to symbol names, module names, build paths and import-library names. Inputs without `DT_STRSZ` keep the file-bounded fallback. 16 desired-behaviour tests replaced the characterizations: 10 failed before the fix and all passed after. A before/after run over 667 retained ELF/SELF files gave identical parsed strings and the same nine pre-existing rejections.
 
-Other AnyPS5 proposals stay deferred: SCE-specific dynamic-table support, provider/reachability changes, synchronization adapters, AMPR changes and new automatic stubs. They need an affected Backport input, a reproduced defect and a failing test before receiving implementation priority. Reference code by itself does not establish a Backport improvement.
+**Phase 3: candidate scope.** `DataGenerators.ScanCandidates` treats an explicit function link label (one name or a comma list, backticks optional) as the selection boundary. A named function missing from the linked file now yields no candidates instead of all of them. A library-directory or descriptive label keeps library-wide selection, still narrowed by matching backtick mentions. 11 tests (4 failing before). On the pinned AnyPS5 checkout the capture went from 41 to 38 entries. The fallback no longer adds `sceSystemServiceDisableNoticeScreenSkipFlagAutoSet`, `GetAppIdOfRunningBigApp`, `SetNoticeScreenSkipFlag` or `HideSplashScreen`, and `sceAudioInInit` (`SxQprgjttKE`), previously lost, is now added. `data/candidates.json` was not regenerated (26 entries), and no stub was added: an emulator's constant return is not evidence that stubbing a console API is safe.
 
-### Phase 1 — executed; progression gate failed
+**Phase 4: integration and fixture recovery.** A pipeline test checks that a NUL outside `DT_STRSZ` aborts the cook with `InvalidDataException`, preserving the source and previous output and leaving no stage or journal, and that a corrected input then cooks to the same destination. Recreating the deleted `work/*_elf` fixtures from `.original/backports` (9 NOT_BACKPORT from GT7 `decrypted`, 13 GT7 from `4xx+/USA`, 11 CONTROL from PPSA34547 `4xx+`) first failed five goldens. The cause: **the historical fixtures were made by `make_fself_batch.py`, which zeroes the section-header fields after unpacking** (`e_shoff` at `0x28`, 8 bytes; `e_shentsize`/`e_shnum`/`e_shstrndx` at `0x3A`/`0x3C`/`0x3E`, 2 bytes each). `Self.Unwrap` preserves them. Applying that 14-byte normalisation reproduced every historical hash, including the AMPR fixture `c681b42e…`. The remaining two report goldens differed only by the same three catalog names and the resulting sort order, and were migrated the same way. The full All lane then passed 481/481 in Debug and Release. `Self.Unwrap` itself was not changed.
 
-**Scope:** no production correction, catalog generation, rule change or golden replacement. Existing app/UI edits were present before this phase and were left untouched. Public verification covers the current workspace including those edits; it does not establish their native UI behavior.
+**Gate principles kept for future work:** write the failing test first and keep valid controls green; never re-record goldens to make a gate pass (migrate by hand only after proving the whole difference); re-run the parser budget/mutation checks and the cook parity tests after any parser change; and remember that lifecycle/concurrency tests cover only their exercised interleavings.
 
-**Baseline commands:**
+### Reference priorities 1–8
 
-```powershell
-pwsh -NoProfile -File scripts/verify.ps1 -Lane Public
-$env:PS5BP_REQUIRE_PRIVATE = '1'
-$env:PS5BP_RECORD = $null
-dotnet src/Ps5Backport.Tests/bin/Debug/net10.0/Ps5Backport.Tests.dll -class '*BackportParityTests' -failSkips -failWarns -result-xml work/verification/anyps5-phase1-cook-debug-unrestricted.xml
-dotnet src/Ps5Backport.Tests/bin/Release/net10.0/Ps5Backport.Tests.dll -class '*BackportParityTests' -failSkips -failWarns -result-xml work/verification/anyps5-phase1-cook-release-unrestricted.xml
-```
+| # | Topic | Verdict | Notes |
+| --- | --- | --- | --- |
+| 1 | Dry-run option coverage | Fixed (test only) | `GuiSupportTests` expected 21 fixes; the default is correctly 18, and 21 with `save_mount_compat`, `save_prepare_compat` and `audio_speaker_compat`. The theory now asserts each adapter NID's presence or absence. |
+| 2 | Provider audit | Implemented, CLI only | `ps5backport report MODULE --firmware F --provider P … --provider-audit` lists bundled export candidates per declared library and NID (`same-library` / `cross-library` / `unknown-library`), excluding the importing module. Diagnostic only: cooking and classification don't use it. |
+| 3 | SCE-relative dynamic tables | Implemented | String, symbol, RELA and JMPREL tables are read relative to the file-backed `PT_SCE_DYNLIBDATA` segment and may lie outside every `PT_LOAD`. Requires one unambiguous segment and matching sizes, and rejects out-of-segment extents and unsupported entry formats. Renames and symbol definitions use the same resolved locations. Standard tables keep precedence. Validated on synthetic binaries; no real-game benefit shown yet. |
+| 4 | PlayGo 0.6 | Optional, experimental | Options `playgo_0_6` and `playgo_0_6_log` (mutually exclusive; the log goes to `/app0/playlgo.log`) use the official variants in store sets 4, 4.03, 7, 9.60, 10 and 11. Set 4's default equals official 0.4 and 9.60's equals official 0.5; 4.03/7 match neither. Defaults are unchanged pending console evidence. |
+| 5 | PlayGo config generation | Deferred | Only two metadata files exist (35 chunks, one scenario). The stub already bounds enumeration at 1,000 chunks. Note the config syntax: `9,` means one ID while `9` means a count. Copying scenario count `1` turns scenario-ID-1 requests into errors. |
+| 6 | 13 new AnyPS5 candidates | Not promoted | 12 exist in every firmware since 1.00 and their constant returns rely on host assumptions (offline, no USB, no media player); the VRR one already has a `ret0` fix. Dry runs with the 26- and 39-entry catalogs gave identical reports. |
+| 7 | Deployment guidance in reports | Implemented | The text/JSON report has a deployment section: Full-mode requirements, libkernel excluded even in Full, fakelib2/source preference, package filtering, PPR cleanup, added app0 data and diagnostic log paths. Rules are pinned to ShadowMountPlus 1.7beta5-fix1. |
+| 8 | Crash-log diagnostics | Implemented | `ps5backport crash-log LOG [--report backport_report.json] [--json]` reads full fatal dumps, numbered excerpts and ShadowMount summaries, and prints fatal events, runtime addresses, module mappings and text-relative offsets (half-open, relative to the logged xotext start). Cook-report association is always marked unverified. Limits: 1 MiB per log, 4,096-character lines, 64 events, 128 addresses/event, 256 modules/event, 256 ranges/module; reports up to 8 MiB / 4,096 modules. |
 
-The public runner and cook checks needed execution outside the filesystem sandbox: the initial sandbox attempts failed on the SDK environment check and temporary atomic file moves respectively. Those environment failures are retained separately and are not counted as product verification results. The successful-access cook runs below still failed their golden assertions.
+Every implemented priority was checked by before/after GT7 cooks with identical payload hashes (priority 7 changed only report text and hashes) and a full Debug and Release suite: 506 → 515 → 549 → 576 → 596 → 631 tests. During priority 2 the headless `busy-cancel` test failed once in Release (a timeout, then `writer.lock` still in use at cleanup); later full runs passed. None of these establishes console compatibility.
 
-| Check executed | Debug | Release |
-| --- | --- | --- |
-| Public baseline before the six characterization cases | 338 passed, zero failed/skipped | 338 passed, zero failed/skipped |
-| Public verification after the six cases | 344 passed, zero failed/skipped | 344 passed, zero failed/skipped |
-| Builds through the public verification script | Zero warnings/errors | Zero warnings/errors |
-| Existing `BackportParityTests` | 7 executed: 4 passed, 3 failed, zero skipped | 7 executed: 4 passed, 3 failed, zero skipped |
+<a id="later-changes"></a>
+## Later engine changes (13–14 October 2026)
 
-Public baseline XML is in `work/verification/20261011-125155-96353d1cff96448c8020695a5d11397b/`; post-test XML is in `work/verification/20261011-125317-8039d90c827e439197fa1ca89f64fa1f/`. Cook XML is at the paths in the commands above. These local verification artifacts are ignored working files, not portable fixtures committed to the repository.
-
-**Six added characterization cases** in `AuditTests`, tagged `Phase=AnyPs5Phase1`:
-
-- String-table size 17: the symbol name and its NUL fit exactly. This valid control is accepted.
-- String-table size 1: the symbol offset equals the declared size. The current parser accepts it, proving the missing declared-table boundary check.
-- String-table size 16: the NUL is immediately outside the declared table. The current parser accepts it too.
-- A Markdown function link labelled `sceTarget` selects both `sceTarget` and `sceOther` from the linked synthetic file, proving unwanted broadening.
-- A backtick-labelled `sceTarget` selects only that function. This control establishes existing restricted selection behavior.
-- An explicitly named but missing `sceMissing` selects both functions, proving the empty-intersection fallback broadens scope.
-
-These assertions intentionally record current behavior. Their passing status is evidence of reproduction, **not** evidence that malformed acceptance or candidate broadening is correct. The affected expectations must be replaced by desired-behavior assertions and observed failing before Phases 2 and 3 implement their fixes. Fixtures are synthetic; the tests create temporary candidate files and delete them in `finally`.
-
-**Cook baseline results:**
-
-| Existing configuration/check | Debug and Release result |
-| --- | --- |
-| `notbackport-4` | Fail: first difference is `backport_report.json` SHA-256 |
-| `notbackport-403-all-options` | Fail: first difference is `backport_report.json` SHA-256 |
-| `notbackport-4-no-store` | Fail: first difference is `backport_report.json` SHA-256 |
-| `control-403` | Pass: existing output record matches |
-| `ac-450-options` | Pass: existing output record matches |
-| Progress and cancellation | Pass |
-| Refuse output inside source game | Pass |
-
-The three failing configurations use the retained GT7 original. The equality assertion reports only the first difference. It does **not** prove that the remaining reports or payloads match. The cause of those mismatches has not been established; do not label them harmless, stale goldens, or runtime regressions without comparing the actual records and their provenance. Debug and Release report the same first actual hash for each failing configuration. `git diff` confirms no changes in `src/Ps5Backport.Core`, `data`, or `src/Ps5Backport.Tests/golden` during this phase.
-
-The complete Private/All lane was not established: its preflight requires deleted derived work fixtures, including `work/NOT_BACKPORT_elf`. Running the available parity class does not substitute for that lane. No console gameplay, exhaustive malformed-input proof, long-duration leak profiling or native UI validation was performed.
-
-**Stop decision:** Phase 1 evidence collection is complete, but its cook acceptance gate failed. Do not begin Phase 2 until the three baseline differences are explained and an agreed, reproducible cook baseline is established. Production changes cannot currently be certified as improving cook stability.
-
-### GT7 baseline follow-up — differences explained (2026-10-11)
-
-The follow-up captured all three GT7 configurations independently in Debug and Release, using the same inputs/options and the existing `BackportParityTests.OutputRecord` and `Golden.Portable` comparison functions. Production code, catalogs and the original goldens remain unchanged. The local capture harness is `work/verification/CookBaseline/`; outputs and complete records are retained in `work/verification/cook-baseline-debug/` and `work/verification/cook-baseline-release/`.
-
-**Result:** every payload file in the original golden comparison contract matches its stored SHA-256. Only `backport_report.json` and `backport_report.txt` differ. There are 13 matching payload files per store-backed configuration and seven in the no-store diagnostic output: 33 payload comparisons per build configuration. The complete portable current records match exactly between Debug and Release. The publication manifest and evidence file are excluded by the original comparison contract; this is not a claim that every metadata byte matches.
-
-The entire report discrepancy is explained by these catalog labels:
-
-| NID (the old report label) | Current report label | Affected configurations |
-| --- | --- | --- |
-| `kP2L8t3j-aM` | `sceVideoOutAddVrrStatusFlagsPrivilege` | All three |
-| `LibwuIonIBw` | `sceVideoOutAddVrrActiveStatusEvent` | All three |
-| `-KRzWekV120` | `sceAgcDcbSetIndexSize_0600` | No-store only |
-
-This was verified by reversing only those labels in the captured portable reports, recomputing their hashes, and comparing the complete resulting records to the original goldens. **All six comparisons (three Debug and three Release) are exact matches.** That establishes that these report differences contain no additional changes to counts, patch descriptions, unresolved imports or other report content. It is stronger than a comparison of selected fields. The name-to-NID computation was also checked for all three names and reproduces their catalog NIDs exactly.
-
-Provenance: the original goldens were introduced in `2274ba7a4f7c7ee2a0b89d4bdc06563b5e895cde` on 2026-10-10; its commit message records C#/Python parity at recording time. They have not changed since. `data/aerolib.csv` was first committed in `04e4079b6499fa107bb7ce6571bd9b92a3347711` on 2026-10-11 and contains all three mappings at lines 159045, 159056 and 159057. `NameDb.Name` returns the catalog name when found, otherwise the NID; `Pipeline.PatchModule` uses that lookup for stubbed and unresolved report entries. This accounts for the observed label changes. The earlier untracked catalog itself is not recoverable from that commit, so its complete contents are not claimed to be known.
-
-The current reproducible comparison baseline is pinned by `work/verification/cook-baseline-manifest.json`: repository HEAD, SDK, 100 input-file hashes, original golden hashes and current record hashes. Current complete record SHA-256 values (LF records, no BOM) are:
-
-| Configuration | Current complete portable record SHA-256 |
-| --- | --- |
-| `notbackport-4` | `c6e292a7d0871042910f8e4577c684272a11ff1237330cd6f6897c2dc4716744` |
-| `notbackport-403-all-options` | `639000c995d4bd2a820b677274d01e68597eb4da615790aba64b57a31a413726` |
-| `notbackport-4-no-store` | `640b9e3cc4be53bdfdf5d5c02487d2b3e30f4bdb5e75a1fb48c5fe142b808fc3` |
-
-To repeat with new destination directories (the existing captured outputs are preserved):
-
-```powershell
-dotnet run --project work/verification/CookBaseline/CookBaseline.csproj -c Debug -- E:\PS5_TOOLS\Backport E:\PS5_TOOLS\Backport\work\verification\cook-baseline-debug-repeat
-pwsh -NoProfile -File work/verification/CookBaseline/Compare-Reports.ps1 -Capture work/verification/cook-baseline-debug-repeat
-```
-
-The harness never calls `Golden.Match` or enables recording. The proof script operates on captured report copies, not on the published outputs or stored goldens. These are local ignored verification artifacts and must be retained if the evidence is needed after working-folder cleanup.
-
-**Gate at the end of that investigation:** the three unexplained GT7 mismatches were resolved as report-name baseline differences, with unchanged payloads under the existing golden contract. The original strict parity tests still failed those three cases because their expected report labels were deliberately preserved. The authorized migration below supersedes that test status. No parser/generator production fix or Phase 2 implementation has begun. The no-store configuration still yields incomplete diagnostic output rather than a published cook; the matching baseline does not make it a successful console backport. Missing Private/All fixtures and lack of console runtime evidence remain separate limits.
-
-### Report expectation migration — verified (2026-10-11)
-
-After explicit user authorization, the three GT7 golden records were updated surgically: six report SHA-256 lines and seven function-label lines across `notbackport-4.txt`, `notbackport-403-all-options.txt` and `notbackport-4-no-store.txt`. No golden recording command was used. Every payload filename and hash remains unchanged (13 + 13 + 7 expectations). Production code, rules, catalogs and the existing test comparison logic were left unchanged.
-
-Before editing, all 100 pinned input hashes, all three original golden hashes and both sets of captured records were rechecked. The report-name reversal proof still reconstructed the original goldens exactly. After editing, each complete updated golden matched its previously captured Debug record exactly; the Release captures had already been proven identical. The original expectations remain recoverable from Git and the retained `expected-record.txt` evidence copies. The preceding investigation describes the state before this authorized migration.
-
-| Fresh verification after migration | Debug | Release |
-| --- | --- | --- |
-| Locked restore and solution build via `scripts/verify.ps1 -Lane Public` | Pass; zero warnings/errors | Pass; zero warnings/errors |
-| Public tests | 344 passed; zero failures/skips | 344 passed; zero failures/skips |
-| Existing `BackportParityTests`, recording disabled | 7 passed; zero failures/skips | 7 passed; zero failures/skips |
-
-Public XML: `work/verification/20261011-130618-f18564b7890445d9b40893dcdbc6d9b1/Public-Debug.xml` and `Public-Release.xml`. Cook parity XML: `work/verification/anyps5-report-baseline-debug.xml` and `work/verification/anyps5-report-baseline-release.xml`. `git diff --check` passed. This closes the three report-expectation failures without weakening payload comparisons or suppressing report differences. The available public/cook baseline gate is green; the complete Private/All lane and console runtime remain unverified. Work stopped before Phase 2.
-
-### Phase 2 — dynamic string-table bounds delivered (2026-10-11)
-
-`SceElf` now honors `DT_STRSZ` for symbol names, module names, build paths and import-library names. It validates the complete declared table size against the remaining file bytes before narrowing it to an integer, rejects name offsets at or beyond that size, and searches for NUL only within the remaining declared table. The public file-bounded `CStr` behavior and support for inputs without `DT_STRSZ` are preserved. The symbol loop resolves the table once per `Symbols()` call. This is a correction to reads; no signing, patching, candidate selection, rule, catalog or golden change was made in Phase 2.
-
-**Test before implementation:** replaced the three Phase 1 string acceptance cases with 16 desired-behavior cases, tagged `Phase=AnyPs5Phase2`. Before the production edit, ten malformed cases failed because no `InvalidDataException` was thrown, while six valid controls passed. After the edit, all 16 passed. Cases cover zero-sized tables; name offsets at/beyond the end; NUL immediately outside the table; an oversized range; `ulong.MaxValue`; a NUL at the last valid byte; a table ending exactly at EOF; absent size metadata; and each dynamic-name consumer. The three Phase 1 candidate characterizations remain unchanged for Phase 3.
-
-| Phase 2 verification | Result |
-| --- | --- |
-| Desired-behavior tests before fix | 16 executed: ten failed, six passed; zero skips |
-| Desired-behavior tests after fix | 16 passed; zero failures/skips |
-| Public Debug and Release | 357 passed in each; zero failures/skips |
-| Locked restore and solution builds | Pass; zero warnings/errors |
-| Existing cook parity, Debug and Release | Seven passed in each; zero failures/skips; recording disabled |
-| Retained binary corpus, before/after | Exact same input hashes and parsed-string hashes/rejections for 667 selected files |
-
-The public verification includes the existing generated-parser checks and mutation workers with enforced time, allocation and managed-heap budgets. Those checks are bounded tests, not proof that every possible malformed input terminates or that all resource defects are absent.
-
-The corpus was selected by ELF/PS4 SELF/PS5 SELF magic across the retained `.original/backports` tree, including backup files. A saved pre-fix Core assembly and the fixed Debug assembly ran the identical capture harness. Both accepted 658 files and rejected nine; 152 nonmatching/short files were skipped. Every complete per-file record matches exactly, including parsed symbols, module/build names and import-library names. The nine existing rejections comprise seven invalid-segment backup ELFs, one out-of-file SELF entry and one encrypted/compressed SELF. They were not repaired or ignored in the comparison. Both corpus executions return a nonzero exit status when any rejection exists; acceptance here is the exact before/after comparison, not a claim that the entire corpus is loadable.
-
-Local evidence: `work/verification/anyps5-phase2-before.xml`, `anyps5-phase2-after.xml`, `anyps5-phase2-cook-debug.xml`, `anyps5-phase2-cook-release.xml`, and `anyps5-phase2-corpus-before.json`/`anyps5-phase2-corpus-after.json`. Public XML is under `work/verification/20261011-131032-b2f06e42cd1f4cf098dfa7b78722a09b/`. The ignored corpus harness is `work/verification/StringTableCorpus/`; it checks the file magic before reading a candidate fully and disposes its file streams. Pre-fix Core SHA-256: `ca68dd6c3b784d10fd69df2c944d40bfcc15a7e8d15da74764e3055eb829cc0a`; fixed Debug Core SHA-256: `87d7b741382d8674dd92bdaf284e3be6797b4b42c58ee8354e411494f5f48265`. The assembly copied into the final corpus harness was checked against the fixed assembly.
-
-**Stop decision:** the tested malformed-string reads are now rejected deliberately, and the accepted cook baseline remains unchanged. Phase 2's available verification gates pass. No candidate-generator edit or Phase 3 implementation has begun. Full Private/All verification still needs the deleted work fixtures; native UI, console gameplay and exhaustive leak/concurrency/compatibility claims remain unverified.
-
-### Phase 3 — candidate function scope delivered (2026-10-11)
-
-`DataGenerators.ScanCandidates` now treats an explicit function link label as the selection boundary. A label containing one identifier or a comma-separated identifier list, with optional backticks, selects only those functions from its linked source file. The linked library-directory name is treated as a library label; descriptive labels retain the previous library-wide behavior. For those library/descriptive bullets, existing backtick mentions still restrict selection when they match functions. Explicit function labels take precedence over prose mentions. A named function that is absent from the linked file produces no candidates for that bullet; it no longer falls back to every constant-return function. This is an empty-result contract, not a new exception or console compatibility claim.
-
-The production change is confined to link-label extraction and the existing candidate filter. Constant-return evaluation, NID computation, ordering, duplicate resolution, source handling and live cook rules remain unchanged. `data/candidates.json` remains at 26 entries; no catalog was regenerated. No automatic console stub was added.
-
-**Test before implementation:** replaced the three Phase 1 candidate characterizations with eleven desired-behavior cases (`Phase=AnyPs5Phase3`). Before the edit, four failed: a plain function label broadened selection, plain and backtick unmatched labels broadened selection, and a prose mention overrode the named label. Seven controls passed. All eleven pass after the fix. Cases also cover multiple names, mixed formatting, repeated names and bullets, library-wide selection, matching inline mentions, incidental constants, descriptive labels and ignoring the next documentation section. Assertions check exact selected names, NIDs and constant-return values.
-
-| Phase 3 verification | Debug | Release |
-| --- | --- | --- |
-| Public verification | 365 passed; zero failures/skips | 365 passed; zero failures/skips |
-| Locked restore and solution builds | Pass; zero warnings/errors | Pass; zero warnings/errors |
-| Existing cook parity, recording disabled | Seven passed; zero failures/skips | Seven passed; zero failures/skips |
-| Pinned AnyPS5 candidate capture | 38 entries | Exact same 38 entries |
-
-The pinned AnyPS5 checkout is still `9a1f6f44ac75ac42aea6fa0d60f99fad1cde7bc4`, clean. The pre-fix capture contains 41 entries. The corrected capture contains 38: four removals, one addition, and 37 entries identical in NID, name, value and source. Every changed entry was reviewed against the source and the Silent stubs bullet:
-
-| Difference | Function | NID | Constant value | Evidence |
-| --- | --- | --- | --- | --- |
-| Removed | `sceSystemServiceDisableNoticeScreenSkipFlagAutoSet` | `8Lo6Zv94aho` | 0 | Unrelated constant-return function included by the former web-browser bullet fallback |
-| Removed | `sceSystemServiceGetAppIdOfRunningBigApp` | `NwT2R5lo8P8` | 1 | Same fallback; its host return represents a running application ID |
-| Removed | `sceSystemServiceSetNoticeScreenSkipFlag` | `Q3utJvma4Mo` | 0 | Same fallback |
-| Removed | `sceSystemServiceHideSplashScreen` | `Vo5V8KAwCmk` | 0 | Same fallback |
-| Added to generated capture only | `sceAudioInInit` | `SxQprgjttKE` | 0 | Explicit function label previously lost because prose named different functions |
-
-All five NIDs are present under the matching library in the local 1.00, 3.20 and 4.00 firmware catalogs. None is in the live candidate catalog or default fixes. The reference selection correction therefore does not establish a need for a new cook stub. An emulator's constant-return implementation alone remains insufficient evidence for changing console behavior.
-
-The temporary comparison harness initially resolved the preserved pre-fix DLL before its configured reference path. Its hash check caught that stale assembly; the capture was discarded and repeated with explicit assembly search paths. Final pre-fix and fixed captures each used hash-verified Core assemblies. Repeating the pre-fix capture reproduced its 41 entries exactly; fixed Debug and Release captures matched exactly. This tooling issue required no production workaround.
-
-Local evidence: `work/verification/anyps5-phase3-before.xml`, `anyps5-phase3-after.xml`, `anyps5-phase3-cook-debug.xml`, `anyps5-phase3-cook-release.xml`, `anyps5-phase3-candidates-before.json`, `anyps5-phase3-candidates-before-confirmed.json`, `anyps5-phase3-candidates-after.json`, `anyps5-phase3-candidates-release.json` and `anyps5-phase3-candidate-differences.json`. Public XML is under `work/verification/20261011-131716-3cb3db9e4098446ab316795fdec16224/`. The ignored capture harness is `work/verification/CandidateScope/`. `git diff --check` passed.
-
-**Stop decision:** Phase 3's available verification gates pass. The accepted cook payload/report baseline and live catalog are unchanged. Phase 4 has not started. The full Private/All lane still lacks derived work fixtures; no native UI or console runtime result is claimed. The generator supports the tested documentation conventions and does not claim to be a general Markdown/C++ parser.
-
-### Phase 4 — combined integration checks and private fixture recovery (2026-10-11)
-
-No additional production behavior was changed. Added a pipeline integration regression for a symbol whose terminating NUL lies outside `DT_STRSZ`: the cook raises `InvalidDataException`, preserves the source bytes and previous output, and leaves no publication stage or journal. Correcting only the declared table size then permits a successful, manifest-verified cook to the same destination, preserving the previous result in its backup. This exercises refusal and subsequent recovery through the pipeline; it does not establish a structured per-module report for this preflight exception. The eleven candidate-scope cases now also call `WriteCandidates` and check the serialized entry count, names, NIDs, values and sources, including empty selections.
-
-| Phase 4 verification | Debug | Release |
-| --- | --- | --- |
-| Public verification | 366 passed; zero failures/skips | 366 passed; zero failures/skips |
-| Locked restore and solution builds | Pass; zero warnings/errors | Pass; zero warnings/errors |
-| Existing cook parity, recording disabled | Seven passed; zero failures/skips | Seven passed; zero failures/skips |
-| Full Private/All lane | Blocked before test execution | Blocked before test execution |
-
-The seven retained cook cases preserve the accepted payload/report records. The public lane includes the existing parser bounds/mutation, cancellation, publication fault/recovery and lifecycle/concurrency checks within their tested scope. The initial sandboxed direct build exited unsuccessfully without compiler diagnostics; the same build and final verification succeeded outside the sandbox. No production workaround was introduced.
-
-`scripts/verify.ps1 -Lane All` refuses to start because `work/NOT_BACKPORT_elf` is missing. A create-only restoration harness checked retained source provenance before writing derived fixtures. The original GT7 default AMPR file is empty. Its retained decrypted and USA copies both unwrap to SHA-256 `26367ffde3e746eeaf552cb5f595002f271f91890eb22125070b7a92ace99076`, while the existing unmodified private patch golden requires `c681b42e2d9ad844f8acba524bf835b79b5914c15daa3e6de7e720e4fffc545c`. Searching all 87 matching AMPR files under `.original` and `fakelibs` found no copy with the required unwrapped hash. Restoration stopped before creating any fixture directory. A different library was not substituted, and no golden was changed in this phase. Other deleted private fixture directories also remain absent; restoring AMPR alone would not establish that the full lane passes.
-
-Local evidence: `work/verification/anyps5-phase4-integration-debug.xml`, `anyps5-phase4-cook-debug.xml`, `anyps5-phase4-cook-release.xml`, `anyps5-phase4-ampr-search.json` and `anyps5-phase4-private-preflight.txt`. Final public XML and environment records are under `work/verification/20261011-132940-1192b9de269a478ea7ef21b2dc554d56/`. The ignored restoration harness is `work/verification/RestoreFixtures/`. `git diff --check` passed.
-
-**Initial stop decision:** available integration and cook gates passed, but the full private gate was blocked by missing directories. This setup blocker was subsequently resolved as recorded below. Native UI, console runtime compatibility, long-running memory growth and exhaustive absence of defects remain unverified. No release was performed.
-
-#### Follow-up research and extracted fixtures (2026-10-11)
-
-The expanded local search covered sibling PS5 tools, game folders, downloads, relevant D: folders and accessible recycle-bin records. It inspected 291 candidate binaries: 280 unwrapped successfully, 11 were unsupported/invalid, and none matched the missing historical AMPR hash. Individual AMPR entries were also extracted into ignored verification folders from two local GT7 archives and four download archives. None matched. The older GT7 archive reproduced the retained decrypted AMPR ELF hash exactly; the Lizard archive contained a different build. The [public AMPR release history](https://github.com/drakmor/ampr_emu/releases) provides reimplementation releases, but did not establish provenance or a hash match for the missing historical fixture. No replacement library was installed.
-
-Following the user's clarification, fixture preparation proceeded from the actual retained `.original/backports` modules despite the known historical hash mismatch, so the existing expectations could adjudicate the result. The create-only extraction produced 33 ELF files: nine NOT_BACKPORT fixtures from GT7 `decrypted`, thirteen GT7 fixtures from `4xx+/USA`, and eleven CONTROL fixtures from PPSA34547 `4xx+`. Signed inputs were unwrapped with `Self.Unwrap`; already-ELF inputs were copied as ELF. For every non-AMPR GT7 decrypted module, extracted bytes matched the corresponding default input's extracted bytes. The default AMPR file is empty, so its retained decrypted copy was used with explicit provenance rather than asserting equivalence to that empty file. Rechecking all 33 source hashes after verification found zero source changes.
-
-| Full suite after extraction | Debug | Release |
-| --- | --- | --- |
-| Total executed | 481 | 481 |
-| Passed | 476 | 476 |
-| Failed | Five golden comparisons | Same five golden comparisons |
-| Skipped / runner errors | Zero / zero | Zero / zero |
-| Locked restore and solution build | Pass; zero warnings/errors | Pass; zero warnings/errors |
-
-The failing methods are `PatchTests.AllKnownFixes_OnEveryNotBackportModule_MatchGolden`, `PatchTests.CodeSpaceFallback_WhenPaddingIsUsedUp_MatchesGolden`, `CliParityTests.ReadOnlyCommands_MatchGolden`, `CliParityTests.WritingCommands_MatchGolden`, and `AnalysisTests.ModulesClassifyReferencesAndReports_MatchGolden`. Observed differences include patched ELF hashes, CLI output/order and resolved report names. These assertions stop at their first mismatch; the excerpts do not establish the complete cause of each comparison.
-
-An isolated copy of the Debug test runner then exercised the three affected test classes with the preserved Core assembly from before Phases 2 and 3 (SHA-256 `ca68dd6c3b784d10fd69df2c944d40bfcc15a7e8d15da74764e3055eb829cc0a`). Sixteen tests ran: eleven passed and the same five failed, with identical assertion failure messages. This establishes that those observed failures also occur without the two new production fixes when using the restored inputs and current catalogs. It does not prove that every byte differs solely because of fixture preparation, or justify rewriting goldens.
-
-Full results: `work/verification/20261011-133656-9d968e364501462d9261acdf3939e176/All-Debug.xml` and `work/verification/20261011-133807-92c0f7338fb44cab87624a77dadecd1c/All-Release.xml`. Extraction provenance: `work/verification/anyps5-phase4-restored-fixtures.json`. Control and comparison: `work/verification/fixture-recovery-prechange-control-debug.xml` and `fixture-recovery-failure-comparison.json`. Broader search evidence is in `work/verification/fixture-search-*.json` and archive listings. All recovery files and tools are ignored work artifacts.
-
-**Interim stop decision:** missing fixture directories no longer blocked execution, but five reproduced pre-change golden comparisons failed. This state was investigated and resolved as recorded below. No production fix or golden change was made during that initial recovery attempt.
-
-#### Historical fixture contract verified; full automated gate passed (2026-10-11)
-
-The original AMPR file was available in the retained decrypted inputs. The earlier comparison incorrectly treated the header-preserving C# extraction as equivalent to the historical fixture representation. `ps5bp/vendor/make_fself_batch.py` from commit `a071572` explicitly clears four ELF section-header fields after unpacking: `e_shoff` (eight bytes at `0x28`), `e_shentsize` (two bytes at `0x3A`), `e_shnum` (two bytes at `0x3C`) and `e_shstrndx` (two bytes at `0x3E`). These section headers are not preserved by the signer. Applying this historical preparation step to the derived AMPR ELF reproduces SHA-256 `c681b42e2d9ad844f8acba524bf835b79b5914c15daa3e6de7e720e4fffc545c` exactly. Searching for that hash in header-preserving ELF output was therefore the wrong recovery criterion.
-
-Normalized all 33 newly restored work fixtures using that preparation contract. A byte-difference assertion restricts edits to those fourteen header-field bytes; all other bytes and lengths remain unchanged. Running the actual historical unpacker independently on all nine retained decrypted GT7 modules produced nine exact hash matches to the normalized fixtures, with no rejections. The affected Debug classes then ran sixteen tests: fourteen passed, including both patch tests and the CLI writing test, leaving two report comparisons. No patched ELF hash expectation was changed to resolve those three failures. Production `Self.Unwrap` retains its existing header-preserving behavior.
-
-Captured every record behind the two remaining report tests, including commands/sample roots that the first failing assertion previously prevented from reaching a golden check: ten read-only CLI records and three game-analysis records. Ten records were already identical. The only changed records were `analysis/PPSA01317_4xx+_USA.txt`, `analysis/PPSA01317_default.txt` and `cli/report-eboot-4-provider.txt`. They contain eight occurrences of the same three catalog-resolved names documented in Phase 1. `Imports.Report` sorts each library by status and then resolved name, so resolving `-KRzWekV120` also moves its row. Reversing only those three names and applying that documented sort reproduces all thirteen original records exactly, with matching whole-record hashes. Statuses, counts, GOT addresses, reference/classification hashes and code-reference records are unchanged.
-
-Updated only those three report goldens to the verified current catalog names and resulting order. This is a manual, proven expectation migration; `PS5BP_RECORD=1` was never enabled. This investigation changed no production code or test assertions. The Debug Core SHA-256 remains Phase 3's `e6e57c643e2f9add3f1a2a33d2e7aabd3abd8c1271ba76673c68195f4af7f333`.
-
-| Final full verification | Debug | Release |
-| --- | --- | --- |
-| All lane, recording disabled | 481 passed | 481 passed |
-| Failures / skips / runner errors | Zero / zero / zero | Zero / zero / zero |
-| Locked restore and solution build | Pass; zero warnings/errors | Pass; zero warnings/errors |
-
-Final XML and environment records: `work/verification/20261011-134527-2fcf3fb999e94f33b5967bf37c2b0c0c/`. Fixture preparation and independent historical controls: `fixture-normalization-provenance.json` and `historical-unwrapper-comparison.json`. Complete report captures: `work/verification/fixture-report-capture-debug/`; exact name/order reversal proof: `fixture-report-name-proof.json`. Rechecking all 33 source hashes and all 33 normalized fixture hashes found zero mismatches. The historical control, extraction, normalization and capture tools remain ignored verification artifacts. `git diff --check` passed.
-
-**Final stop decision:** Phase 4's full automated gate passes. The missing fixture blocker and all five observed comparisons have verified explanations and are resolved. Stop here; no new production phase or release was performed. This establishes the exercised automated behavior and accepted cook baseline, not a universal absence of defects. Target-console gameplay, native UI and long-running memory measurements remain separate unverified evidence.
-
-### Phase acceptance criteria
-
-**Phase 2:** inspect every string-table consumer and the declared-size/address contract before changing it. Test the last valid NUL, offset at/end/beyond size, missing NUL, truncated table and sizes that would overflow address arithmetic. Preserve supported inputs with absent optional metadata unless the actual format contract and fixtures justify rejecting them. Use checked bounds before indexing; malformed data must produce a deliberate diagnostic rather than an incidental runtime exception. Re-run the generated parser/mutation checks and available real-input corpus as well as the cook baseline. Do not add unrelated program-header or dynamic-tag rejection rules in this phase. Accept only if the defect test turns green, valid controls remain green and accepted cook payload/report records are unchanged.
-
-**Phase 3:** establish the documentation's distinction between a named function and a library-wide link before choosing extraction behavior. Explicit names that match nothing must not silently select every function; choose and test the caller-visible diagnostic/empty-result contract before coding. Compare pinned-reference candidate output function by function, checking NID, firmware availability and existing fixes; constant return in a host emulator is not evidence that stubbing a console API is safe. Accept only if the two defect expectations turn green, unrelated candidate selections are preserved, public verification passes and the unchanged live catalog preserves cook results.
-
-**Phase 4:** verify the combined change against the accepted baseline without `PS5BP_RECORD=1`. Bounds tests and mutation budgets address parser overflow/termination risks; cancellation/publication fault tests address resource cleanup and integration behavior. Existing lifecycle/concurrency tests apply only to their exercised interleavings and do not prove absence of all races/deadlocks. Builds and nullable checks address compiler/type issues within their scope. Native UI, runtime compatibility and memory growth need separate applicable measurements. If any gate fails, stop, retain the failure evidence and do not release or expand scope. There is no universal zero-defect guarantee.
-
-### Reference improvement priority 1 — dry-run option coverage (2026-10-11)
-
-The four-day reference audit exposed a stale private dry-run expectation: `GuiSupportTests.DryRun_WritesNothing_ButReportsTheSame` expected 21 fixes although the existing save/audio option changes correctly produce 18 by default. A focused pre-change run reproduced that failure. This correction changes the test contract; it does not change application behavior, default options, rule data, or golden expectations.
-
-The replacement theory, `DryRun_WritesNothing_AndReportsOnlySelectedAdapters`, checks both the 18-fix default and the 21-fix run with `save_mount_compat`, `save_prepare_compat`, and `audio_speaker_compat` explicitly selected. It asserts the presence or absence of each adapter's NID, rather than relying on totals alone. Existing output-directory, module-write, unresolved-import, and status assertions remain. Both focused cases pass.
-
-Full verification with recording disabled: `pwsh -NoProfile -File scripts/verify.ps1 -Lane All` passes **506 tests in each Debug/Release configuration**, with zero failures/skips and zero-warning/error builds. This includes 390 public and 116 private cases and the existing cook payload/report comparisons. The previous suite had 505 cases and the one stale dry-run failure; replacing that Fact with two theory cases adds one case. Evidence: `work/verification/reference-priority1/before.xml`, `after.xml`, and `work/verification/20261011-211610-be0d80bf568d48f49a9ee02610574e54/`. Priority 1 improves regression coverage and restores the complete automated baseline. Provider-identity, ELF-format, PlayGo, and other reference improvements remain separate work; this result does not establish console compatibility.
-
-### Reference improvement priority 2 — optional provider audit (2026-10-11)
-
-The CLI report command accepts `--provider-audit` to show bundled export candidates by declared library and NID:
-
-```powershell
-ps5backport report eboot.bin --firmware 4 --provider sce_module/libc.prx --provider fakelib/libScePlayGo.sprx --provider-audit
-```
-
-Supply each relevant module with repeated `--provider` arguments. The audit preserves the same NID under different imported libraries, identifies every candidate's module and export library, excludes the importing module itself, and distinguishes `same-library`, `cross-library`, and `unknown-library` metadata. Cross-library candidates can be aliases/re-exports; missing bundled candidates do not imply absence from firmware. The audit makes no new runtime-resolution claim.
-
-This is an opt-in diagnostic in the CLI, not a new Analyze/Cook GUI mode. The existing report remains the default. Cooking, classification, fixes, stubs, firmware matching and publication do not call the new audit. Strict library matching in automatic patch decisions remains deferred.
-
-Nine new public tests cover provider identity, same-NID imports in different libraries, multiple candidates, self-exclusion, missing metadata, libc labeling and read-only CLI behavior. A separate before/after comparison of GT7 at FW 4 with default and explicitly selected save/audio options found identical normalized dry-run/cook results and identical SHA-256 hashes for all 14 payload files in each configuration. Evidence: `tmp/reference-priority2-parity/before.json` and `after.json` (both SHA-256 `ada86d11a60e13e98724e83b101e806377c04e1f64c51c7904be7ffdf7201fa3`). A real PlayGo/libc audit reports eight cross-library candidates while retaining all eight firmware-reference classifications; example: `tmp/reference-priority2/implemented-example.txt`.
-
-Locked restore and Debug/Release builds passed with zero warnings/errors. The complete Debug suite passed **515 tests**, zero failures/skips. Parallel Release completed with **514 passed, one failed**, zero skips: the existing headless UI `busy-cancel` test exceeded its 30-second timeout. The audit tests and existing cook payload/report comparisons passed in that run. Records: `work/verification/20261011-213832-13421d14d9024be2b8ac47b6b0588aae/All-Debug.xml` and `All-Release.xml`. The first parallel Debug attempt also hit a headless timeout and was interrupted; the subsequent Debug run passed. These results do not establish a clean parallel Release gate or console compatibility. No assertions, test deadlines, rules, catalogs or goldens were changed for this improvement.
-
-A complete serial Release rerun also finished with **514 passed, one failed**, zero skips. The same headless `busy-cancel` check failed during cleanup because `writer.lock` remained in use. Record: `All-Release-Serial.xml` in the same directory. This unresolved UI verification issue was not suppressed or addressed by changes outside the provider-report scope.
-
-### Reference improvement priority 3 — SCE-relative dynamic tables (2026-10-11)
-
-`SceElf` now reads SCE string, symbol, RELA and JMPREL tables using offsets relative to the file-backed `PT_SCE_DYNLIBDATA` segment. These tables can be outside every `PT_LOAD`. Standard tables retain their existing precedence and address handling. Raw dynamic entries and input bytes are not rewritten during parsing.
-
-The SCE path requires one unambiguous data segment and matching table sizes. It rejects offsets or extents outside that segment, truncated entries, unsupported declared entry formats, out-of-range symbol writes, and strings whose terminator lies outside the declared string table. Standard string tables without `DT_STRSZ` retain their existing file-bounded fallback. Import renaming and symbol-definition writes use the same resolved table locations; a read-only parser change would have left cooking incomplete. Existing code extension already stops at the next file-backed segment, including SCE data.
-
-Pre-change regression tests reproduced empty SCE symbol results and missing dynamic strings. The final **34 new public cases** cover equivalent standard/SCE parsing, export identity, both relocation kinds, rename/definition/stub writes, malformed metadata and complete synthetic cooking through fake-SELF signing and publication. Two initial fixture-padding failures were corrected by supplying the existing cave detector's required preceding `ret`; production cave detection was not changed.
-
-Before/after GT7 FW 4 dry runs and published cooks, with default options and explicitly selected save/audio options, have identical normalized results and identical SHA-256 hashes for all **14 payload files per configuration**. Evidence: `tmp/reference-priority3-parity/before.json` and `after.json`, both SHA-256 `ada86d11a60e13e98724e83b101e806377c04e1f64c51c7904be7ffdf7201fa3`.
-
-Locked restore and both solution builds passed with zero warnings/errors. Complete Debug and Release verification passed **549 tests each**, zero failures/skips, including the existing headless UI cases and unchanged cook payload/report goldens. Runs used `-maxThreads 2` to bound test contention; no assertion, timeout or case was relaxed or omitted, and golden recording was disabled. Records: `work/verification/reference-priority3/All-Debug.xml` and `All-Release.xml`. Focused before/after evidence is in `tmp/reference-priority3-parity/`. Rules, catalogs, goldens and private fixtures were not edited for this improvement. Existing user edits were retained.
-
-**Verdict: implemented and worthwhile for format support.** The reproduced parser gap is fixed and checked legacy cooking results are unchanged. New SCE-only cooking is validated with synthetic binaries; console runtime compatibility and a real-game benefit for that format remain unverified.
-
-### Reference priority 4 — optional PlayGo 0.6 (2026-10-11)
-
-Studio's optional patches now offer **PlayGo 0.6 (experimental)** and **PlayGo 0.6 logging (experimental)**; CLI keys are `playgo_0_6` and `playgo_0_6_log`. The GUI allows one at a time, and Core rejects both together. Separately manifested official variants are present in the local `4`, `4.03`, `7`, `9.60`, `10` and `11` store sets. The logging asset is mounted as `libScePlayGo.sprx` and writes `/app0/playlgo.log` (upstream spelling), with its path and experimental status in cook warnings. Configuration is preserved; no `playgo_stub.dat` is generated. Custom library folders need their own variant subfolders; the existing missing-variant warning keeps their library unchanged.
-
-Historical source/tags and official 0.4/0.5/0.6 assets were compared. The default FW 4 file exactly matches official 0.4 without logging, and 9.60 matches official 0.5 without logging. The 4.03/7 binary matches neither official release. All six official binaries retain the same 24 exported NIDs and SDK metadata, and their imported NIDs appear in all 43 available firmware catalogs. This does not establish loader, library-binding, ABI or native lifecycle compatibility, and gives no reason to automatically replace a version by firmware. **All current defaults remain intact.** Native PlayGo was not rebuilt; the official hash-verified assets were used.
-
-All 33 original base-store files remain hash-identical. Before/after GT7 FW 4 cooking with default settings and existing save/audio options produced identical normalized reports and identical hashes for all 13 module/data files per cook. The run-evidence file correctly records the changed optional-patch catalog. Twelve cooks using the actual 0.6 assets across the six target sets kept every unwrapped PlayGo byte unchanged, required no fixes/stubs, and had no unresolved imports. Complete Debug and Release verification each passed **576 tests**, zero failures/skips, with clean builds and no golden edits. Evidence: `work/verification/reference-priority4/All-*.xml`, `tmp/reference-priority4-parity/`, and `tmp/reference-priority4/IMPLEMENTATION.md` (history and firmware recommendation table).
-
-Two additional GT7 FW 4 cooks selected the normal/logging 0.6 variants. Only `fakelib/libScePlayGo.sprx` changed among the 13 module/data files in either cook; all other file hashes and module decisions matched the default. Capture: `tmp/reference-priority4-parity/variants.json`.
-
-**Verdict: worthwhile as an optional diagnostic/compatibility experiment; default promotion deferred.** Console tests must establish an actual title benefit and cover lifecycle, empty lists, enumeration, scenarios/languages and reloads. The current known working library remains the first choice for each supplied backport.
-
-### Reference priority 5 — PlayGo config evaluation (2026-10-12)
-
-**Verdict: defer automatic generation.** Only two game metadata files are available (PPSA23566 and PPSA24003); both declare 35 chunks and explicitly list IDs 0..34 in one scenario. A bounded scratch reader validated the observed header/table profile and rejected 17 malformed/unsupported controls. No real game chunk-definition XML or title log establishes a benefit from generating stricter configuration.
-
-Thirteen probes against a scratch host build of the local PlayGo 0.6 source passed normally and with AddressSanitizer/UndefinedBehaviorSanitizer. The stub's default enumeration is already bounded at 1,000 chunks, unlike the motivating AnyPS5 emulator behavior. A chunk-only `35` config narrows it to 35. Copying scenario count `1` also changes a scenario-ID-1 request from success to an error; singleton explicit IDs require comma syntax (`9,` is one ID, while `9` means a count). These are host contract checks, not console/game compatibility proof.
-
-No application, rule, fakelib, golden or game file was changed; all 33 original base-store files still match the previous baseline. No production config is generated. Further work should first compare a chunk-only config against a reproduced title failure, preserving scenario/language defaults and existing files. Full evidence and implementation criteria: `tmp/reference-priority5/VERDICT.md`. The previous 576-test Debug/Release record belongs to priority 4; the application suite was not rerun for this scratch/documentation-only evaluation.
-
-### Reference priority 6 — candidate catalog review (2026-10-12)
-
-**Verdict: not worth promoting the 13 additions now.** Twelve functions already appear in their expected modules in all 43 supplied firmware catalogs, starting at 1.00. Their AnyPS5 constant returns depend on host assumptions such as offline networking, no USB devices or no system media player. The remaining VRR function is absent on older firmware but already has a maintained `ret0` fix. Twelve additions are deferred pending title-specific evidence; the duplicate VRR addition is rejected.
-
-A read-only scan parsed 258 of 260 modules across 17 original/default game folders and found 19 candidate import sites; two malformed/unsupported inputs remain unassessed. Four GT7 FW 4 dry runs compared the maintained 26-entry catalog with a scratch generated 39-entry catalog, with candidate fixes disabled and enabled. Both pairs produced identical complete reports across 12 modules and reused the existing VRR fix. All maintained data hashes were unchanged. No application, rule/catalog, fakelib, golden or game file was modified, and no fresh full suite or console verification is claimed. Individual decisions, limitations and evidence: `tmp/reference-priority6/VERDICT.md`.
-
-### Reference priority 7 — deployment report guidance (2026-10-12)
-
-**Verdict: worthwhile and implemented in text/JSON reports.** The new deployment section identifies Full-mode requirements, libkernel exclusion even in Full, fakelib2/source preference, narrower package filtering and conditional PPR cleanup. It lists added app0 data and applied diagnostic log destinations, preserving optional PlayGo configuration. The assessed rules are pinned to ShadowMountPlus 1.7beta5-fix1; the console's version, settings and launch format remain unknown. The planned merged-game module inventory includes unchanged source libraries; actual output hashes continue to live in `backport_publication.json`, with source provenance in `backport_run.json`.
-
-Formatting uses only the captured result and reads no additional files. Parsing, patching, selection, signing and publication were not changed. Twenty new public regression cases cover the policy, source inventories, failed modules, missing logging variants and complete synthetic analysis/cooking. Three before/after GT7 configurations (default, selected save/audio, PlayGo logging) have identical existing report decisions and all 14 payload/evidence file hashes per cook. Five existing cook goldens were reproduced before editing; their reviewed updates change only deployment text and report hashes, retaining every payload hash. Locked restore and clean Debug/Release builds passed; both complete suites passed **596 tests**, zero failures/skips, with required private fixtures and golden recording disabled. Records: `work/verification/reference-priority7/All-*.xml`; implementation/evidence: `tmp/reference-priority7/IMPLEMENTATION.md`; actual example: `tmp/reference-priority7-parity/after/playgo-log/backport_report.txt`. The earlier read-only prototype verdict is retained in `tmp/reference-priority7/VERDICT.md`. No console runtime verification is claimed.
-
-### Reference priority 8 — local crash-log diagnostics (2026-10-12)
-
-**Verdict: worthwhile; implemented as a separate read-only CLI command.** Run `ps5backport crash-log LOG [--report backport_report.json] [--json]`. Text output shows fatal events, runtime addresses, unique logged module mappings and text-relative offsets; JSON additionally retains module ranges, opaque fingerprints and candidate cook-report patch context. Both inputs stay unchanged, with SHA256 identities recorded. This command does not invoke cooking or automatically repair a game.
-
-Full fatal dumps, numbered excerpts and ShadowMount summaries are supported. Each event owns its own module map. Zero addresses, missing maps and overlapping ranges stay unattributed or ambiguous. Cook-report association is always unverified; filename matches and opaque fingerprints do not establish loaded-binary identity or crash cause. Offsets are relative to logged xotext starts, using half-open ranges; ELF virtual addresses and file offsets require matching binary/layout evidence. Input limits are 1 MiB per log, 4,096 characters per parsed line, 64 events, 128 addresses per event, 256 modules per event and 256 ranges per module; optional reports are limited to 8 MiB and 4,096 modules. Malformed recognized addresses/ranges produce warnings; excessive input or invalid report structure is rejected. NUL removal and UTF-8 replacements are disclosed and affect only parsing.
-
-The original PPSA38510 log and its excerpt produce the same eleven addresses and eight nonzero text offsets, with 40 modules in the full log. All original log/excerpt/report hashes remain unchanged. The separate FW 8.60 recook report remains unverified context. A before/after GT7 analysis and real cook have identical existing report decisions and all 14 payload/evidence hashes. Locked restore and final Debug/Release builds passed with zero warnings/errors. Both full suites passed **631 tests**, zero failures/skips, with required private fixtures and golden recording disabled; this includes 35 new diagnostic cases. Earlier failures from concurrent UI expectation changes were resolved by separately updated UI tests and retained in historical XML. Production verification and commands: `tmp/reference-priority8/IMPLEMENTATION.md`; parser output: `tmp/reference-priority8/production-result.json`; cooking parity: `tmp/reference-priority8-parity/before.json` and `after.json`. The earlier 27-control research evaluation is retained in `tmp/reference-priority8/VERDICT.md`. No console runtime verification is claimed.
-
-<a id="engineering-milestones"></a>
 ### Full source audit (2026-10-13)
 
 Every C# file in Core, CLI and App was reviewed (parsers of untrusted SELF/ELF/BPS/JSON/log input, patching, the pipeline, publication transactions, view-model threading and command error handling). Only defects that were reproduced by a test failing first were changed:
@@ -3261,6 +2529,10 @@ Every C# file in Core, CLI and App was reviewed (parsers of untrusted SELF/ELF/B
 
 Full suite 686/686, 0 skipped, 0 warnings. Observed but not changed (not proven to occur, or a design decision): the Store page verifies (SHA-256) every set on the UI thread when it opens; Add and Apply BPS also run on the UI thread; `FilePathCase` repeats the "ambiguous file path casing" warning once per occurrence of the string; a symbol named like `NID#x#y` with invalid library characters throws `FormatException` (not a module error); `PyJson.WriteFile` writes `firmware_db` lists non-atomically; the Firmware DB page's Import writes into the folder it reads (the bundled copy when running from `bin`), unlike the CLI's `fwdb import-*`.
 
+### Load-segment size check (2026-10-14)
+
+`SceElf` now rejects a `PT_LOAD` whose file size exceeds its memory size (`InvalidDataException`). The loader maps only `p_memsz` bytes, so `Off()` would otherwise translate addresses past the loaded image to file bytes the console never maps. None of 112,384 `PT_LOAD` segments in 22,481 local modules has that layout (FINDINGS Part 1 §5, 14 October afternoon). Tests: `AuditTests.Elf_RejectsLoadSegmentWithFileSizeLargerThanMemorySize` and `Elf_AcceptsLoadSegmentWithMemorySizeLargerThanFileSize`.
+
 ### Optional patches panel: grouped grid (2026-10-13)
 
 The Overview's optional patches were a fixed-height (196 px) list beside a details panel, which had to be scrolled once there were 13 options. They are now a wrapping grid of area cards. Each option in `data/fixes.json` has a `group`, and the top-level `option_groups` sets the card order: Saves, Audio, PS5 Pro, Libraries, Engine, Diagnostics. Groups that are not declared come after these in option order, and an option without a group goes to "Other". A new option therefore lands in its card with no XAML change, and a new area only needs a `group` value. Clicking a name shows its description and warning in the details strip below the grid; the boot-notice message box appears only while `boot_notice` is enabled. The search box filters across all cards. The test is `OptionalPatchTests.PatchGroups_ShowEveryOptionOnce_InDataOrder_AndFilter`. The snapshot mode gained `--expand` (opens every expander) and `--height PX` for reviewing panels below the fold. Full suite 687/687.
@@ -3269,10 +2541,31 @@ The Overview's optional patches were a fixed-height (196 px) list beside a detai
 
 `audio_bed_71` (Audio 7.1 bed (engine), group Audio) is the stateless alternative to `audio_port_compat`: instead of folding the engine's 7.1.4 beds to 8 channels every grain, it makes Scream/NCA render 7.1 natively, the approach already used for Wwise and Frostbite. Two code patterns (`snd_SynthInit`'s permitted output modes `0x3fff → 0x3fef`; the start-up probe's port format `0xC00 → 0x800`, both unique in Ghost of Yōtei's eboot) plus one post-call adapter on `sceAudioOut2PortGetState` (`num_channels` capped at 8 below FW 11, so a console reporting 12 channels does not push the engine into 7.1.4 mode). No caves beyond the 31-byte cap, no runtime state, no page-tail requirement. `Knowledge.FixTable` refuses the two audio bed options together. Tests: `OptionalAudioTests.Cook_AppliesSevenOneBedOnlyWithOption` (3 cases), `SevenOneBed_PatternsMatchYoteiOnce` (private eboot), `FixTable_RejectsBothAudioBedOptions`. Static basis and the tester comparison plan: FINDINGS §6j.
 
+### Requirements probe (2026-10-14)
+
+Analyze and Cook now give every optional patch a verdict from the game's own modules before anything is patched: `needed` (static evidence: the Unity unset-SKU layout is recognised, or `scePadSetVibrationMode` is called with a constant mode above 3), `applicable` (the game imports the option's functions or its byte patterns match; necessity is a console question), `not-applicable` (nothing to change) or `console-choice` (auto/force Pro, PlayGo, psml_kpn9, boot notice). The rule per option is data: `data/fixes.json` option `probe` (`{"kind": "console"}`, `{"kind": "detector", "recognized": "needed|applicable"}`, `{"kind": "argument", "nid", "argument", "above"}`; absent = by imports and patterns), validated by `Knowledge`. Results: `GameResult.Recommendations`, report lines `probe <verdict> <key> <evidence>`, JSON `recommendations`; `Pipeline.Probe(source, knowledge)` runs the probe alone. Engine pieces: `UnitySkuFallback.Recognize`/`UbisoftOfflinePopups.Recognize` (no bytes changed), `Imports.ArgumentConstants` (constant in an argument register before each call site; byte-pattern evidence), `FixApplier.CountPattern`/`CountMatches`. Tests: `ProbeTests` (4), recognise tests in both detector classes; the five cook goldens gained 15 `probe` lines each. **GUI (same day, after the mock-up review in `work/mockups/requirements-probe.html`):** Analyze runs `Pipeline.Probe` first, then the analysis, so a pre-ticked `needed` option is part of the result and the receipt is not stale (the pre-tick is excluded from stale marking; a setting changed by the user during the run still marks it stale). Each option row shows a verdict chip (needed = ok tone, applicable = warning tone, not applicable and console choice = muted; not-applicable rows at 55 % opacity but still selectable), the details strip gets a "Probe" line with the chip and the evidence, the expander header appends `probe: n needed, …`, and the log records the summary and every pre-selection. Cancel and closing the window stop the probe as well as the operation, and progress reports keep the caller's synchronization context captured before the probe's first await (lifecycle tests unchanged). Verdicts and ticks are cleared when another game is opened. Only `needed` is ever pre-ticked; nothing is ever unticked. Tests: `OptionalPatchTests.Analyze_PreselectsNeededOptions_FromTheProbe` (synthetic game, pad mode 4) and the extended `EnabledOption_ReachesTheRun_AndResetsForTheNextGame` (AC: verdicts set, nothing pre-selected, cleared on reload). Classification and limits: FINDINGS §6n.
+
+### Rule-data safety nets: unknown keys and comment round trip (2026-10-14)
+
+Two checks on the hand-written rule data. **Unknown keys are now errors.** `Knowledge` validates every record of the seven `data/*.json` files against an allow-list (root keys per file; fix, option, pattern, stub, candidate, introduced, build and evidence records) and reports `<file>.json: unknown key 'belo' at $.fixes.<NID> (allowed: …)`. Before, a misspelt `below` made a rule unconditional, a misspelt `proven` marked it proven and a misspelt `contiguous` let a branching adapter be split across caves (the Phase 8 schema finding). Keys starting with `_` are comments and allowed everywhere. Tests: `PreflightTests.UnknownKey_FailsAtLoadWithPathAndAllowedKeys` (11 record kinds) and `CommentKeys_StartingWithUnderscore_AreAllowedEverywhere`. **Comment round trip.** `verification/DecoderEvaluation` (`scripts/evaluate-decoder.ps1`) now decodes every adapter instruction and stub body with Iced and compares mnemonic and operands with the `; asm` comment structurally (registers, memory operands, immediates under 8/16/32/64-bit masks, branch targets relative to the block start, `{state+N}` placeholders; size words, `ptr`, notes after two spaces or " (" and label operands are not compared). The first run passed with no comment corrections needed: 291 instructions, the 260 adapter instruction blocks (263 entries minus the three `call_got` tokens) and the 31 instructions of the 9 stub bodies; the only adjustment was to the checker itself, for the implicit operands of `rep stosb`. It stays in the explicit evaluation tool because Core and Tests take no external packages; run it after editing `insns` or `stubs.json`.
+
+### Pad vibration mode compatibility option (2026-10-14)
+
+`pad_vibration_compat` (Pad vibration mode compatibility, new group **Input**) is an opt-in adapter on `scePadSetVibrationMode` that clamps a mode above 3 to 3 for targets below FW 8.00. libScePad validates the mode against the process's compiled SDK (1–3 from SDK 3.00, 1–5 from SDK 8.00, and only the FW 8.00+ libraries know 4 and 5), so a 4.00 cook of a game using mode 4 or 5 gets `0x80920001` on every console; UFC 6 passes a constant 4 and discards the result. Not console-tested and not a default: FINDINGS §6m has the library readings, the 14-game call-site survey and the reasoning. Test: `OptionalInputTests` (4 cases).
+
+### Report portability: native-from firmware and missing-later imports (2026-10-14)
+
+A cook targets the lowest firmware but runs on every newer console, so the report now says what changes there. Each `stubbed` line (a GOT pre-fill) ends with `GOT pre-fill, native from FW X / <source>` when a later `firmware_db` list or an `introduced.json` fact exports the function: from that console firmware on, the loader binds the native function over the stub (FINDINGS §6b, §6c). `StubbedEntry.Introduced` carries it, the JSON report has `stubbed_now[].introduced`, and the GUI import inspector shows it under "Introduced" for stubbed rows. Separately, every import that the target list exports (`reference` or `patched`) is checked against every later list: a NID a later firmware no longer exports (13.60 dropped 2,049, FINDINGS §6g) is reported as `missing-later NID name [library] exported on FW T, not on FW X, Y`, with a top-level NOTE, `ModuleResult.LaterMissing`, JSON `modules[].later_missing[]` and a GUI warning per module. Unresolved imports keep their existing `introduced:` hint. No sample produces a missing-later line. Tests: `PortabilityReportTests` (4 cases: native-from present/absent, missing-later present/absent, text and JSON). Goldens: the five cook goldens gained the native-from suffix on their stubbed lines (and new report hashes); `patch/all-known-fixes` is unchanged by this.
+
+### Save mount compatibility is a default rule (2026-10-14)
+
+`ZP4e7rlzOUk` (`sceSaveDataMount3` `systemBlocks` −1 → 0) moved from the opt-in option `save_mount_compat` to the default fixes in `data/fixes.json`, unchanged otherwise (`when: always`, `below: 5.00`). It is `proven` (user decision): the PPSA32935 FW 4 cook with this adapter saves and reloads on FW 13.60 (FINDINGS §1.1). Reason (FINDINGS §6d, §6g, Part 1 §8): libSceSaveData.native chooses the create-mount validator by the process's compiled SDK, and SDK < 5.00 requires `systemBlocks = 0` on every firmware 1.00–13.60, so a cook stamped below 5.00 needs the rewrite on every console. Targets ≥ 5.00 keep the game's −1 (`below` is exact). The option key no longer exists: `--option save_mount_compat` is an unknown-option error, and the Saves card keeps only Save preparation compatibility. Known side effect (FINDINGS §6d): with `systemBlocks = 0`, native `sceSaveDataCancel` fails on 6.00+ consoles; the `ret0` stub covers only consoles below 6.00. Tests: `OptionalSaveDataTests.Mount3Adapter_IsDefaultBelowFirmware5` (4, 4.51 apply; 5.02 does not), `Gui_PrepareToggleStartsDisabled_AndMountIsNoLongerAnOption`; `GuiSupportTests.DryRun_…` default count 18 → 19; `DerivedFixes_AreFlagged` does not list it and `KnowledgeTests` asserts `Proven`. Six goldens were re-recorded (`patch/all-known-fixes`, `backport/notbackport-4`, `notbackport-4-no-store`, `notbackport-403-all-options`, `control-403`, `ac-450-options`); the reviewed diff is one new `fixed ZP4e7rlzOUk … via cave … proven` line per eboot, `patched` +1 / `reference` −1, shifted stub cave addresses, and the eboot/report hashes. libc, fakelibs and param.json hashes are unchanged.
+
 ### Hide PSN error dialogs option (2026-10-14)
 
 `np_error_dialogs` (Hide PSN error dialogs, group **Online**, a new optional-patches card) answers the system error dialog for online errors at the import boundary instead of changing any game logic. Ghost of Yotei's "Something went wrong. NP-104602-3" at first boot is the game's own `sceErrorDialogOpen` call with `0x8055A011`, the code ShellCore hands every pending NpManager request when a PSN sign-in fails; the game queues every failed NP result for that dialog, so any console that cannot reach PSN shows it (FINDINGS §6a). Four adapters share a one-byte state block (`np_error_dialog`, 16 bytes in the last data page): `sceErrorDialogOpen` returns `SCE_OK` without opening when the error code's facility is NP (`0x8055xxxx`) or libSceNet (`0x8041xxxx`) and sets the mark, otherwise clears it and runs the real function; `sceErrorDialogUpdateStatus` and `sceErrorDialogGetStatus` report `FINISHED` (3) once and clear the mark, otherwise run the real function; `sceErrorDialogClose` clears the mark. No firmware gate (`when: always`, no `below`), opt-in, not console-tested. A game's own message box and a game that blocks until PSN answers are out of scope. Tests: `OptionalOnlineTests` (adapters only with the option, on FW 4 and 11; placement, state displacement and tail jump; every short branch lands on an instruction boundary).
 
+<a id="engineering-milestones"></a>
 ## Engineering milestones
 
 The completed engineering work supersedes the earlier research proposals. These are historical acceptance records, not tests newly executed for this consolidation.

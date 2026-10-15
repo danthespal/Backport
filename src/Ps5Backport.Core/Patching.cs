@@ -422,6 +422,38 @@ public static class FixApplier
         return count;
     }
 
+    /// <summary>Matches of <see cref="FixPattern.Find"/> in data[start..end) at offsets that are a multiple of
+    /// <paramref name="step"/> from <paramref name="start"/>, without writing (the probe's count).</summary>
+    public static int CountMatches(byte[] data, FixPattern pattern, CancellationToken cancel, long start = 0, long end = -1, int step = 1)
+    {
+        cancel.ThrowIfCancellationRequested();
+        end = end < 0 ? data.Length : end;
+        if (pattern.Find.Length == 0)
+            throw new ArgumentException("patterns must find a nonempty sequence");
+        if (start < 0 || end < start || end > data.Length || step <= 0)
+            throw new ArgumentOutOfRangeException(nameof(start), "invalid pattern range or step");
+        int count = 0;
+        long i = start, checkpoint = start;
+        while (i <= end - pattern.Find.Length)
+        {
+            if (i >= checkpoint) { cancel.ThrowIfCancellationRequested(); checkpoint = i + 65536; }
+            long candidates = Math.Min(1024 * 1024, end - pattern.Find.Length - i + 1);
+            int at = data.AsSpan((int)i, checked((int)(candidates + pattern.Find.Length - 1))).IndexOf(pattern.Find);
+            if (at < 0) { i += candidates; continue; }
+            i += at;
+            if ((i - start) % step == 0) count++;
+            i++;
+        }
+        return count;
+    }
+
+    /// <summary>What <see cref="ApplyPattern(SceElf, FixPattern, CancellationToken)"/> would replace, counted without writing.</summary>
+    public static int CountPattern(SceElf elf, FixPattern pattern, CancellationToken cancel) => pattern.Code
+        ? elf.Phdrs.Where(p => p.Type == SceElf.PtLoad && p.Filesz > 0 && (p.Flags & SceElf.PfX) != 0)
+                   .Sum(p => CountMatches(elf.Data, pattern, cancel, p.Offset, p.Offset + p.Filesz))
+        : elf.Phdrs.Where(p => p.Type == SceElf.PtLoad && p.Filesz > 0 && (p.Flags & SceElf.PfX) == 0)
+                   .Sum(p => CountMatches(elf.Data, pattern, cancel, p.Offset, p.Offset + p.Filesz, 4));
+
     /// <summary>Pattern in a module: only 4-aligned hits inside non-executable loaded segments (shader binaries
     /// live in data; code is left alone).</summary>
     public static int ApplyPattern(SceElf elf, FixPattern pattern) => ApplyPattern(elf, pattern, default);

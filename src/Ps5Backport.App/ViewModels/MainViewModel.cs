@@ -75,7 +75,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
                       OnPropertyChanged(nameof(PatchOptionsSummary));
                       if (option.Key == BootNoticeOption)
                           OnPropertyChanged(nameof(IsBootNoticeEnabled));
-                      MarkAnalysisStale();
+                      if (!_applyingProbe) MarkAnalysisStale();
                   }
               };
           SelectedPatchOption = PatchOptions.FirstOrDefault();
@@ -251,7 +251,14 @@ public partial class MainViewModel : ObservableObject, IDisposable
     public partial string OutputFolder { get; set; } = "";
     /// <summary>Optional patches (opt-in fix groups); reset when another game is opened.</summary>
     public ObservableCollection<OptionRow> PatchOptions { get; } = [];
-      public string PatchOptionsSummary => $"Optional patches · {PatchOptions.Count} available · {PatchOptions.Count(o => o.IsEnabled)} enabled";
+      public string PatchOptionsSummary => $"Optional patches · {PatchOptions.Count} available · {PatchOptions.Count(o => o.IsEnabled)} enabled"
+          + (PatchOptions.Any(o => o.HasVerdict) ? $" · probe: {ProbeSummary}" : "");
+      /// <summary>"1 needed, 3 applicable, 5 console choices, 6 not applicable" for the current verdicts.</summary>
+      public string ProbeSummary => string.Join(", ", new[]
+      {
+          (PatchOptions.Count(o => o.IsNeeded), "needed"), (PatchOptions.Count(o => o.IsApplicable), "applicable"),
+          (PatchOptions.Count(o => o.IsConsoleChoice), "console choice(s)"), (PatchOptions.Count(o => o.IsNotApplicable), "not applicable"),
+      }.Select(c => $"{c.Item1} {c.Item2}"));
       [ObservableProperty] public partial OptionRow? SelectedPatchOption { get; set; }
       [ObservableProperty]
       [NotifyPropertyChangedFor(nameof(VisiblePatchOptions), nameof(VisiblePatchGroups))]
@@ -393,7 +400,12 @@ public partial class MainViewModel : ObservableObject, IDisposable
             catch (Exception e) { Log.Warning($"Could not load the background image: {e.Message}"); }
             OutputFolder = DefaultOutput(info);
             foreach (var option in PatchOptions)
+            {
                 option.IsEnabled = false;
+                option.Verdict = "";
+                option.Evidence = "";
+            }
+            OnPropertyChanged(nameof(PatchOptionsSummary));
               PatchSearch = "";
             AmprDebugLogging = false;
             AmprIndexText = "Build after creating the backport if the release needs an AMPR index.";
@@ -418,9 +430,13 @@ public partial class MainViewModel : ObservableObject, IDisposable
     [RelayCommand(CanExecute = nameof(CanRun))]
     Task Cook() => Run(dryRun: false);
 
+    /// <summary>Cancels the requirements probe that runs before the analysis operation exists.</summary>
+    CancellationTokenSource? _probeCancel;
+
     [RelayCommand]
     void Cancel()
     {
+        _probeCancel?.Cancel();
         _operation?.Cancel();
         _cancel?.Cancel();
     }
@@ -533,6 +549,30 @@ public partial class MainViewModel : ObservableObject, IDisposable
         try
         {
             Log.Info($"{verb} {game.TitleName} for FW {Firmware.Name(SelectedFirmware)}{(dryRun ? " (dry run, nothing is written)" : $" -> {OutputFolder}")}");
+            // progress reports are posted to the caller's synchronization context: capture it before the first await
+            BackportOperation? started = null;
+            var progress = new Progress<BackportProgress>(p =>
+            {
+                if (_closing || started is null || !ReferenceEquals(_operation, started) || started.State != OperationState.Running
+                    || OperationState != OperationState.Running) return;
+                Progress = p.Count == 0 ? 0 : Math.Min(99, 100.0 * p.Index / p.Count);
+                if (p.Module.Length > 0) StatusText = $"{verb}: {p.Stage} {p.Module}";
+            });
+            if (dryRun)
+            {
+                // the requirements probe runs first, so a pre-ticked "needed" option is part of the analysis that follows
+                // (the pre-tick itself does not count as a settings change made during the run); Cancel stops it too
+                StatusText = "Probing optional patches…";
+                var knowledgeForProbe = Knowledge;
+                using var probeCancel = new CancellationTokenSource();
+                _probeCancel = probeCancel;
+                List<OptionRecommendation> recommendations;
+                try { recommendations = await Task.Run(() => Pipeline.Probe(game.Root, knowledgeForProbe, probeCancel.Token)); }
+                finally { _probeCancel = null; }
+                probeCancel.Token.ThrowIfCancellationRequested();
+                if (_closing) throw new OperationCanceledException();
+                ApplyProbe(recommendations, preselectNeeded: true);
+            }
             var options = new BackportOptions
             {
                 Firmware = SelectedFirmware,
@@ -550,14 +590,8 @@ public partial class MainViewModel : ObservableObject, IDisposable
             using var operation = new BackportOperation(game.Root, output, options, knowledge, dryRun ? null : _analysis, _diagnostics);
             Log.RunId = operation.RunId;
             _operation = operation;
+            started = operation;
             if (dryRun) _analysis = null;
-            var progress = new Progress<BackportProgress>(p =>
-            {
-                if (_closing || !ReferenceEquals(_operation, operation) || operation.State != OperationState.Running
-                    || OperationState != OperationState.Running) return;
-                Progress = p.Count == 0 ? 0 : Math.Min(99, 100.0 * p.Index / p.Count);
-                if (p.Module.Length > 0) StatusText = $"{verb}: {p.Stage} {p.Module}";
-            });
             var result = await operation.ExecuteAsync(progress);
             OperationState = result.State;
             Progress = result.State == OperationState.Completed ? 100 : 0;
@@ -602,11 +636,45 @@ public partial class MainViewModel : ObservableObject, IDisposable
         }
     }
 
+    /// <summary>Shows the probe's verdicts on the option rows; with <paramref name="preselectNeeded"/> ticks the "needed" ones
+    /// (never unticks anything) and logs what it did.</summary>
+    bool _applyingProbe;
+
+    void ApplyProbe(IReadOnlyList<OptionRecommendation> recommendations, bool preselectNeeded)
+    {
+        var byKey = recommendations.ToDictionary(p => p.Key, StringComparer.Ordinal);
+        var preselected = new List<OptionRow>();
+        _applyingProbe = true;
+        try
+        {
+            foreach (var option in PatchOptions)
+            {
+                if (!byKey.TryGetValue(option.Key, out var verdict)) continue;
+                option.Verdict = Pipeline.Verdict(verdict.Verdict);
+                option.Evidence = verdict.Evidence;
+                if (preselectNeeded && verdict.Verdict == OptionVerdict.Needed && !option.IsEnabled)
+                {
+                    option.IsEnabled = true;
+                    preselected.Add(option);
+                }
+            }
+        }
+        finally { _applyingProbe = false; }
+        OnPropertyChanged(nameof(PatchOptionsSummary));
+        if (preselectNeeded)
+        {
+            Log.Info($"Probe: {ProbeSummary} (static evidence from the game's modules, not console compatibility)");
+            foreach (var option in preselected)
+                Log.Info($"Probe: pre-selected {option.Name} — {option.Evidence}");
+        }
+    }
+
     void Show(GameResult r, Knowledge k)
     {
         ClearResults();
         Result = r;
         ReferenceText = r.Reference;
+        ApplyProbe(r.Recommendations, preselectNeeded: false);
         var fixes = k.FixTable(r.Options);
         foreach (string w in r.ParamWarnings)
         {
@@ -620,17 +688,25 @@ public partial class MainViewModel : ObservableObject, IDisposable
                 Log.Error(m.Error, m.Path);
             if (m.TextExtended != 0)
                 Log.Warning($"code segment extended by 0x{m.TextExtended:x} bytes (not console-tested)", m.Path);
+            if (m.LaterMissing.Count > 0)
+                Log.Warning($"{m.LaterMissing.Count} import(s) resolve on FW {r.TargetFirmware} but are not exported by a later firmware: " +
+                            string.Join(", ", m.LaterMissing.Select(l => $"{l.Name} (not on FW {l.MissingOn})")), m.Path);
             var unresolved = m.Unknown.ToDictionary(u => u.Nid);
             var applied = m.Fixed.ToDictionary(f => f.Nid, f => f.How);
+            var nativeFrom = new Dictionary<string, string>(StringComparer.Ordinal);
             foreach (var s in m.StubbedNow)
+            {
                 applied.TryAdd(s.Nid, $"{s.Stub} @ {s.At} ({s.Origin})");
+                if (s.Introduced.Length > 0)
+                    nativeFrom.TryAdd(s.Nid, s.Introduced);
+            }
             foreach (var s in m.Statuses)
             {
                 unresolved.TryGetValue(s.Nid, out var u);
                 _allImports.Add(new ImportRow
                 {
                     Module = m.Path, Nid = s.Nid, Name = Names.Name(s.Nid), Library = s.Library, Status = s.Status, Plt = s.Plt,
-                    Refs = u?.CodeRefs, Candidate = u?.Candidate ?? "", LeftByCount = k.LeftUnpatched.GetValueOrDefault(s.Nid)?.Count ?? 0, Introduced = u?.Introduced ?? "",
+                    Refs = u?.CodeRefs, Candidate = u?.Candidate ?? "", LeftByCount = k.LeftUnpatched.GetValueOrDefault(s.Nid)?.Count ?? 0, Introduced = u?.Introduced ?? nativeFrom.GetValueOrDefault(s.Nid, ""),
                     Applied = applied.GetValueOrDefault(s.Nid, ""), Fix = fixes.GetValueOrDefault(s.Nid),
                 });
             }

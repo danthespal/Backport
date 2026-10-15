@@ -209,7 +209,7 @@
               <Expander Header="{Binding PatchOptionsSummary}" IsVisible="{Binding HasGame}"
                         HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch">
                 <StackPanel Spacing="8">
-                  <TextBlock Classes="caption" Text="Off by default and not remembered. Review the warnings, choose patches per game, then analyze or create the backport again." TextWrapping="Wrap" />
+                  <TextBlock Classes="caption" Text="Off by default and not remembered. Analyze probes the game's modules first: a patch the game needs is pre-selected (needed), the others are marked applicable, not applicable or a console choice. Review the warnings, then analyze or create the backport again." TextWrapping="Wrap" />
                   <TextBox Text="{Binding PatchSearch}" PlaceholderText="Search optional patches" MaxWidth="320" HorizontalAlignment="Left" />
                   <!-- one card per area (data/fixes.json option "group"); cards wrap as areas are added -->
                   <ItemsControl ItemsSource="{Binding VisiblePatchGroups}">
@@ -226,7 +226,7 @@
                             <ItemsControl ItemsSource="{Binding Options}">
                               <ItemsControl.ItemTemplate>
                                 <DataTemplate x:DataType="vm:OptionRow">
-                                  <Grid ColumnDefinitions="*,Auto" ColumnSpacing="6" MinHeight="30">
+                                  <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="6" MinHeight="30" Opacity="{Binding RowOpacity}">
                                     <Button Classes="patchName" Classes.selected="{Binding IsSelected}" Command="{Binding SelectCommand}"
                                             AutomationProperties.Name="{Binding Name}">
                                       <TextBlock Text="{Binding Name}" TextWrapping="Wrap" />
@@ -234,10 +234,17 @@
                                         <StackPanel Spacing="6" MaxWidth="420">
                                           <TextBlock Text="{Binding Description}" TextWrapping="Wrap" />
                                           <TextBlock Text="{Binding Warning}" TextWrapping="Wrap" Foreground="{DynamicResource StatusWarn}" />
+                                          <TextBlock Text="{Binding Evidence}" TextWrapping="Wrap" IsVisible="{Binding HasVerdict}" />
                                         </StackPanel>
                                       </ToolTip.Tip>
                                     </Button>
-                                    <ToggleSwitch Grid.Column="1" IsChecked="{Binding IsEnabled}" OnContent="" OffContent=""
+                                    <!-- the requirements probe's verdict for this game (empty before Analyze) -->
+                                    <Border Grid.Column="1" Classes="status" Classes.ok="{Binding IsNeeded}" Classes.warning="{Binding IsApplicable}"
+                                            IsVisible="{Binding HasVerdict}" VerticalAlignment="Center" ToolTip.Tip="{Binding Evidence}"
+                                            AutomationProperties.Name="{Binding VerdictLabel}">
+                                      <TextBlock Text="{Binding VerdictLabel}" />
+                                    </Border>
+                                    <ToggleSwitch Grid.Column="2" IsChecked="{Binding IsEnabled}" OnContent="" OffContent=""
                                                   MinHeight="0" Height="30" VerticalAlignment="Center"
                                                   AutomationProperties.Name="{Binding Name}" ToolTip.Tip="{Binding Warning}" />
                                   </Grid>
@@ -252,6 +259,14 @@
                   <Border Classes="card" Padding="12,8">
                     <StackPanel Spacing="4">
                       <TextBlock Text="{Binding SelectedPatchOption.Name, FallbackValue='Select a patch to see details'}" FontWeight="SemiBold" TextWrapping="Wrap" />
+                      <StackPanel Orientation="Horizontal" Spacing="8" IsVisible="{Binding SelectedPatchOption.HasVerdict, FallbackValue=False}">
+                        <TextBlock Classes="caption" Text="Probe" VerticalAlignment="Center" />
+                        <Border Classes="status" Classes.ok="{Binding SelectedPatchOption.IsNeeded, FallbackValue=False}"
+                                Classes.warning="{Binding SelectedPatchOption.IsApplicable, FallbackValue=False}" VerticalAlignment="Center">
+                          <TextBlock Text="{Binding SelectedPatchOption.VerdictLabel, FallbackValue=''}" />
+                        </Border>
+                        <TextBlock Text="{Binding SelectedPatchOption.Evidence, FallbackValue=''}" TextWrapping="Wrap" VerticalAlignment="Center" MaxWidth="900" />
+                      </StackPanel>
                       <TextBlock Classes="muted" Text="{Binding SelectedPatchOption.Description, FallbackValue=''}" TextWrapping="Wrap" />
                       <TextBlock Text="{Binding SelectedPatchOption.Warning, FallbackValue=''}" TextWrapping="Wrap" Foreground="{DynamicResource StatusWarn}" />
                     </StackPanel>

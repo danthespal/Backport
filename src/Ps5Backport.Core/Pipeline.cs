@@ -44,6 +44,16 @@ public sealed class StubbedEntry
 {
     public required string Nid, Name, Stub, Got, At, Origin;
     public bool KnownFix;
+    /// <summary>First later firmware that exports the function ("6.00 / firmware_db 6.00"). A stub is a GOT pre-fill: on a console
+    /// from that firmware on, the loader binds the native function over it. Empty when no later list or known fact exports it.</summary>
+    public string Introduced = "";
+}
+
+/// <summary>An import that the target firmware exports but a later firmware list does not: the same cook fails on that console
+/// if the function is called (the loader binds unresolved imports to a trap).</summary>
+public sealed class LaterMissingEntry
+{
+    public required string Nid, Name, Library, MissingOn;
 }
 
 public sealed class UnresolvedEntry
@@ -84,6 +94,8 @@ public sealed class ModuleResult(string path, string container, bool added)
     public List<KeyValuePair<string, int>> Counts { get; } = [];
     public List<UnresolvedEntry> Unknown { get; } = [];
     public List<StubbedEntry> StubbedNow { get; } = [];
+    /// <summary>Imports that resolve on the target but are missing from a later firmware list (firmware_db above the target).</summary>
+    public List<LaterMissingEntry> LaterMissing { get; } = [];
     public List<FixedEntry> Fixed { get; } = [];
     public List<PatternEntry> Patterns { get; } = [];
     public long TextExtended { get; set; }
@@ -121,6 +133,8 @@ public sealed class GameResult(string source, string output, string targetFirmwa
     public List<Psvr2Entry> Psvr2 { get; } = [];
     /// <summary>Selected opt-in fix groups.</summary>
     public List<string> Options { get; } = [];
+    /// <summary>The requirements probe: one verdict per optional patch from the game's own modules (<see cref="Pipeline.Probe"/>).</summary>
+    public List<OptionRecommendation> Recommendations { get; } = [];
     public List<DataFileEntry> DataFiles { get; } = [];
     /// <summary>Data files added from the fakelib set's app0/ (e.g. k9.psp for an app0-patched libScePsml).</summary>
     public List<string> App0Files { get; } = [];
@@ -244,6 +258,8 @@ public static partial class Pipeline
             .Select(l => (l.Mod.Path, Evidence: DynamicPsmlEvidence(l.Elf))).Where(l => l.Evidence is not null).ToList();
         foreach (var (path, evidenceText) in dynamicPsml)
             result.ParamWarnings.Add($"possible dynamic Psml dependency in {path}: {evidenceText}; including the selected Psml library's app0 data when available (static evidence does not prove runtime use)");
+        // the requirements probe reads the game's own modules before anything is patched
+        result.Recommendations.AddRange(ProbeModules(loaded.Where(l => !l.Mod.Added).Select(l => (l.Mod.Path, l.Elf)).ToList(), src, knowledge, cancel));
         var sourceFiles = evidence.CaptureInventory(src);
         var pathCase = FilePathCase.Resolve(sourceFiles.Select(f => Path.GetRelativePath(src, f).Replace('\\', '/')),
             loaded.Where(m => !m.Mod.Added).Select(m => m.Elf.Data), result.ParamWarnings, cancel);

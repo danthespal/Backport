@@ -22,6 +22,8 @@ public static partial class Pipeline
         };
         if (r.Options.Count > 0)
             lines.Add("  options: " + string.Join(", ", r.Options.Select(key => knowledge.Options.TryGetValue(key, out var option) ? $"{key} ({option.Name})" : key)));
+        foreach (var p in r.Recommendations)
+            lines.Add($"  probe {Verdict(p.Verdict),-14} {p.Key}  {p.Evidence}");
         foreach (string f in r.App0Files)
             lines.Add($"  added file {f} (from the fakelib set)");
         foreach (var d in r.DataFiles)
@@ -33,6 +35,9 @@ public static partial class Pipeline
             .Order(StringComparer.Ordinal).ToList();
         if (derived.Count > 0)
             lines.Add($"  NOTE: {derived.Count} derived fix(es) applied, not yet console-tested: {string.Join(", ", derived)}");
+        int laterMissing = r.Modules.Sum(m => m.LaterMissing.Count);
+        if (laterMissing > 0)
+            lines.Add($"  NOTE: {laterMissing} import(s) resolve on FW {r.TargetFirmware} but are not exported by a later firmware (missing-later lines): the same cook fails on that console if they are called");
         foreach (var note in (JsonArray)DeploymentReport(r)["notes"]!)
             lines.Add("  deployment: " + note!.GetValue<string>());
         foreach (var m in r.Modules)
@@ -53,7 +58,7 @@ public static partial class Pipeline
             foreach (var f in m.Fixed)
                 lines.Add($"  fixed    {f.Nid}  {f.Name}  ({f.How}; {(f.Proven ? "proven" : "DERIVED, not console-tested")}; from {f.Source})");
             foreach (var s in m.StubbedNow)
-                lines.Add($"  stubbed  {s.Nid}  {s.Name}  ({s.Stub} @ {s.At}; {s.Origin})");
+                lines.Add($"  stubbed  {s.Nid}  {s.Name}  ({s.Stub} @ {s.At}; {s.Origin}{(s.Introduced.Length > 0 ? $"; GOT pre-fill, native from FW {s.Introduced}" : "")})");
             foreach (var p in m.Patterns)
                 lines.Add($"  pattern  {p.Name}  x{p.Count}");
             foreach (var u in m.Unknown)
@@ -63,9 +68,18 @@ public static partial class Pipeline
                 string left = u.LeftBy.Length > 0 ? $"   left unpatched by: {u.LeftBy}" : "";
                 lines.Add($"  {u.Status,-8} {u.Nid}  {u.Name}  [{u.Library}]  refs={u.CodeRefs}{hint}{intro}{left}");
             }
+            foreach (var l in m.LaterMissing)
+                lines.Add($"  missing-later {l.Nid}  {l.Name}  [{l.Library}]  exported on FW {r.TargetFirmware}, not on FW {l.MissingOn}");
         }
         return string.Join("\n", lines);
     }
+
+    /// <summary>Report spelling of a probe verdict.</summary>
+    public static string Verdict(OptionVerdict v) => v switch
+    {
+        OptionVerdict.Needed => "needed", OptionVerdict.Applicable => "applicable", OptionVerdict.NotApplicable => "not-applicable",
+        OptionVerdict.ConsoleChoice => "console-choice", _ => v.ToString().ToLowerInvariant(),
+    };
 
     /// <summary>The JSON report.</summary>
     public static JsonObject ToJson(GameResult r) => new()
@@ -80,6 +94,10 @@ public static partial class Pipeline
             ["module"] = p.Module, ["library"] = p.Library, ["imports"] = p.Imports,
         }).ToArray()),
         ["options"] = new JsonArray(r.Options.Select(key => (JsonNode)key).ToArray()),
+        ["recommendations"] = new JsonArray(r.Recommendations.Select(p => (JsonNode)new JsonObject
+        {
+            ["key"] = p.Key, ["verdict"] = Verdict(p.Verdict), ["evidence"] = p.Evidence,
+        }).ToArray()),
         ["app0_files"] = new JsonArray(r.App0Files.Select(f => (JsonNode)f).ToArray()),
         ["data_files"] = new JsonArray(r.DataFiles.Select(d => (JsonNode)new JsonObject
         {
@@ -98,7 +116,11 @@ public static partial class Pipeline
             ["stubbed_now"] = new JsonArray(m.StubbedNow.Select(s => (JsonNode)new JsonObject
             {
                 ["nid"] = s.Nid, ["name"] = s.Name, ["stub"] = s.Stub, ["got"] = s.Got, ["at"] = s.At,
-                ["known_fix"] = s.KnownFix, ["origin"] = s.Origin,
+                ["known_fix"] = s.KnownFix, ["origin"] = s.Origin, ["introduced"] = s.Introduced,
+            }).ToArray()),
+            ["later_missing"] = new JsonArray(m.LaterMissing.Select(l => (JsonNode)new JsonObject
+            {
+                ["nid"] = l.Nid, ["name"] = l.Name, ["library"] = l.Library, ["missing_on"] = l.MissingOn,
             }).ToArray()),
             ["fixed"] = new JsonArray(m.Fixed.Select(f => (JsonNode)new JsonObject
             {

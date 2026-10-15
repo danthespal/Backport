@@ -2,7 +2,7 @@
 
 The single record of research, investigations, problems and solutions that are not part of the engine documentation. README.md keeps the engineering, verification and reference-project history. This file keeps what was learned from games, consoles and diagnostics.
 
-Consolidated on 12 October 2026, before `tmp/` and the investigation folders in `work/` were deleted. Part 1 covers 11–12 October. Part 2 is the earlier work archive (`work/CONFIRMED_FINDINGS.md`, 10 October), merged here unchanged.
+Consolidated on 12 October 2026, before `tmp/` and the investigation folders in `work/` were deleted. Part 1 covers 11–12 October. Part 2 is the earlier work archive (`work/CONFIRMED_FINDINGS.md`, 10 October); its verification records and data tables were condensed on 14 October.
 
 **Evidence standard.** Console observations, static binary facts and desktop test results are kept apart. A static import check or a passing desktop test is not a console compatibility result. Unless stated otherwise, console results come from the user's standard PS5 on FW 13.60, not from a physical FW 4.xx console.
 
@@ -92,6 +92,7 @@ Why the name is `k9.psp` (2026-10-13): both sites are `snprintf(buf, 0x100, fmt,
 - **12 October** (AnyPS5 `a11c8f7` → `2a5eca11c`, 949 commits; the other 15 repos unchanged). **Applied:** 28 hash-verified NID names appended to `data/aerolib.csv` (README "Verified name additions — 12 October 2026"), and 5 placeholder labels in `data/fixes.json` renamed. The `data candidates` / `data sony-builds` commands now write to the repository `data/` instead of the bundled copy. **Rejected:** regenerating `candidates.json` (17 of 18 new entries exist on every firmware ≥ 2.00, so they would never fire; the 18th is the already-covered VRR privilege call). The `sceAmprAmmSetPageTablePoolOccupancyNotificationThreshold` export is already in our fakelib, which covers all 118 FW 12.70 Ampr exports. The relinker's `R_X86_64_NONE` and section-symbol `RELATIVE` cases are already skipped by `SceElf.Imports()`. `.suprx`/`.debug_prx` suffixes do not occur in any sample. Sysmodule IDs and `kern.sdk_version` have no rule surface in Studio. ShadowMountPlus's "FAKE title ID" commit is on `main`, not the tracked `1.7`.
 - **13 October** (AnyPS5 `2a5eca11c` → `8299b2f7e`, 572 commits / 336 non-merge; the other 15 repos unchanged). **Applied:** `data candidates` fix. AnyPS5 moved every "Silent stubs" bullet from `docs/dev/TechnicalDebt.md` into `docs/dev/debt/<library>.md` (links now `../../../core/libs/prx/…`). The old generator found the now-empty section and wrote an **empty** `candidates.json` with exit 0. It now reads both places, resolves each link relative to its own file, and throws when no bullet is found anywhere. Same output as the HEAD generator on the `2a5eca11c` tree (42 = 42 entries). On `8299b2f7e` it finds 44: `+sceKernelGetMainSocId`, `+sceKernelIsThreadSanitizerEnabled`, `+sceRazorCpuSync`, `−sceUsbdInit` (now a libusb pass-through). All three additions exist on every firmware from 1.00 (TSan from 3.00), so they never fire, and the catalog stays unchanged. **Rejected with corpus evidence (110 sample ELFs):** weak-import binding (the only weak undefined imports are `__cxa_finalize`/`__pthread_cxa_finalize`, in 43/43 firmwares); PT_SCE_RELRO outside PT_LOAD, DT_GNU_HASH, and bad `e_version`/`e_ehsize` (0 occurrences; PS4 and host cases). **NID sweep:** 889,958 identifiers hashed; 0 new names (this update's new functions were already in `aerolib.csv`). **Notes:** AnyPS5 now ignores flag `0x8000` in the *public* `sceKernelMapFlexibleMemory` because Animal Well's (PPSA22520, SDK 9.04) bundled libc passes it. This is host behaviour, not console evidence; our `IWIBBdTHit4` rationale (public entry rejects `0x88000` on FW 7.01–12.70) stands. `sceAgcInit` now returns `0x80890001` for version ≥ 14 in AnyPS5 (a host choice; no console threshold known). AudioOut2 `UserGetSupportedAttributes` reports port attributes 0 and 1 only, which agrees with the Yōtei adapter's attribute model; the function is on 43/43 firmwares and Yōtei doesn't import it. **NuGet audit (same day):** no vulnerable packages. Available updates are patch/test-tooling only. Avalonia 12.1.4's fixes (style-set `Command` leak, `CalendarDatePicker`, `ColorPicker`, `TreeView`) don't touch anything Studio's XAML uses, so it was not bumped. No new package was adopted: System.CommandLine, SQLite and Iced were already decided in Phases 7–8. The Iced re-run found the scanner's conditional-tail-call gap instead (README "Follow-up: conditional tail calls"), which was fixed without a dependency.
 - **14 October** (AnyPS5 `8299b2f7e` → `30f961266`, 420 commits; the other 15 repos unchanged). **Applied:** 2 hash-verified NID names appended to `data/aerolib.csv`, `EVP_MD_block_size` (`zCa75KLWWn4`) and `sceNpGetSandboxInfo` (`ZVZ++68nNI8`). Both are exported only by FW 13.60, so the newly imported 13.60 list found them, not new AnyPS5 code (1,075,110 identifiers hashed against 7,695 unnamed exported NIDs). **Rejected:** regenerating `candidates.json` (46 entries; +22/−2 against the committed file). 19 additions exist on every firmware from 1.00 or 2.00. `sceKernelIsThreadSanitizerEnabled` (from 3.00) and `sceSystemServiceOpenChallengeActivity` (from 4.00) could fire only below those targets, with no sample needing them, and their constants are host choices. `sceVideoOutAddVrrStatusFlagsPrivilege` is already covered by a fix. `sceAudioOut2EnableChat` (now implemented, Palworld/PPSA28416) exists on all 45 firmwares. **Notes:** PlayGo now returns `BAD_CHUNK_ID` for any chunk ≠ 0 when `sce_sys` has no `playgo-*` file (Sifu PPSA03001 walks chunk IDs until the first error). This is host behaviour; pgo_stub is unchanged. The NID patcher's verneed and GNU-hash bounds fixes apply to host executables (0 DT_GNU_HASH in the corpus, per 13 October). The rest is AGC/shader/Vulkan, relinker console output and Windows host I/O.
+- **14 October, afternoon** (AnyPS5 `30f961266` → `7181fe94d`, 626 commits; the other 15 repos unchanged, ShadowMountPlus still `98c5248` = the profile pinned in `Pipeline.Deployment.cs`). **Applied:** `SceElf` rejects a `PT_LOAD` whose `p_filesz` exceeds `p_memsz` (from AnyPS5 `bc014a887`). Such a module cannot load (FreeBSD's loader refuses it), and `Off()` would treat file bytes past the mapped image as backed. A scan of 22,481 real modules (2,058 SELFs; all game samples, 46 firmware dumps, the fakelib store and `work/*_elf`) found 0 of 112,384 `PT_LOAD` (and 0 `PT_SCE_RELRO`) segments with that layout; non-loadable SCE comment/NOTE segments with `memsz = 0` are normal and unaffected. Text-segment extension grows both sizes by the same gap, so cooked output keeps the invariant. The strict All lane passed 707/707 in Debug and Release. That run also exposed a test left stale by the 7.00 export list in `d044d73`: `ToolsPageTests.NidLookup_BothDirectionsWithKnowledge` expected "from FW 7.01" for `sceKernelIsTrinityMode`, but 7.00 is now the first list that exports it (absent in 6.50), as `fixes.json` already says; the expectation was corrected. Note: `scripts/verify.ps1` also runs under Windows PowerShell 5.1 (`powershell -File …`), which helps when PowerShell 7 isn't installed. **Already covered:** relocation symbol-entry bounds (`f10ab0b6a`; `SceElf` checks the index against the table at both sites) and a failed `sceSaveDataMount3` leaving the caller's result untouched (`4ccf88829`; our `save_mount_compat` adapter only rewrites the input struct). **NID sweep:** 954,074 identifiers hashed against 7,693 unnamed exported NIDs, 0 new names; this update's new names (`sceKernelGetSocPowerConsumption`, `sceAppContentAddcontDelete`, `tzname`, `sys_siglist`, `sys_nsig`) were already in `aerolib.csv`, and the newly declared libScePad import `zBsgF0q8DIM` is still unnamed. **Rejected:** regenerating `candidates.json` (47 entries, +23/−2): 20 additions exist on every firmware from 1.00/2.00, `sceKernelIsThreadSanitizerEnabled` (3.00) and `sceSystemServiceOpenChallengeActivity` (4.00) have no sample needing them, and the VRR privilege call has a fix. The two dropped entries (`sceHttp2SetMinSslVersion`, `sceHttp2SslEnableOption`) now validate the handle in AnyPS5 but still ignore the value for a live one, so our `ret0` candidates stay. AnyPS5's new `unwrap_self.py` re-aligns segments for its relinker; Studio's header-preserving unwrap is what gets re-signed and stays. **Notes:** AnyPS5 now implements `sceVideoOutGetOutputStatusWithVrr` as an 80-byte status (the `sceVideoOutGetOutputStatus` fields, then zeros), confirming the 0x50 size our `out2_zero50` rule took from FW 10.01; our all-zero ("VRR off") body is kept because it was derived from the firmware's own code. The rest is AGC/shader, PC-host loading (PE/Mach-O, TLS relocations, unwind caches) and host OS emulation.
 - **NID-name method (reusable).** Hash every identifier in the reference repos with the NID algorithm, and keep a name only when its NID is exported by a real firmware in `firmware_db` and is still unnamed. The false-match probability is about 1e-9 for that run.
 
 ## 6. Rejected or superseded conclusions
@@ -399,6 +400,79 @@ Method: export addresses from `SceElf` (scratch C# helper), capstone disassembly
 - **Monitor channel mapping** (`0x34d16d`/`0x34d187` tables, same as the probe `0x34b30f`): 1 → mono, 2/4 → stereo, 6 → 5.1, 8 → 7.1 (but **2 output channels when port-state `+8` bit 0, the 3D flag, is set**: `0x34d1ca`; the 5.50 builder reports 8 channels + bit 0 for its "3D" case, `0x1c547`), 12 → 7.1.4. 3, 5, 7, 9, 10 and 11 → flags `0x3fe0`, 0 channels. At boot the probe refuses those (start-up crash), so they can only appear at runtime.
 - **Conclusion:** the game and the backport hold no state across a launch. With the same console state, the 5.50 TV path is SDK-neutral, so a fault that survives a PS5 restart means the console's audio state changed: a sound setting, or the TV/HDMI/receiver side. Inside the backport the one TV-only component is the fold: it runs only in channel playback, while headphones can go ambisonic and bypass it. Next evidence needed (no build): whether the PS5 menu and another game have TV sound; the Sound → Audio Output settings ("Enable 3D Audio for TV Speakers", output device, audio format); how the sound is broken; whether audio was already broken in gameplay before the headset (the first TV check may have been the menu only).
 
+### 6k. `sceSaveDataCancel` after the default Mount3 rule: native call kept (2026-10-14)
+
+Question: with `systemBlocks` forced to 0 by the default `sceSaveDataMount3` adapter, does the native `sceSaveDataCancel` on 6.00+ consoles (the `ret0` GOT pre-fill is live only below 6.00, where the export is absent) hurt a 4.00 cook?
+
+- **Client (decrypted `libSceSaveData.native`, 13.60 export `0x28180`, 6.02 `0x26100`, same code):** no check of the argument or of any mount state. Not initialised → `0x809f0001`; otherwise a zeroed `0x100`-byte request carrying the `int` argument goes out as IPC method `0x7d`, and the mapped reply is returned.
+- **Server (SceShellCore 12.70 `0x1545db`, 6.02 `0x148faa`):** the function that prints "Cancel operation is not supported when systemBlocks is 0" returns **`0x809f800a`** on that branch, on both firmwares. The 4.03 ShellCore has no such path (Cancel is not exported below 6.00).
+- **Games (unwrapped original eboots, `callers` scan for `call rel32` to the import's PLT entry, then disassembly of the following code):** CONTROL PPSA34547 calls it at `0x374da7d` and `0x374fdee`; PPSA03671 at `0x3f91159`. At every site `eax` is overwritten or the function returns another register's value before any test: **all three discard the result.** No other sample game imports the NID.
+- **Console data point:** CONTROL's own backport set `systemBlocks` to 0 at the Mount3 call site and ran on FW 10.01, where the native Cancel was bound over its GOT stub.
+- **Decision (user list item 1): keep the `stub`.** A `plt_stub` (ret0 on every console) would only hide a cancel that does work on 6.00+ for mounts the adapter does not touch, with no observed benefit. The rule's `rationale` in `data/fixes.json` records this.
+- **Method (reusable for the next game that imports it):** `scratchpad/elfscan.py imports EBOOT.elf e6y3WMBYbiM#` gives the PLT entry; `callers EBOOT.elf <PLT> 0x40` lists each call and the code after it. A game that tests `eax` after the call is the trigger to revisit.
+
+### 6l. Compiled-SDK gates in the FW 13.60 system libraries: enumeration (2026-10-14)
+
+Why: a 4.00 cook stamps SDK 4.00, so on every console 4.00–13.60 the system libraries take their "SDK below N" paths. Every SDK-stamp regression so far was such a gate (AGC flags §1.1, SaveData validator §6d, AudioOut ports §6a). This section enumerates the rest.
+
+**Scope and method.** 61 of the decrypted 13.60 `common/lib` modules import `sceKernelGetProsperoCompiledSdkVersion` (`GGeRJk1XdWc`); `libkernel`/`_sys`/`_web` implement it and ShellCore reads the value from app info, so neither is covered. Scanner `work/sdk-gates-13.60/sdkgates.py` (capstone): call sites of the import; "SDK globals" = rip-relative stores within 128 bytes after a call, plus any global compared against two different SDK-shaped constants; gates = `cmp`/`test` with an imm32 of the form BCD major 01–20, BCD minor (or `..FFFFFF` upper bounds), low 16 bits 0000/FFFF/≤00FF. Tier A = operand is an SDK global or a register just loaded from one; S = register loaded from the stack; B = other. `gatefuncs.py` attributes each gate to the nearest preceding export. Outputs: `work/sdk-gates-13.60/sdkgates-13.60.txt` (all 61 libraries) and `gatefuncs-13.60.txt` (28 game-relevant libraries). Calibration: the scanner finds the known gates (Agc `cmp edx, 0x4000000` at `0x8c0d`; AudioOut 5.00/6.00/8.00/9.00; SaveData.native `0x1ecc0` dispatcher 5.00/9.00/12.00). Known false positives: power-of-two constants (sizes, tagged `pow2`) and encoded handles (libSceSysmodule's `0x07xxxxxx`/`0x07800000` pairs test a handle format, not the SDK). Only 13.60 was scanned; older libraries have their own gate sets.
+
+**Which libraries the sample games use** (string match of the library name in the 17 `default` dumps' eboot/prx): all 17 use libkernel, libSceVideoOut, libSceSystemService, libSceSysmodule, libSceSaveData, libScePad, libSceHttp, libSceCommonDialog, libSceAudioOut, libSceAgc; 16 use libSceSsl, libSceSaveDataDialog, libSceNpWebApi2, libSceNpUniversalDataSystem, libSceIme; 15 libScePlayGo, libSceNpCommerce, libSceMsgDialog, libSceJson2, libSceImeDialog, libSceAmpr; 14 libSceMouse; 12 libScePsml; 11 libSceContentExport; 8 libSceNpSessionSignaling, libSceAvPlayer; 7 libSceFont; 6 libSceVideodec2, libSceConvertKeycode; 4 libSceNgs2; ≤3 the rest; 23 libraries by none.
+
+**Gates read so far (13.60 code; verified by disassembly, not console-tested):**
+
+| Library | Export | Gate | Effect below the threshold (= with the 4.00 stamp) |
+| --- | --- | --- | --- |
+| libScePad | `scePadSetVibrationMode` (`W2G-yoyMF5U`, imported by 14/17 samples) | `0x10064`: SDK ≥ 8.00 → modes 1–5; 3.00–7.xx → 1–3; < 3.00 → 1–2; else `0x80920001` (unless the byte at `0x202a8` is set) | **A game built for SDK ≥ 8 that passes mode 4 or 5 gets `SCE_PAD_ERROR_INVALID_ARG`.** Rule candidate: adapter clamping mode > 3 to 3 (degrades the effect, removes the error). Which samples pass 4/5 is not yet read. |
+| libScePad | `scePadGetHandle` (×2), `scePadGetControllerInformation`, `scePadDeviceClassGetExtendedInformation` | `cmp [sdk], 0x6500000; jb` before `test byte [dev+0x2a], 2` / `test byte [rcx], 2` | A device capability bit is only honoured for SDK ≥ 6.50; below it the generic path runs. Consequence not read. |
+| libScePad | `scePadGetTriggerEffectState`, `scePadVrControllerSetTriggerEffects` | `cmp [sdk], 0x6000000` | SDK ≥ 6.00 feature branch skipped below. Not read. |
+| libSceSystemService | `ActivateMpeg2Term`, `ActivateHevcTerm`, `ActivateHevcSoftTerm`, `SetPowerSaveLevel` | `0x1bf1` etc.: result `0x80e30005` becomes 0 when SDK < 4.50 | More permissive below 4.50 (an error is hidden). Harmless for the goal. |
+| libSceSystemService | `sceSystemServiceParamGetInt` (17/17) | `0x4a83`/`0x4ab0` (`< 5.00`), `0x4b3f` (`< 6.00`) | Some parameter IDs (0x16, 0x1b–0x1e by the surrounding compares) return fixed defaults (0x12 or 1) instead of the real value below 5.00/6.00. IDs not decoded. |
+| libSceSysmodule | `sceSysmoduleLoadModule` (17/17) | `0x25e`/`0x274`: boolean "SDK ≥ 11.50" / "SDK ≥ 9.00" | Selects a load-path variant; the 7.00/7.80 compares deeper in the file are handle-format checks, not SDK. What the boolean changes is not read. KCD2 loads `0x137` (Psml) this way (§6e). |
+| libSceSaveData (client) | `sceSaveDataGetSaveDataMemory2` / `SetSaveDataMemory2` (3/17: GT7, Silksong, Yōtei) | `0x38fcc`: `cmp [ctx+0x3c], 0x6500000` selects callee `0x32d10` (≥ 6.50) or `0x32c20` | Two parameter-struct layouts/versions; a SDK ≥ 6.50 game's struct is parsed by the pre-6.50 routine. **ABI candidate; needs reading of both callees.** |
+| libSceSaveData (client) | `sceSaveDataMount2` (0/17) | `0x34caf`: on `0x809f000a`, extra handling only for SDK ≥ 11.50 | Nothing for the samples. |
+| libSceJson2 | `sce::Json::Value::set/~Value/getValue/getString/…` (52 sites; `Value::set` imported by 11/17, `~Value` by 15/17) | per site: effective SDK (`[5.5087, +0x7900)` mapped to 6.00) `< 6.00` → old path; `Value::set` also `< 4.50` | Object-model differences (e.g. the parent back-pointer `[root+0x18]` is only maintained for ≥ 6.00). Used by NP/online code; **ABI candidate, not read further.** |
+| libSceNgs2 | `sceNgs2VoiceControl` (2/17) | `0x2746f`: a parameter (`[r15+0x18] & 0x7f`) is passed only for SDK ≥ 7.00, else 0 | Voice-control parameter dropped below 7.00. |
+| libSceVideoOut | internal (`0x7bc`, `0x8ae`), `96hq3WwT3DE`, `znMcW7Whi2Q` | `< 6.50` and `< 7.00` set context flags `[ctx+0x788]`, `[ctx+0x6f4]`; `≥ 9.00` ×3 selects an extra check (`0x8000001f`) | Legacy-mode flags; semantics not read. |
+| libSceAmpr (native, replaced by ampr_emu in cooks) | init `0x187` | `< 5.00` | Not relevant while the fakelib replaces it. |
+
+Other libraries with gates above 4.00 that were enumerated but not read: libSceIme (5.00/6.00/11.00 in `sceImeOpen`, `sceImeFilterText`, an internal), libSceImeDialog (5.00/6.00/11.00/4.50 in `Init`, `GetPanelSize*`, `SetVoiceDictationEnabled`), libSceHttp (4.50 in `sceHttpAuthCacheExport`, 0/17), libSceNpWebApi2 (5.00–9.50 in the push-event context), libSceSsl (7.00/7.50/8.00/11.50, attribution unreliable: few exports), libScePsml (7.xx/11.00 in Mfsr2 and an internal), libSceHmd2 (7.00/9.00/11.00), libSceVrTracker2 (7.00), libSceAvPlayer (5.00/6.00/9.00 in `StartEx`), libSceContentExport (4.50/5.50/6.00/12.00), libSceConvertKeycode (5.00), libSceVideodec2 (7.50), libSceMouse (7.00 in `ExtensionSetCursor`, 0/17), libSceUlt (5.00, 0/17), libSceNpSessionSignaling (5.00/7.xx), libSceVoiceChat (6.00). Per-library counts are in the table at the end of `sdkgates-13.60.txt`.
+
+**Reading method for the next gate:** `python -I work/sdk-gates-13.60/elfscan.py disasm LIB 0xADDR 0x60` around the listed address; `sym LIB NID#` for an export's address; the NID of a name is `base64(sha1(name + 518D64A635DED8C1E6B039B1C3E55230)[:8], +-)[:11]`.
+
+### 6m. `scePadSetVibrationMode` under the 4.00 stamp: survey and opt-in clamp (2026-10-14)
+
+Follow-up of §6l. **Library side (decrypted libScePad, export `W2G-yoyMF5U`):** the mode range depends on the process's compiled SDK. FW 4.00 (`0xb230`), 6.50 (`0xb820`) and 7.61 (`0xbdc0`): SDK ≥ 3.00 → modes 1–3, else 1–2; no library before 8.00 knows modes 4 and 5. FW 8.00 (`0xbbd0`), 8.60, 11.00 (`0xc7d0`) and 13.60 (`0x10040`): SDK ≥ 8.00 → 1–5, ≥ 3.00 → 1–3, else 1–2; anything else returns `0x80920001` (a byte flag at 13.60 `0x202a8`, meaning unknown, bypasses the check). So for a cook stamped 4.00, modes 4 and 5 fail on every console 4.00–13.60; for a target ≥ 8.00 the stamp lets FW 8.00+ consoles accept them.
+
+**Game side** (`work/sdk-gates-13.60/padmode.py`, every call to the import's PLT entry in the 14 sample games that import it; `padmode-survey.txt`):
+
+| Game | Calls | Mode argument | Result use |
+| --- | ---: | --- | --- |
+| PPSA23566 EA SPORTS UFC 6 (SDK 12) | 6 | constant **4** at every site | discarded (stores 0 / returns another value) |
+| PPSA24003 Dying Light: The Beast | 1 (+1 call with 1) | 1, then **3** | not tested |
+| PPSA28183 AC Black Flag | 1 (tail jump) | 1 or 3 | returned to the caller |
+| PPSA01494 Borderlands 4, PPSA29343 Beast of Reincarnation, PPSA34008 | 1 each | a runtime setting (`[obj+0x16e8]` / `+0x1658` / `+0x17e8`), range unknown | discarded (the handle is returned) |
+| PPSA12544 Silksong (Unity) | 2 | a runtime value from the script side | one site logs the result |
+| PPSA19534 BF6 (both executables), PPSA34015 FC 27, PPSA05666 Horizon CotM, PPSA01746 Kena | 6/6/3/2 | 1 or 2 | not tested |
+| PPSA21704 KCD2, PPSA26344 Yōtei, PPSA36082 Hades II | 5/1/1 | 1 | not tested |
+
+UFC 6's console-tested backport (PS5 Pro, FW 9.60, SDK 4.00 stamp) therefore ran with every `scePadSetVibrationMode(…, 4)` refused and the pad left in its default mode; nobody reported it because the game ignores the result. AnyPS5 accepts modes 0–3 and documents mode 3 as unknown; what 3, 4 and 5 select in the haptics is not documented in the references available here.
+
+**Decision (my call, reversible): opt-in option `pad_vibration_compat`** (group Input), adapter on `W2G-yoyMF5U`: `cmp esi, 3; mov eax, 3; cmovg esi, eax` then the native call (`when: always`, `below: 8.00`, `proven: false`). Not a default rule because it changes a console-tested backport's haptics (UFC 6) from "default mode" to mode 3 without evidence of which is better, and because the three runtime-setting games cannot be assessed statically. Promote after a UFC 6 A/B on a console. Test: `OptionalInputTests.Cook_ClampsVibrationModeOnlyWithOptionBelowFirmware8` (targets 4 / 7.61 apply with the option, 8 does not, off by default; verifies the cave bytes `83fe03 b803000000 0f4ff0 ff25…`).
+
+### 6n. Requirements probe: what the analyser can decide about each optional patch (2026-10-14)
+
+Audit for the user's request to auto-select optional patches from the analysed game (goal: fewer console runs). Classification of the 15 options by what is statically decidable, now implemented as the probe in `Pipeline.Probe.cs` and the GUI (verdict chips, pre-tick of `needed` only; mock-up `work/mockups/requirements-probe.html` approved by the user):
+
+| Class | Options | Rule |
+| --- | --- | --- |
+| needed (pre-tick) | `unity_sku_offline` (engine recogniser matches), `pad_vibration_compat` (a call passes a constant mode > 3) | `probe.kind` = `detector`/`recognized: needed`, `argument` |
+| applicable | `save_prepare_compat`, `audio_speaker_compat`, `audio_port_compat`, `np_error_dialogs` (the game imports the wrapped functions), `audio_bed_71` and `gpu_scratch` (their byte patterns match), `ubisoft_offline_popups` (recognised; suppression is a preference), `pad_vibration_compat` when the mode is not a readable constant | default rule by imports and patterns; `detector`/`recognized: applicable` |
+| not applicable | any of the above when nothing is imported, no pattern matches or no layout is recognised | same rules |
+| console choice | `auto_pro`, `force_pro` (not applicable when none of the queries is imported), `playgo_0_6`, `playgo_0_6_log`, `psml_kpn9` (not applicable when the game does not use libScePsml), `boot_notice` | `probe.kind` = `console` |
+
+Facts behind the classification: `sceSaveDataPrepare`'s mode is a struct field (`[rsi+4]`), not a register constant, so it cannot be read the way the pad mode is; the audio options were only ever settled by console runs (§6a); `force_pro` depends on the console (§3). Mechanics: the two engine detectors gained recognise-only entry points (`Recognize`, no bytes changed); `Imports.ArgumentConstants` reads the constant written to an argument register before each call site (`mov r32, imm32`, `xor r32, r32`, `push imm8; pop`, stopping at a closer non-constant write; a byte-pattern scan, so evidence rather than proof); `FixApplier.CountPattern/CountMatches` count without writing. The probe runs inside Analyze and Cook before any patch (`GameResult.Recommendations`, text report `probe <verdict> <key> <evidence>`, JSON `recommendations`), and `Pipeline.Probe(source, knowledge)` runs it alone so the GUI can pre-tick before the real analysis without making the receipt stale. On the sample cooks: GT7 and Control get no needed verdict (pad not imported), AC's single pad call is `1 or 3` (not a constant → applicable), every sample reports `gpu_scratch` applicable (164–332 `s_trap` hits) and `audio_bed_71` not applicable (Yōtei's Scream patterns match nothing else). Testing-time caveat recorded in the audit: most console time so far went to issues that were not option selection (AGC flags, Set3DLatency, console save state, Yōtei audio, PPSA38510, Crow Country).
+
 ## 7. Open items
 
 1. Run a physical FW 4.xx console test of the patched set-4 AGC, and any console test of the patched set-4.03 AGC.
@@ -415,11 +489,36 @@ Method: export addresses from `SceElf` (scratch C# helper), capstone disassembly
 12. §6i: a FW 7.00 cook no longer applies the MapNamedFlexibleMemoryInternal adapter (native call, as for 7.01 targets). Console-check one re-cooked 7.00 build (e.g. PPSA32935) before relying on it.
 13. §6j (tester on FW 5.50; other games work on every mode): Yōtei TV audio broken after a headset test, and a restart does not fix it. Statically the downmix is correct at every layer; candidates are the game's saved options and the console's TV audio configuration ("Enable 3D Audio for TV Speakers"). Compare build A (`PPSA26344_backport_4.00`, downmix) with build B (`PPSA26344_backport_4.00_bed71`, native 7.1 bed, no downmix) on TV and headset, and get the in-game audio options and the PS5 sound settings.
 
+## 8. Engine and rule-data assessment: verified facts (2026-10-14)
+
+Source review of `Ps5Backport.Core`, `data/*.json`, `firmware_db/` and §1–§7, done without changing code. Each item is a checked fact; the recommendation that follows it is a proposal, not a decision.
+
+- **31 of the 36 default `stub` rules are firmware-conditional.** A `stub` only pre-fills the GOT, and the loader binds the real export wherever the console firmware has it (console-confirmed: GT7 FW 4 GOT stubs stay for unresolvable NIDs; §6b, FW 8.60 overwrote the Set3DLatency pre-fill). Against the 45 `firmware_db` lists, every default `stub` function except the five `libSceShaderTranscode` NIDs is exported by some firmware (first exports from 5.02 to 12.40, §6c). The text and JSON reports list these under `stubbed` without that first-export firmware (`StubbedEntry` has no `Introduced` field; `Pipeline.Reports.cs`), although `FirmwareDb.Introduced` already computes it for unresolved imports. The §6b crash would have been visible in the report as "ret0 pre-fill; native from FW 6.00". **Done 2026-10-14:** stubbed lines carry `GOT pre-fill, native from FW X`, and imports dropped by a later list are reported as `missing-later` (README "Report portability").
+- **`auto_pro`'s warning text contradicted that mechanism (corrected 2026-10-14; `AutomaticProTests.AutomaticMode_UsesLoaderOverridableGotPrefills` pins the kinds and first-export firmwares).** `data/fixes.json` said missing queries "fall back to fixed base-console answers, even if this cook later runs on a Pro with newer firmware"; README "Optional fixes (implemented 2026-10-09)" repeats it. All four `auto_pro` fixes are `kind: stub`, so on a console that exports the query (IsTrinityMode/HasTrinityMode from 7.00, AgcGetIsTrinityMode from 9.00, GetOperationMode from 11.00) the native function answers. The fixed base answer applies only on firmwares between the target and the first export.
+- **Targets 12.xx and 13.xx are refused.** `Firmware.SdkPairs` ends at 11 (`Firmware.cs`), `Pipeline.ExecuteCore` calls `SdkFor` first, the GUI's target list is built from `SdkPairs.Keys` (`MainViewModel.cs:50`) and `FirmwareTests.SdkFor_UnknownMajor` asserts that "12" throws. The pair for 12 is attested by the UFC 6 / FC 27 originals (`0x12000038/0x13090001`, README Parts 20–21); for 13 only the PS5 half is recorded (`0x13000035`, PPSA38510, §2), the PS4 half has to be read from an SDK-13 module. Testers on 12.xx exist (`known_builds.json`: FC 27's Sep 6 ampr_emu "works on FW 12.xx and later").
+- **`Knowledge` ignored unknown JSON keys** (done 2026-10-14: allow-list per record, README "Rule-data safety nets"). `ValidateKeys` rejected duplicates only; every field is read with `TryGetProperty` and a default. A misspelt `below` makes a rule unconditional, a misspelt `proven` marks it proven (default `true`), a misspelt `contiguous` lets `PlaceChain` split a branching adapter across caves. README "JSON schema finding" (Phase 8) identified this and named a schema the "strongest follow-up"; nothing was implemented. `verification/GameAnalysis` profiles already reject unknown fields.
+- **Adapter machine code was hand-encoded with unchecked comments** (done 2026-10-14: `evaluate-decoder.ps1` compares every comment with its decoded bytes; first run clean). 263 `insns` across the default and option fixes plus 9 stub bodies are hex strings whose `; asm` comment is free text; no test assembles the comment and compares it with the bytes. `verification/DecoderEvaluation` decodes the bytes with Iced and checks selected operands only. Two defects in this class were found late (boot_notice stack alignment, SyncOnAddress timeout ABI, §6d and README "Full source audit").
+- **The cross-firmware argument-check screen is a manual procedure.** §6c, §6g and §6i compared `cmp`/`test` immediates and `0x80xxxxxx` codes of every rule function and its direct callees across firmwares with a scratch C# export-address helper and capstone. The decrypted libraries of 42 firmwares are in `.original/.PS5OriginalLibs`, but the engine imports only export NID sets (`FirmwareDb.ImportDump`). The screen was re-run by hand when 13.60 and 7.00 arrived and will be again for 4.30.
+- **The 18 × 3 FW 13.60 portability check (§6g, `work/fw1360-range`) is also manual**, although it uses only `firmware_db` and the cook output: for every output module, is any import that resolves on the target missing on a later list.
+- **The SDK-4 AGC patch has no version-controlled recipe.** `work/agc-4.03-patch/patch_agc.py`, the unpatched originals in `work/fakelib-backups/` and the patched `fakelibs/*/libSceAgc.sprx` are all Git-ignored (`.gitignore`: `work/`, `fakelibs/*`). The only tracked record is prose (fakelibs/README.md, §1.1: VA `0x8c23`, `0f45c6` → `89f090`). The engine already has BPS apply/sign and the Store's "Apply BPS and add" workflow.
+- **Rule provenance is prose.** `sources` labels carry the test firmware and console in free text ("tested on PS5 Pro FW 9.60", "test status unknown"). A script check found the data consistent today (every rule that defaults to `proven: true` has at least one console-tested source), but `Knowledge.Validate` cannot enforce it.
+- **Engine-pattern options are wired by name.** `unity_sku_offline`, `ubisoft_offline_popups` and `boot_notice` have empty `fixes` in `data/fixes.json`; `Pipeline.Transformation.PatchModule` calls each detector by its option constant. A fourth detector needs a pipeline edit.
+- **`firmware_db` gaps (unchanged from §6h):** no 4.30 list (encrypted dump), no 10.00 dump, 11.20 `priv/lib` absent. 7,693 exported NIDs remain unnamed in `data/aerolib.csv` after the 14 October sweep.
+
+**Goal-specific facts (stated goal: cook for FW 4.00, run unchanged on every console 4.00–13.60):**
+
+- **Compiled-SDK gates are audited for 4 of 64 libraries.** `sceKernelGetProsperoCompiledSdkVersion` (`GGeRJk1XdWc`) is imported by 64 decrypted 13.60 `common/lib` modules (66 on 12.70, 31 on 4.00). Because the cook stamps SDK 4.00, every console takes those libraries' SDK < 5 paths. FINDINGS reads the gates of libSceAgc (§1.1), libSceSaveData.native (§6d), libSceAudioOut (§6a) and libSceUserService (§6d), plus ShellCore's save validator; the other ~60 (libkernel, libScePad, libSceVideoOut, libSceSystemService, libSceNgs2, libScePlayGo, libSceAmpr, libSceCommonDialog, …) have not been enumerated. Each gate is a `cmp` against `0x0N000000` after that call, so the same capstone method applies.
+- **`save_mount_compat` is required by the SDK-4 stamp on every firmware, but was opt-in and off by default** (made a default, proven rule below 5.00 on 2026-10-14, user decision, on the PPSA32935 13.60 save/reload result in §1.1; README "Save mount compatibility is a default rule"). §6d/§6g: the create-mount validator picks its rule by the process's compiled SDK, and SDK < 5.00 demands `systemBlocks = 0` on 1.00–13.60; the console firmware does not matter. Seven of the source backports patched this at the call site. Side effect already noted in §6d: with `systemBlocks = 0`, native `sceSaveDataCancel` fails on 6.00+ consoles ("Cancel operation is not supported when systemBlocks is 0"); the `ret0` stub covers only consoles below 6.00, where the export is absent.
+- **Every always-on rule's wrapped import exists on all 45 lists 4.00–13.60** (adapters and the Set3DLatency/Psml `plt_stub`s: checked by script), so no PLT-patched rule can hit an unresolved import on a later console. The 4.03 → 4.50 export lists differ by one added NID (`F5ZTyyVUHTs`), which bounds the missing 4.30 list.
+- **Imports were classified against the target list only** (done 2026-10-14: `reference`/`patched` imports are now checked against every later list and reported as `missing-later`; the §6g end-to-end check is automatic). No current sample imports a dropped NID.
+- **Set-4 Agc with the SDK-4 workaround-off patch has never run on a physical 4.xx console** (open item 1). GT7's console-tested FW 4 build used the unpatched Agc. The patch changes behaviour only when the process reports SDK major 4, which is every console under this goal, so the 4.xx result decides whether the patch is a fix or a regression there.
+- **FW 12/13 target support (previous bullet) is irrelevant to this goal** and is kept only as a recorded limitation.
+
 ---
 
 # Part 2 — Work archive, 10 October 2026
 
-The former `work/CONFIRMED_FINDINGS.md`, unchanged except that its headings are one level lower. Its §7 statement that the fixtures are deleted is outdated (see the Part 1 table above).
+The former `work/CONFIRMED_FINDINGS.md`, with headings one level lower. §6, §7 and the data tables were condensed on 14 October 2026 (per-run XML summaries, per-file hashes and the deletion inventory were reduced to their findings).
 
 
 Consolidated on 10 October 2026 before cleaning `E:\PS5_TOOLS\Backport\work`.
@@ -637,113 +736,24 @@ Mutation evaluation of Firmware.cs recorded 20 killed, 3 survived, 0 uncovered a
 
 ### 6. Verification retained from actual records
 
-The XML table below preserves all recognizable project result summaries found in `work`, including failed runs so that they are not silently represented as passes. Test counts changed as regressions were added. XML paths and source hashes preserve provenance; deleting XML removes the original detailed execution evidence.
+Condensed on 14 October 2026 from the 38 xUnit XML summaries and their hash table; the XML files themselves were deleted on 10 October. They describe historical code states, not the current tree.
 
-The popup unrestricted run records **428 tests, 0 failed, 0 skipped, 0 errors**, corroborated by its log. The latest stored strict All/Debug run also records 428 with zeros. Earlier unity/general runs reported 379/395 tests in their text summaries; the later production option documentation records 406/428 after additional tests. These describe different historical code states.
+- **Test count history (10 October):** Public lane 196 → 204; All lane 307 → 315 → 335 → 340 → 342 → 345 → 357 → 360, then 370/373 (import-library audit, Debug/Release), 379 (Unity) and 428 (Ubisoft popup option; also the last strict All/Debug run). Each count has at least one run with 0 failed / 0 skipped.
+- **Recorded failures** (each followed by a passing run):
+  - Sandbox-constrained runs: `import-library-audit/tests-debug.xml` (58 failed) and `ubisoft-popup-verification/tests.xml` (66 failed) recorded "Access to the path is denied" (`UnauthorizedAccessException` where `IOException` was expected) plus count assertions (expected 0 or 37, got 1; an empty collection). `tests-workspace.xml` (3 failed) recorded only the expected-0-got-1 assertion. The unrestricted reruns passed.
+  - Release run `20261010-024404` (5 failed): the headless UI worker produced no output, so `busy-cancel`, `close-busy`, `close-save-failure`, `search-selection` and `stale-analysis` were missing.
+  - Debug run `20261010-034148` (1 failed): a CLI golden listed `fakelibs/10` under the test `bin` folder instead of the repo.
+- No build, test, game launch or console test was performed during the cleanup itself.
 
-Sandbox-constrained runs recorded failures and were followed by successful unrestricted runs. Failure reasons are retained below from the XML rather than inferred solely from counts. Root reports retain historical zero-warning build evidence. No new build, regression run, live game launch or console test was performed during this cleanup.
+### 7. Consequences of the cleanup
 
-### 7. Consequences and reproduction after cleanup
+The 10 October cleanup deleted 6,406 files (24.7 GiB logical) from `work`: fixtures, raw logs, diagnostic ZIPs, candidate packages, benchmark baselines and screenshots. The per-file SHA-256 tables of the 60 evidence sources and of the deleted top-level entries were condensed out on 14 October. Hashes identified those files but could not restore them, so deleted candidates must not be referenced as available restore packages. The six `*_elf` fixture roots were recreated on 11 October (Part 1 §6), so `scripts/verify.ps1 -Lane All`/`Private` can run again.
 
-Deleted fixture roots: `NOT_BACKPORT_elf`, `CONTROL_elf`, `GT7_root_elf`, `GT7_sce_module_elf`, `GT7_sce_sys_elf`, `GT7_fakelib_elf`. Existing private tests, CLI goldens and `verification/DecoderEvaluation` refer to these exact `work` paths. They must be recreated from the appropriate original corpus before strict private verification. `scripts/verify.ps1 -Lane All` / `-Lane Private` will refuse setup when `work/NOT_BACKPORT_elf` is absent; direct private fixture tests can skip or fail depending on their policy. Public verification remains the appropriate fixture-independent lane; it was not newly run here.
-
-Keep source/reports outside `work` as the maintained implementation reference. Generated `work` folders can be recreated by verification, packaging, performance and game-analysis scripts. Historical baseline DLLs, traces and diagnostic candidate packages cannot be recreated from hashes alone; reproducing them may require original revisions, original binaries and new console captures. Deleted candidates must not be referenced as available restore packages.
-
-The broader software audit requested earlier remains unfinished. This cleanup consolidates existing confirmed results and does not upgrade them into a new full audit.
-
-<!-- GENERATED_EVIDENCE -->
 ### Preserved data tables
-
-#### Historical xUnit result summaries
-
-| Former XML path | Total | Failed | Skipped | Errors | SHA-256 |
-| --- | ---: | ---: | ---: | ---: | --- |
-| crow-diagnostics/unity-tests-all.xml | 379 | 0 | 0 | 0 | f439f3d7ee6f3e223da3d58a8dfeb1ae61936a864313ec1458852c5b541ee83e |
-| import-library-audit/tests-debug-unrestricted.xml | 370 | 0 | 0 | 0 | 955440abd6051f100124b90ec326471cf5616ef1d38ac94ecccf93c584fb958d |
-| import-library-audit/tests-debug.xml | 370 | 58 | 0 | 0 | 1ab2f621fbc050cb2cfc4ef35aa8180b545fa4ae0a0eac1261f46449bf25b99b |
-| import-library-audit/tests-release.xml | 373 | 0 | 0 | 0 | a4e1aec2a9c93b5e3abab44870895e69c62c74c54b841c0d5b790d1ee86e200d |
-| phase3/clean-verification/20261010-013805-e5d0d6dd7dec4d529bd18781ee84c2eb/Public-Debug.xml | 196 | 0 | 0 | 0 | c3aa5b08076f1520942c1a3750218dbae790fd33de626a0bb91948f3484e8d94 |
-| phase3/clean-verification/20261010-013805-e5d0d6dd7dec4d529bd18781ee84c2eb/Public-Release.xml | 196 | 0 | 0 | 0 | 8bb280990c26e8141923f93f622abca867ded4d2e6b6e0b1fcaae56a8a39b82f |
-| phase3/clean-verification/20261010-014326-22d19587892f46379c0aa40cae53480e/Public-Debug.xml | 204 | 0 | 0 | 0 | 2387b3c62e12e12c11b2551a9fe930b8ee6f368c98c812f854da56c61603f8ed |
-| phase3/clean-verification/20261010-014326-22d19587892f46379c0aa40cae53480e/Public-Release.xml | 204 | 0 | 0 | 0 | dea93b1679205cfd31f32664406224013a62789a6ef35400c0e3aad1fab8dcf9 |
-| ubisoft-popup-verification/tests-unrestricted.xml | 428 | 0 | 0 | 0 | 9dc30327db0e26fb7992b33c0fad10a81438efcbbd9d71a5dadcabbc3af8c5fe |
-| ubisoft-popup-verification/tests-workspace.xml | 428 | 3 | 0 | 0 | dc9e0c00d25ed92332d02735b24f5aa2022d6f532d61332d1913dd7ad5d1b05e |
-| ubisoft-popup-verification/tests.xml | 428 | 66 | 0 | 0 | cc8639d0d1df65f042660c0a061f455234da11e3c3774d9637b849d01cbd642c |
-| verification/20261010-013558-6a85530179d54d3c9ca9bf11f1369d3c/Public-Debug.xml | 196 | 0 | 0 | 0 | 6b454c0090dac4d0876d7f4e83b837f03ee7dd093bc1a061dbd9c26282d21975 |
-| verification/20261010-013705-63eb68d00f4b48f99fb13357ac7aa45d/All-Debug.xml | 307 | 0 | 0 | 0 | 8d8632b8b22be36d875a2e999737031c077438afb691cf7bd4bcdfb84a421484 |
-| verification/20261010-013705-63eb68d00f4b48f99fb13357ac7aa45d/All-Release.xml | 307 | 0 | 0 | 0 | 95713425587a4298d9d42b29db0afc930d12872af4988d82a6ef1116f28c8e48 |
-| verification/20261010-014149-71ef80c9a44745b1b956008b433f75cf/All-Debug.xml | 315 | 0 | 0 | 0 | 3d9ba1b869c793e4962bca488b98d5688a091399fc5438fb432abf1fafdcd082 |
-| verification/20261010-014149-71ef80c9a44745b1b956008b433f75cf/All-Release.xml | 315 | 0 | 0 | 0 | 625d223ec7d09979ace9bb1b04bd89c8df7d4026259256524b6dd2c9c91c02dc |
-| verification/20261010-015726-b929e9c95fab4c38968c6cb804d2dcff/All-Debug.xml | 335 | 0 | 0 | 0 | ba2ef922d0f5b3a71fe13bc8163b75d215b30aa351545189b5b3e9ac93e8dce1 |
-| verification/20261010-015726-b929e9c95fab4c38968c6cb804d2dcff/All-Release.xml | 335 | 0 | 0 | 0 | 84b08dba0e38e9197575645bf6b1bfb10ecd599da0da7a1aec2f19d6fd17e24f |
-| verification/20261010-020149-98103a498e98481ab603a06ea49b3ada/All-Debug.xml | 340 | 0 | 0 | 0 | d37571ac31eec61a1353660862fd62ef30ea19e662d436bb167f0b215ef62d42 |
-| verification/20261010-020149-98103a498e98481ab603a06ea49b3ada/All-Release.xml | 340 | 0 | 0 | 0 | 571b29866284a9782e66d109a23d420007e8368496545cbfda83daf9ee0a77c0 |
-| verification/20261010-020320-70e2650e82ae4af8bfb628a0399f0b57/All-Debug.xml | 342 | 0 | 0 | 0 | 01a4a6696a5e2f663423f972092ba6ddcde21baf7c6294b7175e2f8a80ab1bc0 |
-| verification/20261010-020320-70e2650e82ae4af8bfb628a0399f0b57/All-Release.xml | 342 | 0 | 0 | 0 | 77aee0e89d2d342b736974d9af7fea9b18e2bf6326bab5b1a03da2fb6349404c |
-| verification/20261010-021831-33e89269039d464ab0860f7771c58575/All-Debug.xml | 345 | 0 | 0 | 0 | ab86c6737694a1f2e7255357a9cc84165adb016db05ad0732de4fbd53987103a |
-| verification/20261010-021831-33e89269039d464ab0860f7771c58575/All-Release.xml | 345 | 0 | 0 | 0 | 4a9033aa7cb6ef26016427a0b4b6548b60ff2e111a012507bcacf01a55e581ac |
-| verification/20261010-024404-5ee838d65cc0491e885b1cb78be8235e/All-Debug.xml | 357 | 0 | 0 | 0 | f0cc1d285010203bec3513ce5be3913d02bdf310553394c8639ed2fefcc6fbc4 |
-| verification/20261010-024404-5ee838d65cc0491e885b1cb78be8235e/All-Release.xml | 357 | 5 | 0 | 0 | 98b48c64c1dbf121797b3d327923648e23635360b95691d689fef37bfa897456 |
-| verification/20261010-024610-a1fb4e8e72c34cf3aa7826bdb9f51e65/All-Debug.xml | 357 | 0 | 0 | 0 | 80367e8411ddecef0b97c5b9295c67ea7c8abc3df265aa47b2b0e59b0a67cd4e |
-| verification/20261010-024610-a1fb4e8e72c34cf3aa7826bdb9f51e65/All-Release.xml | 357 | 0 | 0 | 0 | 84f3663a76de111a91e2251e6d98c56741e346120eacd941f238d6e31547951f |
-| verification/20261010-031031-82cadd74618248d5b350078a07cefaa4/All-Debug.xml | 357 | 0 | 0 | 0 | 752050bee7772f5171d1e0f2370ff1da7c9c692c8ce97f7ba0838ca7b56b455c |
-| verification/20261010-031031-82cadd74618248d5b350078a07cefaa4/All-Release.xml | 357 | 0 | 0 | 0 | 9beeb43f043694510a452feb21332d41922d6cb59f70a58a5532f6760bcb4ca1 |
-| verification/20261010-032020-04ec1872bf4d4006b2e800c901635003/All-Debug.xml | 357 | 0 | 0 | 0 | 0db1e08ada3d45e22bb6c80f33d0a3cb369f28e2e2dd37544f9377de1ed984b2 |
-| verification/20261010-032020-04ec1872bf4d4006b2e800c901635003/All-Release.xml | 357 | 0 | 0 | 0 | e105c3f42ef11214186d69e7dcb0085523d0ee4e10d806c021fd665797607cbc |
-| verification/20261010-033423-a569d4839f4c4c9e8ab08dd05df6f48c/All-Debug.xml | 360 | 0 | 0 | 0 | 9a90a1a0bedf024135aee4b4ae5e383b97b55011397f23584a19ff72936b712e |
-| verification/20261010-033423-a569d4839f4c4c9e8ab08dd05df6f48c/All-Release.xml | 360 | 0 | 0 | 0 | 34d2a85c8af23a6bbc73cd5adbbfe04d32e2f6fb0f449b1f20c384d70205253a |
-| verification/20261010-034148-a1ba172b9cd14724a8c293992786e60b/All-Debug.xml | 360 | 1 | 0 | 0 | 0b1cb0e829b3763717adb495e6276882f2bc37419f3867a7a22297f132223a8e |
-| verification/20261010-034236-d3245083451d4c61882b080500452d7d/All-Debug.xml | 360 | 0 | 0 | 0 | 2e39e342ea10735b91274ab3b5316df8d004e31cce4f6a299799bc900d780369 |
-| verification/20261010-034236-d3245083451d4c61882b080500452d7d/All-Release.xml | 360 | 0 | 0 | 0 | 7736d303e1520a922c10954c8a51149a21effb4774f89bc46aaa736ce70af2f4 |
-| verification/20261010-224459-2fc643784bc448f1acea6e25a9f8402a/All-Debug.xml | 428 | 0 | 0 | 0 | 3057133ba2ba6e7df13efcbce8625b9414543c95660342617a55552853c37d45 |
-
-#### Failed-run context
-
-##### import-library-audit/tests-debug.xml
-
-Distinct failure messages (up to five, each bounded to 600 characters):
-
-- Assert.Equal() Failure: Values differ Expected: 0 Actual:   1
-- Assert.Equal() Failure: Values differ Expected: 37 Actual:   1
-- Assert.Null() Failure: Value is not null Expected: null Actual:   \"Access to the path is denied.\"
-- Assert.Single() Failure: The collection was empty
-- Assert.Throws() Failure: Exception type was not an exact match Expected: typeof(System.IO.IOException) Actual:   typeof(System.UnauthorizedAccessException) ---- System.UnauthorizedAccessException : Access to the path is denied.
-
-##### ubisoft-popup-verification/tests-workspace.xml
-
-Distinct failure messages (up to five, each bounded to 600 characters):
-
-- Assert.Equal() Failure: Values differ Expected: 0 Actual:   1
-
-##### ubisoft-popup-verification/tests.xml
-
-Distinct failure messages (up to five, each bounded to 600 characters):
-
-- Assert.Equal() Failure: Values differ Expected: 0 Actual:   1
-- Assert.Equal() Failure: Values differ Expected: 37 Actual:   1
-- Assert.Null() Failure: Value is not null Expected: null Actual:   \"Access to the path is denied.\"
-- Assert.Single() Failure: The collection was empty
-- Assert.Throws() Failure: Exception type was not an exact match Expected: typeof(System.IO.IOException) Actual:   typeof(System.UnauthorizedAccessException) ---- System.UnauthorizedAccessException : Access to the path is denied.
-
-##### verification/20261010-024404-5ee838d65cc0491e885b1cb78be8235e/All-Release.xml
-
-Distinct failure messages (up to five, each bounded to 600 characters):
-
-- Assert.Contains() Failure: Sub-string not found String:    \"\" Not found: \"Passed: busy-cancel\"
-- Assert.Contains() Failure: Sub-string not found String:    \"\" Not found: \"Passed: close-busy\"
-- Assert.Contains() Failure: Sub-string not found String:    \"\" Not found: \"Passed: close-save-failure\"
-- Assert.Contains() Failure: Sub-string not found String:    \"\" Not found: \"Passed: search-selection\"
-- Assert.Contains() Failure: Sub-string not found String:    \"\" Not found: \"Passed: stale-analysis\"
-
-##### verification/20261010-034148-a1ba172b9cd14724a8c293992786e60b/All-Debug.xml
-
-Distinct failure messages (up to five, each bounded to 600 characters):
-
-- Assert.Equal() Failure: Strings differ                                    ↓ (pos 22) Expected: \"exit 0\\n== 10  (<repo>\\\\fakelibs\\\\10)\\n   libScePsml.s\"··· Actual:   \"exit 0\\n== 10  (<repo>\\\\src\\\\Ps5Backport.Tests\\\\bin\\\\De\"···                                    ↑ (pos 22)
 
 #### Paired engine measurements
 
-From phase5/final/summary.json. Times are milliseconds; allocation and working set are MiB. Warm values are two-sample means. See the limitations in section 5.
+From `phase5/final/summary.json` (private-large-cook from the former PERFORMANCE_REPORT.md). Times are milliseconds; allocation and working set are MiB. Warm values are two-sample means. See the limitations in section 5.
 
 | Case | Cold before → after | Warm before → after | Allocated before → after | Working set before → after |
 | --- | ---: | ---: | ---: | ---: |
@@ -753,317 +763,35 @@ From phase5/final/summary.json. Times are milliseconds; allocation and working s
 | private-small-analyze | 1703 → 1519 | 1417 → 1340 | 1078.7 → 970.5 | 666 → 704 |
 | small-analyze | 106 → 106 | 27 → 84 | 8.7 → 8.7 | 46 → 46 |
 | small-cook | 634 → 708 | 538 → 493 | 26 → 17.9 | 68 → 59 |
+| private-large-cook | — | 6425 → 6247 | 2398.0 → 1974.1 | 2198 → 1865 |
 
-Private-large Cook is absent from that summary array; its documented paired measurements in PERFORMANCE_REPORT.md were warm 6,425 → 6,247 ms, allocated 2,398.0 → 1,974.1 MiB, working set 2,198 → 1,865 MiB. The memory-summary.json independently records its memory counters below.
-
-| Case | Private MiB before → after | Managed MiB before → after | Post-GC LOH MiB before → after | Gen0/1/2 counts before → after |
-| --- | ---: | ---: | ---: | --- |
-| small-analyze | 20 → 20 | 9 → 9 | 6 → 8 | 1/1/1 → 1/1/1 |
-| small-cook | 39 → 31 | 26 → 18 | 6 → 8 | 1/1/1 → 1/1/1 |
-| large-analyze | 208 → 208 | 194 → 194 | 176 → 176 | 2/2/2 → 2/2/2 |
-| large-cook | 607 → 412 | 579 → 387 | 176 → 176 | 2/2/2 → 2/2/2 |
-| private-small-analyze | 649 → 686 | 572 → 648 | 466 → 564 | 26/21/3 → 20/16/3 |
-| private-large-analyze | 1600 → 1475 | 1542 → 1390 | 1435 → 1246 | 23/19/4 → 15/12/2 |
-| private-large-cook | 2223 → 1890 | 2157 → 1789 | 2051 → 1738 | 23/19/4 → 15/12/1 |
+Post-GC LOH (`memory-summary.json`): private-small-analyze grew 466 → 564 MiB; private-large-analyze fell 1435 → 1246 and private-large-cook 2051 → 1738; the public cases were unchanged or +2 MiB.
 
 #### AMPR firmware matrix
 
-Former sources: ampr-source-validation/release-import-matrix.json and mandatory-hook-matrix.json. These are static export/import observations against the stored reference databases.
-
-| Firmware | Missing functions | Unknown functions | Mandatory hooks | Absent hook exports |
-| --- | ---: | ---: | ---: | ---: |
-| 4.00 | 0 | 0 | 48 | 0 |
-| 4.03 | 0 | 0 | 48 | 0 |
-| 4.50 | 0 | 0 | 48 | 0 |
-| 4.51 | 0 | 0 | 48 | 0 |
-| 5.02 | 0 | 0 | 48 | 0 |
-| 5.10 | 0 | 0 | 48 | 0 |
-| 5.50 | 0 | 0 | 48 | 0 |
-| 6.00 | 0 | 0 | 48 | 0 |
-| 6.02 | 0 | 0 | 48 | 0 |
-| 6.50 | 0 | 0 | 48 | 0 |
-| 7.01 | 0 | 0 | 48 | 0 |
-| 7.20 | 0 | 0 | 48 | 0 |
-| 7.40 | 0 | 0 | 48 | 0 |
-| 7.60 | 0 | 0 | 48 | 0 |
-| 7.61 | 0 | 0 | 48 | 0 |
-| 8.00 | 0 | 0 | 48 | 0 |
-| 8.20 | 0 | 0 | 48 | 0 |
-| 8.40 | 0 | 0 | 48 | 0 |
-| 8.60 | 0 | 0 | 48 | 0 |
-| 9.00 | 0 | 0 | 48 | 0 |
-| 9.05 | 0 | 0 | 48 | 0 |
-| 9.20 | 0 | 0 | 48 | 0 |
-| 9.40 | 0 | 0 | 48 | 0 |
-| 9.60 | 0 | 0 | 48 | 0 |
-| 10.01 | 0 | 0 | 48 | 0 |
-| 10.20 | 0 | 0 | 48 | 0 |
-| 10.40 | 0 | 0 | 48 | 0 |
-| 10.60 | 0 | 0 | 48 | 0 |
-| 11.00 | 0 | 0 | 48 | 0 |
-| 11.20 | 0 | 0 | 48 | 0 |
-| 11.40 | 0 | 0 | 48 | 0 |
-| 11.60 | 0 | 0 | 48 | 0 |
-| 12.00 | 0 | 0 | 48 | 0 |
-| 12.02 | 0 | 0 | 48 | 0 |
-| 12.20 | 0 | 0 | 48 | 0 |
-| 12.40 | 0 | 0 | 48 | 0 |
-| 12.60 | 0 | 0 | 48 | 0 |
-| 12.70 | 0 | 0 | 48 | 0 |
+From `ampr-source-validation/release-import-matrix.json` and `mandatory-hook-matrix.json` (static export/import observations). All 38 reference firmwares (4.00, 4.03, 4.50, 4.51, 5.02, 5.10, 5.50, 6.00, 6.02, 6.50, 7.01–7.61, 8.00–8.60, 9.00–9.60, 10.01–10.60, 11.00–11.60, 12.00–12.70) gave the same result: 0 missing functions, 0 unknown functions, 48 mandatory hooks, 0 absent hook exports.
 
 #### Completed game-analysis import counts
 
-##### game-analysis/HadesII-standardized-v2/summary.md
+Unresolved function imports per module against each `firmware_db` list. Modules not listed had 0 against every firmware (fmod, NpCppWebApi, Pfs, Renoir/cohtml, `right.sprx`, and every fakelib Agc/AgcDriver/Ampr/PlayGo/Psml).
 
-State: completed. Modules: 19. Finished UTC: 10/10/2026 11:50:31.
+**HadesII-standardized-v2** (19 modules; FW 4.03 / 10.01): `default` eboot 7 / 2, libSceFontGsm 2 / 0, libSceJobManager 18 / 1, libc 10 / 5. `4xx+`: every module 0 / 0.
 
-| Variant/module | Firmware reference | Unresolved function imports |
-| --- | --- | ---: |
-| default/eboot.bin | firmware_db 4.03 (exact for FW 4.03) | 7 |
-| default/eboot.bin | firmware_db 10.01 (exact for FW 10.01) | 2 |
-| default/libfmod.prx | firmware_db 4.03 (exact for FW 4.03) | 0 |
-| default/libfmod.prx | firmware_db 10.01 (exact for FW 10.01) | 0 |
-| default/libfmodstudio.prx | firmware_db 4.03 (exact for FW 4.03) | 0 |
-| default/libfmodstudio.prx | firmware_db 10.01 (exact for FW 10.01) | 0 |
-| default/sce_module/libSceFontGsm.prx | firmware_db 4.03 (exact for FW 4.03) | 2 |
-| default/sce_module/libSceFontGsm.prx | firmware_db 10.01 (exact for FW 10.01) | 0 |
-| default/sce_module/libSceJobManager.prx | firmware_db 4.03 (exact for FW 4.03) | 18 |
-| default/sce_module/libSceJobManager.prx | firmware_db 10.01 (exact for FW 10.01) | 1 |
-| default/sce_module/libSceNpCppWebApi.prx | firmware_db 4.03 (exact for FW 4.03) | 0 |
-| default/sce_module/libSceNpCppWebApi.prx | firmware_db 10.01 (exact for FW 10.01) | 0 |
-| default/sce_module/libScePfs.prx | firmware_db 4.03 (exact for FW 4.03) | 0 |
-| default/sce_module/libScePfs.prx | firmware_db 10.01 (exact for FW 10.01) | 0 |
-| default/sce_module/libc.prx | firmware_db 4.03 (exact for FW 4.03) | 10 |
-| default/sce_module/libc.prx | firmware_db 10.01 (exact for FW 10.01) | 5 |
-| default/sce_sys/about/right.sprx | firmware_db 4.03 (exact for FW 4.03) | 0 |
-| default/sce_sys/about/right.sprx | firmware_db 10.01 (exact for FW 10.01) | 0 |
-| 4xx+/eboot.bin | firmware_db 4.03 (exact for FW 4.03) | 0 |
-| 4xx+/eboot.bin | firmware_db 10.01 (exact for FW 10.01) | 0 |
-| 4xx+/libfmod.prx | firmware_db 4.03 (exact for FW 4.03) | 0 |
-| 4xx+/libfmod.prx | firmware_db 10.01 (exact for FW 10.01) | 0 |
-| 4xx+/libfmodstudio.prx | firmware_db 4.03 (exact for FW 4.03) | 0 |
-| 4xx+/libfmodstudio.prx | firmware_db 10.01 (exact for FW 10.01) | 0 |
-| 4xx+/fakelib/libSceAgc.sprx | firmware_db 4.03 (exact for FW 4.03) | 0 |
-| 4xx+/fakelib/libSceAgc.sprx | firmware_db 10.01 (exact for FW 10.01) | 0 |
-| 4xx+/fakelib/libSceAgcDriver.sprx | firmware_db 4.03 (exact for FW 4.03) | 0 |
-| 4xx+/fakelib/libSceAgcDriver.sprx | firmware_db 10.01 (exact for FW 10.01) | 0 |
-| 4xx+/sce_module/libSceFontGsm.prx | firmware_db 4.03 (exact for FW 4.03) | 0 |
-| 4xx+/sce_module/libSceFontGsm.prx | firmware_db 10.01 (exact for FW 10.01) | 0 |
-| 4xx+/sce_module/libSceJobManager.prx | firmware_db 4.03 (exact for FW 4.03) | 0 |
-| 4xx+/sce_module/libSceJobManager.prx | firmware_db 10.01 (exact for FW 10.01) | 0 |
-| 4xx+/sce_module/libSceNpCppWebApi.prx | firmware_db 4.03 (exact for FW 4.03) | 0 |
-| 4xx+/sce_module/libSceNpCppWebApi.prx | firmware_db 10.01 (exact for FW 10.01) | 0 |
-| 4xx+/sce_module/libScePfs.prx | firmware_db 4.03 (exact for FW 4.03) | 0 |
-| 4xx+/sce_module/libScePfs.prx | firmware_db 10.01 (exact for FW 10.01) | 0 |
-| 4xx+/sce_module/libc.prx | firmware_db 4.03 (exact for FW 4.03) | 0 |
-| 4xx+/sce_module/libc.prx | firmware_db 10.01 (exact for FW 10.01) | 0 |
+**PPSA03671-library-fix** (17 modules; FW 4.00 / 4.03 / 9.60 / 12.70):
 
-##### game-analysis/PPSA03671-library-fix/summary.md
+| Module | default | 4xx+ |
+| --- | --- | --- |
+| eboot.bin | 169 / 169 / 157 / 147 | 153 / 153 / 148 / 147 |
+| sce_module/libc.prx | 10 / 10 / 5 / 0 | 9 / 9 / 5 / 0 |
 
-State: completed. Modules: 17. Finished UTC: 10/10/2026 13:25:32.
+**PPSA34008-standardized-v2** (25 modules; FW 4.03 / 4.51 / 10.01 / 10.40 / 12.00; `decrypted` and `default` gave identical counts):
 
-| Variant/module | Firmware reference | Unresolved function imports |
-| --- | --- | ---: |
-| default/eboot.bin | firmware_db 4.00 (exact for FW 4.00) | 169 |
-| default/eboot.bin | firmware_db 4.03 (exact for FW 4.03) | 169 |
-| default/eboot.bin | firmware_db 9.60 (exact for FW 9.60) | 157 |
-| default/eboot.bin | firmware_db 12.70 (exact for FW 12.70) | 147 |
-| default/libRenoirCore.PS5.prx | firmware_db 4.00 (exact for FW 4.00) | 0 |
-| default/libRenoirCore.PS5.prx | firmware_db 4.03 (exact for FW 4.03) | 0 |
-| default/libRenoirCore.PS5.prx | firmware_db 9.60 (exact for FW 9.60) | 0 |
-| default/libRenoirCore.PS5.prx | firmware_db 12.70 (exact for FW 12.70) | 0 |
-| default/libcohtml.Prospero.prx | firmware_db 4.00 (exact for FW 4.00) | 0 |
-| default/libcohtml.Prospero.prx | firmware_db 4.03 (exact for FW 4.03) | 0 |
-| default/libcohtml.Prospero.prx | firmware_db 9.60 (exact for FW 9.60) | 0 |
-| default/libcohtml.Prospero.prx | firmware_db 12.70 (exact for FW 12.70) | 0 |
-| default/fakelib/libSceAmpr.sprx | firmware_db 4.00 (exact for FW 4.00) | 0 |
-| default/fakelib/libSceAmpr.sprx | firmware_db 4.03 (exact for FW 4.03) | 0 |
-| default/fakelib/libSceAmpr.sprx | firmware_db 9.60 (exact for FW 9.60) | 0 |
-| default/fakelib/libSceAmpr.sprx | firmware_db 12.70 (exact for FW 12.70) | 0 |
-| default/fakelib/libScePlayGo.sprx | firmware_db 4.00 (exact for FW 4.00) | 0 |
-| default/fakelib/libScePlayGo.sprx | firmware_db 4.03 (exact for FW 4.03) | 0 |
-| default/fakelib/libScePlayGo.sprx | firmware_db 9.60 (exact for FW 9.60) | 0 |
-| default/fakelib/libScePlayGo.sprx | firmware_db 12.70 (exact for FW 12.70) | 0 |
-| default/sce_module/libc.prx | firmware_db 4.00 (exact for FW 4.00) | 10 |
-| default/sce_module/libc.prx | firmware_db 4.03 (exact for FW 4.03) | 10 |
-| default/sce_module/libc.prx | firmware_db 9.60 (exact for FW 9.60) | 5 |
-| default/sce_module/libc.prx | firmware_db 12.70 (exact for FW 12.70) | 0 |
-| default/sce_sys/about/right.sprx | firmware_db 4.00 (exact for FW 4.00) | 0 |
-| default/sce_sys/about/right.sprx | firmware_db 4.03 (exact for FW 4.03) | 0 |
-| default/sce_sys/about/right.sprx | firmware_db 9.60 (exact for FW 9.60) | 0 |
-| default/sce_sys/about/right.sprx | firmware_db 12.70 (exact for FW 12.70) | 0 |
-| 4xx+/eboot.bin | firmware_db 4.00 (exact for FW 4.00) | 153 |
-| 4xx+/eboot.bin | firmware_db 4.03 (exact for FW 4.03) | 153 |
-| 4xx+/eboot.bin | firmware_db 9.60 (exact for FW 9.60) | 148 |
-| 4xx+/eboot.bin | firmware_db 12.70 (exact for FW 12.70) | 147 |
-| 4xx+/libRenoirCore.PS5.prx | firmware_db 4.00 (exact for FW 4.00) | 0 |
-| 4xx+/libRenoirCore.PS5.prx | firmware_db 4.03 (exact for FW 4.03) | 0 |
-| 4xx+/libRenoirCore.PS5.prx | firmware_db 9.60 (exact for FW 9.60) | 0 |
-| 4xx+/libRenoirCore.PS5.prx | firmware_db 12.70 (exact for FW 12.70) | 0 |
-| 4xx+/libcohtml.Prospero.prx | firmware_db 4.00 (exact for FW 4.00) | 0 |
-| 4xx+/libcohtml.Prospero.prx | firmware_db 4.03 (exact for FW 4.03) | 0 |
-| 4xx+/libcohtml.Prospero.prx | firmware_db 9.60 (exact for FW 9.60) | 0 |
-| 4xx+/libcohtml.Prospero.prx | firmware_db 12.70 (exact for FW 12.70) | 0 |
-| 4xx+/fakelib/libSceAgc.sprx | firmware_db 4.00 (exact for FW 4.00) | 0 |
-| 4xx+/fakelib/libSceAgc.sprx | firmware_db 4.03 (exact for FW 4.03) | 0 |
-| 4xx+/fakelib/libSceAgc.sprx | firmware_db 9.60 (exact for FW 9.60) | 0 |
-| 4xx+/fakelib/libSceAgc.sprx | firmware_db 12.70 (exact for FW 12.70) | 0 |
-| 4xx+/fakelib/libSceAgcDriver.sprx | firmware_db 4.00 (exact for FW 4.00) | 0 |
-| 4xx+/fakelib/libSceAgcDriver.sprx | firmware_db 4.03 (exact for FW 4.03) | 0 |
-| 4xx+/fakelib/libSceAgcDriver.sprx | firmware_db 9.60 (exact for FW 9.60) | 0 |
-| 4xx+/fakelib/libSceAgcDriver.sprx | firmware_db 12.70 (exact for FW 12.70) | 0 |
-| 4xx+/fakelib/libSceAmpr.sprx | firmware_db 4.00 (exact for FW 4.00) | 0 |
-| 4xx+/fakelib/libSceAmpr.sprx | firmware_db 4.03 (exact for FW 4.03) | 0 |
-| 4xx+/fakelib/libSceAmpr.sprx | firmware_db 9.60 (exact for FW 9.60) | 0 |
-| 4xx+/fakelib/libSceAmpr.sprx | firmware_db 12.70 (exact for FW 12.70) | 0 |
-| 4xx+/fakelib/libScePlayGo.sprx | firmware_db 4.00 (exact for FW 4.00) | 0 |
-| 4xx+/fakelib/libScePlayGo.sprx | firmware_db 4.03 (exact for FW 4.03) | 0 |
-| 4xx+/fakelib/libScePlayGo.sprx | firmware_db 9.60 (exact for FW 9.60) | 0 |
-| 4xx+/fakelib/libScePlayGo.sprx | firmware_db 12.70 (exact for FW 12.70) | 0 |
-| 4xx+/fakelib/libScePsml.sprx | firmware_db 4.00 (exact for FW 4.00) | 0 |
-| 4xx+/fakelib/libScePsml.sprx | firmware_db 4.03 (exact for FW 4.03) | 0 |
-| 4xx+/fakelib/libScePsml.sprx | firmware_db 9.60 (exact for FW 9.60) | 0 |
-| 4xx+/fakelib/libScePsml.sprx | firmware_db 12.70 (exact for FW 12.70) | 0 |
-| 4xx+/sce_module/libc.prx | firmware_db 4.00 (exact for FW 4.00) | 9 |
-| 4xx+/sce_module/libc.prx | firmware_db 4.03 (exact for FW 4.03) | 9 |
-| 4xx+/sce_module/libc.prx | firmware_db 9.60 (exact for FW 9.60) | 5 |
-| 4xx+/sce_module/libc.prx | firmware_db 12.70 (exact for FW 12.70) | 0 |
-| 4xx+/sce_sys/about/right.sprx | firmware_db 4.00 (exact for FW 4.00) | 0 |
-| 4xx+/sce_sys/about/right.sprx | firmware_db 4.03 (exact for FW 4.03) | 0 |
-| 4xx+/sce_sys/about/right.sprx | firmware_db 9.60 (exact for FW 9.60) | 0 |
-| 4xx+/sce_sys/about/right.sprx | firmware_db 12.70 (exact for FW 12.70) | 0 |
-
-##### game-analysis/PPSA34008-standardized-v2/summary.md
-
-State: completed. Modules: 25. Finished UTC: 10/10/2026 11:50:33.
-
-| Variant/module | Firmware reference | Unresolved function imports |
-| --- | --- | ---: |
-| decrypted/eboot.bin | firmware_db 4.03 (exact for FW 4.03) | 19 |
-| decrypted/eboot.bin | firmware_db 4.51 (exact for FW 4.51) | 19 |
-| decrypted/eboot.bin | firmware_db 10.01 (exact for FW 10.01) | 4 |
-| decrypted/eboot.bin | firmware_db 10.40 (exact for FW 10.40) | 4 |
-| decrypted/eboot.bin | firmware_db 12.00 (exact for FW 12.00) | 0 |
-| decrypted/sce_module/libSceFontGsm.prx | firmware_db 4.03 (exact for FW 4.03) | 2 |
-| decrypted/sce_module/libSceFontGsm.prx | firmware_db 4.51 (exact for FW 4.51) | 2 |
-| decrypted/sce_module/libSceFontGsm.prx | firmware_db 10.01 (exact for FW 10.01) | 0 |
-| decrypted/sce_module/libSceFontGsm.prx | firmware_db 10.40 (exact for FW 10.40) | 0 |
-| decrypted/sce_module/libSceFontGsm.prx | firmware_db 12.00 (exact for FW 12.00) | 0 |
-| decrypted/sce_module/libSceJobManager.prx | firmware_db 4.03 (exact for FW 4.03) | 18 |
-| decrypted/sce_module/libSceJobManager.prx | firmware_db 4.51 (exact for FW 4.51) | 18 |
-| decrypted/sce_module/libSceJobManager.prx | firmware_db 10.01 (exact for FW 10.01) | 1 |
-| decrypted/sce_module/libSceJobManager.prx | firmware_db 10.40 (exact for FW 10.40) | 1 |
-| decrypted/sce_module/libSceJobManager.prx | firmware_db 12.00 (exact for FW 12.00) | 0 |
-| decrypted/sce_module/libSceNpCppWebApi.prx | firmware_db 4.03 (exact for FW 4.03) | 0 |
-| decrypted/sce_module/libSceNpCppWebApi.prx | firmware_db 4.51 (exact for FW 4.51) | 0 |
-| decrypted/sce_module/libSceNpCppWebApi.prx | firmware_db 10.01 (exact for FW 10.01) | 0 |
-| decrypted/sce_module/libSceNpCppWebApi.prx | firmware_db 10.40 (exact for FW 10.40) | 0 |
-| decrypted/sce_module/libSceNpCppWebApi.prx | firmware_db 12.00 (exact for FW 12.00) | 0 |
-| decrypted/sce_module/libScePfs.prx | firmware_db 4.03 (exact for FW 4.03) | 0 |
-| decrypted/sce_module/libScePfs.prx | firmware_db 4.51 (exact for FW 4.51) | 0 |
-| decrypted/sce_module/libScePfs.prx | firmware_db 10.01 (exact for FW 10.01) | 0 |
-| decrypted/sce_module/libScePfs.prx | firmware_db 10.40 (exact for FW 10.40) | 0 |
-| decrypted/sce_module/libScePfs.prx | firmware_db 12.00 (exact for FW 12.00) | 0 |
-| decrypted/sce_module/libc.prx | firmware_db 4.03 (exact for FW 4.03) | 10 |
-| decrypted/sce_module/libc.prx | firmware_db 4.51 (exact for FW 4.51) | 10 |
-| decrypted/sce_module/libc.prx | firmware_db 10.01 (exact for FW 10.01) | 5 |
-| decrypted/sce_module/libc.prx | firmware_db 10.40 (exact for FW 10.40) | 5 |
-| decrypted/sce_module/libc.prx | firmware_db 12.00 (exact for FW 12.00) | 0 |
-| decrypted/sce_sys/about/right.sprx | firmware_db 4.03 (exact for FW 4.03) | 0 |
-| decrypted/sce_sys/about/right.sprx | firmware_db 4.51 (exact for FW 4.51) | 0 |
-| decrypted/sce_sys/about/right.sprx | firmware_db 10.01 (exact for FW 10.01) | 0 |
-| decrypted/sce_sys/about/right.sprx | firmware_db 10.40 (exact for FW 10.40) | 0 |
-| decrypted/sce_sys/about/right.sprx | firmware_db 12.00 (exact for FW 12.00) | 0 |
-| default/eboot.bin | firmware_db 4.03 (exact for FW 4.03) | 19 |
-| default/eboot.bin | firmware_db 4.51 (exact for FW 4.51) | 19 |
-| default/eboot.bin | firmware_db 10.01 (exact for FW 10.01) | 4 |
-| default/eboot.bin | firmware_db 10.40 (exact for FW 10.40) | 4 |
-| default/eboot.bin | firmware_db 12.00 (exact for FW 12.00) | 0 |
-| default/sce_module/libSceFontGsm.prx | firmware_db 4.03 (exact for FW 4.03) | 2 |
-| default/sce_module/libSceFontGsm.prx | firmware_db 4.51 (exact for FW 4.51) | 2 |
-| default/sce_module/libSceFontGsm.prx | firmware_db 10.01 (exact for FW 10.01) | 0 |
-| default/sce_module/libSceFontGsm.prx | firmware_db 10.40 (exact for FW 10.40) | 0 |
-| default/sce_module/libSceFontGsm.prx | firmware_db 12.00 (exact for FW 12.00) | 0 |
-| default/sce_module/libSceJobManager.prx | firmware_db 4.03 (exact for FW 4.03) | 18 |
-| default/sce_module/libSceJobManager.prx | firmware_db 4.51 (exact for FW 4.51) | 18 |
-| default/sce_module/libSceJobManager.prx | firmware_db 10.01 (exact for FW 10.01) | 1 |
-| default/sce_module/libSceJobManager.prx | firmware_db 10.40 (exact for FW 10.40) | 1 |
-| default/sce_module/libSceJobManager.prx | firmware_db 12.00 (exact for FW 12.00) | 0 |
-| default/sce_module/libSceNpCppWebApi.prx | firmware_db 4.03 (exact for FW 4.03) | 0 |
-| default/sce_module/libSceNpCppWebApi.prx | firmware_db 4.51 (exact for FW 4.51) | 0 |
-| default/sce_module/libSceNpCppWebApi.prx | firmware_db 10.01 (exact for FW 10.01) | 0 |
-| default/sce_module/libSceNpCppWebApi.prx | firmware_db 10.40 (exact for FW 10.40) | 0 |
-| default/sce_module/libSceNpCppWebApi.prx | firmware_db 12.00 (exact for FW 12.00) | 0 |
-| default/sce_module/libScePfs.prx | firmware_db 4.03 (exact for FW 4.03) | 0 |
-| default/sce_module/libScePfs.prx | firmware_db 4.51 (exact for FW 4.51) | 0 |
-| default/sce_module/libScePfs.prx | firmware_db 10.01 (exact for FW 10.01) | 0 |
-| default/sce_module/libScePfs.prx | firmware_db 10.40 (exact for FW 10.40) | 0 |
-| default/sce_module/libScePfs.prx | firmware_db 12.00 (exact for FW 12.00) | 0 |
-| default/sce_module/libc.prx | firmware_db 4.03 (exact for FW 4.03) | 10 |
-| default/sce_module/libc.prx | firmware_db 4.51 (exact for FW 4.51) | 10 |
-| default/sce_module/libc.prx | firmware_db 10.01 (exact for FW 10.01) | 5 |
-| default/sce_module/libc.prx | firmware_db 10.40 (exact for FW 10.40) | 5 |
-| default/sce_module/libc.prx | firmware_db 12.00 (exact for FW 12.00) | 0 |
-| default/sce_sys/about/right.sprx | firmware_db 4.03 (exact for FW 4.03) | 0 |
-| default/sce_sys/about/right.sprx | firmware_db 4.51 (exact for FW 4.51) | 0 |
-| default/sce_sys/about/right.sprx | firmware_db 10.01 (exact for FW 10.01) | 0 |
-| default/sce_sys/about/right.sprx | firmware_db 10.40 (exact for FW 10.40) | 0 |
-| default/sce_sys/about/right.sprx | firmware_db 12.00 (exact for FW 12.00) | 0 |
-| 10xx+/eboot.bin | firmware_db 4.03 (exact for FW 4.03) | 5 |
-| 10xx+/eboot.bin | firmware_db 4.51 (exact for FW 4.51) | 5 |
-| 10xx+/eboot.bin | firmware_db 10.01 (exact for FW 10.01) | 0 |
-| 10xx+/eboot.bin | firmware_db 10.40 (exact for FW 10.40) | 0 |
-| 10xx+/eboot.bin | firmware_db 12.00 (exact for FW 12.00) | 0 |
-| 10xx+/fakelib/libSceAgc.sprx | firmware_db 4.03 (exact for FW 4.03) | 0 |
-| 10xx+/fakelib/libSceAgc.sprx | firmware_db 4.51 (exact for FW 4.51) | 0 |
-| 10xx+/fakelib/libSceAgc.sprx | firmware_db 10.01 (exact for FW 10.01) | 0 |
-| 10xx+/fakelib/libSceAgc.sprx | firmware_db 10.40 (exact for FW 10.40) | 0 |
-| 10xx+/fakelib/libSceAgc.sprx | firmware_db 12.00 (exact for FW 12.00) | 0 |
-| 10xx+/fakelib/libSceAgcDriver.sprx | firmware_db 4.03 (exact for FW 4.03) | 0 |
-| 10xx+/fakelib/libSceAgcDriver.sprx | firmware_db 4.51 (exact for FW 4.51) | 0 |
-| 10xx+/fakelib/libSceAgcDriver.sprx | firmware_db 10.01 (exact for FW 10.01) | 0 |
-| 10xx+/fakelib/libSceAgcDriver.sprx | firmware_db 10.40 (exact for FW 10.40) | 0 |
-| 10xx+/fakelib/libSceAgcDriver.sprx | firmware_db 12.00 (exact for FW 12.00) | 0 |
-| 10xx+/fakelib/libSceAmpr.sprx | firmware_db 4.03 (exact for FW 4.03) | 0 |
-| 10xx+/fakelib/libSceAmpr.sprx | firmware_db 4.51 (exact for FW 4.51) | 0 |
-| 10xx+/fakelib/libSceAmpr.sprx | firmware_db 10.01 (exact for FW 10.01) | 0 |
-| 10xx+/fakelib/libSceAmpr.sprx | firmware_db 10.40 (exact for FW 10.40) | 0 |
-| 10xx+/fakelib/libSceAmpr.sprx | firmware_db 12.00 (exact for FW 12.00) | 0 |
-| 10xx+/fakelib/libScePlayGo.sprx | firmware_db 4.03 (exact for FW 4.03) | 0 |
-| 10xx+/fakelib/libScePlayGo.sprx | firmware_db 4.51 (exact for FW 4.51) | 0 |
-| 10xx+/fakelib/libScePlayGo.sprx | firmware_db 10.01 (exact for FW 10.01) | 0 |
-| 10xx+/fakelib/libScePlayGo.sprx | firmware_db 10.40 (exact for FW 10.40) | 0 |
-| 10xx+/fakelib/libScePlayGo.sprx | firmware_db 12.00 (exact for FW 12.00) | 0 |
-| 10xx+/fakelib/libScePsml.sprx | firmware_db 4.03 (exact for FW 4.03) | 0 |
-| 10xx+/fakelib/libScePsml.sprx | firmware_db 4.51 (exact for FW 4.51) | 0 |
-| 10xx+/fakelib/libScePsml.sprx | firmware_db 10.01 (exact for FW 10.01) | 0 |
-| 10xx+/fakelib/libScePsml.sprx | firmware_db 10.40 (exact for FW 10.40) | 0 |
-| 10xx+/fakelib/libScePsml.sprx | firmware_db 12.00 (exact for FW 12.00) | 0 |
-| 10xx+/sce_module/libSceFontGsm.prx | firmware_db 4.03 (exact for FW 4.03) | 0 |
-| 10xx+/sce_module/libSceFontGsm.prx | firmware_db 4.51 (exact for FW 4.51) | 0 |
-| 10xx+/sce_module/libSceFontGsm.prx | firmware_db 10.01 (exact for FW 10.01) | 0 |
-| 10xx+/sce_module/libSceFontGsm.prx | firmware_db 10.40 (exact for FW 10.40) | 0 |
-| 10xx+/sce_module/libSceFontGsm.prx | firmware_db 12.00 (exact for FW 12.00) | 0 |
-| 10xx+/sce_module/libSceJobManager.prx | firmware_db 4.03 (exact for FW 4.03) | 0 |
-| 10xx+/sce_module/libSceJobManager.prx | firmware_db 4.51 (exact for FW 4.51) | 0 |
-| 10xx+/sce_module/libSceJobManager.prx | firmware_db 10.01 (exact for FW 10.01) | 0 |
-| 10xx+/sce_module/libSceJobManager.prx | firmware_db 10.40 (exact for FW 10.40) | 0 |
-| 10xx+/sce_module/libSceJobManager.prx | firmware_db 12.00 (exact for FW 12.00) | 0 |
-| 10xx+/sce_module/libSceNpCppWebApi.prx | firmware_db 4.03 (exact for FW 4.03) | 0 |
-| 10xx+/sce_module/libSceNpCppWebApi.prx | firmware_db 4.51 (exact for FW 4.51) | 0 |
-| 10xx+/sce_module/libSceNpCppWebApi.prx | firmware_db 10.01 (exact for FW 10.01) | 0 |
-| 10xx+/sce_module/libSceNpCppWebApi.prx | firmware_db 10.40 (exact for FW 10.40) | 0 |
-| 10xx+/sce_module/libSceNpCppWebApi.prx | firmware_db 12.00 (exact for FW 12.00) | 0 |
-| 10xx+/sce_module/libScePfs.prx | firmware_db 4.03 (exact for FW 4.03) | 0 |
-| 10xx+/sce_module/libScePfs.prx | firmware_db 4.51 (exact for FW 4.51) | 0 |
-| 10xx+/sce_module/libScePfs.prx | firmware_db 10.01 (exact for FW 10.01) | 0 |
-| 10xx+/sce_module/libScePfs.prx | firmware_db 10.40 (exact for FW 10.40) | 0 |
-| 10xx+/sce_module/libScePfs.prx | firmware_db 12.00 (exact for FW 12.00) | 0 |
-| 10xx+/sce_module/libc.prx | firmware_db 4.03 (exact for FW 4.03) | 8 |
-| 10xx+/sce_module/libc.prx | firmware_db 4.51 (exact for FW 4.51) | 8 |
-| 10xx+/sce_module/libc.prx | firmware_db 10.01 (exact for FW 10.01) | 4 |
-| 10xx+/sce_module/libc.prx | firmware_db 10.40 (exact for FW 10.40) | 4 |
-| 10xx+/sce_module/libc.prx | firmware_db 12.00 (exact for FW 12.00) | 0 |
+| Module | default and decrypted | 10xx+ |
+| --- | --- | --- |
+| eboot.bin | 19 / 19 / 4 / 4 / 0 | 5 / 5 / 0 / 0 / 0 |
+| libSceFontGsm.prx | 2 / 2 / 0 / 0 / 0 | 0 |
+| libSceJobManager.prx | 18 / 18 / 1 / 1 / 0 | 0 |
+| libc.prx | 10 / 10 / 5 / 5 / 0 | 8 / 8 / 4 / 4 / 0 |
 
 #### Rogue two-launch event counts
 
@@ -1073,125 +801,3 @@ These earlier captures precede the confirmed level-exit run-save result. Success
 | --- | ---: | ---: | ---: | ---: | ---: | ---: |
 | rogue_auth_details_first_save.log | 4 | 4 | 9 | 9 | 9 | 1 |
 | rogue_auth_details_relaunched.log | 4 | 4 | 4 | 4 | 4 | 0 |
-
-### Evidence source identities
-
-Former work-relative paths. Source SHA-256 values were computed before deletion. Former root documents listed above are now consolidated into the linked sections of ../README.md.
-
-| Former source | Bytes | SHA-256 |
-| --- | ---: | --- |
-| ampr-ghidra/COMPARISON.md | 5460 | 074de9f6ccc8634a0489a0f935d0179ace2c0b077c7c32a405d3ade51fc7782f |
-| ampr-source-validation/mandatory-hook-matrix.json | 3705 | 5da17cb8be448fff05fd901c4c9ff0b1d0b4000a08d6dd6dba0b26baf15eb1fc |
-| ampr-source-validation/payload-verify.log | 23511 | c4f9c68aa603b1d48a17e2206b198e3403e3bb80bc46d5201d656302bdba36f5 |
-| ampr-source-validation/rebuilt/import-matrix.json | 7163 | 68e68214401e3b5f82d45704ad75bd1d6948d70a5d98e7d11fbcfde7e8a1bb8d |
-| ampr-source-validation/release-import-matrix.json | 7163 | 01de6bac4459af32c060b60b0c77c4c1cec4a15d168049fd9dd58b71c5d07760 |
-| crow-diagnostics/completed-crash-findings.md | 3134 | 6a2463b17d6b86873c49e459fc275fbc6424b99e45304f260be7e2176959e933 |
-| crow-diagnostics/rogue-auth-first-collected.log | 84 | 23b1062a1777cf7997465f854d4c2b2e9ea15adae358873d1d9d746a6f569161 |
-| crow-diagnostics/rogue-auth-working-offline.log | 112 | c59a3c5f30782cde76ebb26bd020c2c549aadd9c985d606db1c0b689621a123f |
-| crow-diagnostics/rogue-runtime-finding.md | 2722 | e6e35e2c6e4b58908533af988da8a983984b0ae611c70aa41c1ca50169559bfb |
-| game-analysis/HadesII-standardized-v2/run.json | 9206 | a7f272487a5ae3d2a8ad19d71357cb81268bbda9a1fd4ed1159478e5004b066b |
-| game-analysis/HadesII-standardized-v2/summary.md | 3430 | 0cba7bf9dd5cc15738b149db0828ad172ffe1880f7baec8949f54d6558043a1e |
-| game-analysis/HadesII-standardized/run.json | 3833 | d59a89b1285ce5c701ea01f049c944b58fd3569fb8f69e482655e7a63e2e7896 |
-| game-analysis/HadesII-standardized/summary.md | 3430 | 0cba7bf9dd5cc15738b149db0828ad172ffe1880f7baec8949f54d6558043a1e |
-| game-analysis/PPSA03671-first-pass/run.json | 11535 | 563ac3104f115b1640403911f7f0d10d459cdb2b6ef7413dcf29c45100aac41e |
-| game-analysis/PPSA03671-first-pass/summary.md | 5696 | ed8800532e4df6693372ffbef4c578604c66eceb5300b10709219e9b3cc24037 |
-| game-analysis/PPSA03671-library-fix/run.json | 11534 | b3790767682a398997a478808d0d3c52fc4c55208058df184fec6b696d282500 |
-| game-analysis/PPSA03671-library-fix/summary.md | 5696 | ed8800532e4df6693372ffbef4c578604c66eceb5300b10709219e9b3cc24037 |
-| game-analysis/PPSA34008-standardized-v2/run.json | 13336 | 5161b95b1ce08a0322fc3e85e8f7693405b0113eb5d36817c3c47317cdc4056a |
-| game-analysis/PPSA34008-standardized-v2/summary.md | 10689 | 73c6634d5419b630798faf001de579e7f3e24dca9aec6bc99ed8fc5f8d18c70e |
-| game-analysis/PPSA34008-standardized/run.json | 1777 | 425dec90792e19841c5b31d45c94799da99f7c516f24af7bd23d57ca269ddc6d |
-| import-library-audit/audit.txt | 1620 | f81a809b8d2b33f1a0d689310b2a273edaf2d7a53b869f53f2da326ef8b4065b |
-| phase5/benchmarks/results/FirmwareMetadataBenchmarks-report-github.md | 916 | c61870b901547952318fabebc13abd20aea59a0106a088c6217a67d7f4443da6 |
-| phase5/final/memory-summary.json | 1804 | da898563d14d15a8b61203a1839d4f429cff3a2c2dc1de33600111b09b9aa269 |
-| phase5/final/summary.json | 2074 | 8e33c87f2dd6590a6e3c0b68f41db1992007ac5f1707dfe263558995b159387b |
-| phase6/filter-after.json | 706 | 6a1998b00877eb2c7d2b9c272c558b09281a8f54ffd9729ee4a364868225cd77 |
-| phase6/filter-before.json | 727 | 6f54dee29e1a43523bf2c7e606f502c017f69e0f6fbbfb2022483bf79ee94165 |
-| phase7/20261010-031012/evaluation.json | 94754 | fa55ae379ddf3d9e04f0e46f4b5158716a7d248e50d156328fdf983e45062ebe |
-| phase7/public/evaluation.json | 87885 | f6de4b82ee66e525f75fbdceafa16d1facd36ab78bdc15c2d74748eee83896f3 |
-| phase8/20261010-032209/catalog-schema.json | 2356 | a0d9a395d3a257a3f09838aa41d6ba12f6942e02fa3d6c900cb3595fc22beec8 |
-| phase8/20261010-032209/dotnet.json | 21504 | f29de70bb74590c762602e5926e908f7b7236809db271a416f7d0faeacb2d614 |
-| rogue-auth-fallback/README.md | 6871 | 3cd918fc525806c2fa55d0a1aaaed563ecf8561ae43bf6a6d334b7611dd7ee4d |
-| rogue-auth-trace-details/README.md | 3179 | 22634f7c269fdc484ce23243cd293aa4548666d609188948c4fe00e89d48dc4a |
-| rogue-auth-trace-file/README.md | 4050 | e10dd43cafbef6133a1f3ed13c583a0f45e55d9aaabb85740feee01fe42ce3cd |
-| rogue-auth-trace-v2/README.md | 3504 | c812432232b40ba5ea95ab4f9bb8bdef0e5df51ad11776a419ed435b7697c5c5 |
-| rogue-auth-trace/README.md | 5140 | 90945509a4c2b8713da926c9c91cefab356a4c9fc701d73e1c72982f4e84da14 |
-| rogue-offline-comparison/README.md | 3252 | f87fb67d40d1af5ac7f5516e95acbfd728d54cc22d8e38bdc358916e82c61645 |
-| rogue-offline-popups/README.md | 5121 | d8bbb83b1ade33bcf4293ab7a633d0573afba412db6462880081fe840edde289 |
-| rogue-offline-reachability/README.md | 4022 | 0b0e99ccbb028db959b7bafbee50c35e82563672949d68b6eb3738c2a841f1ef |
-| rogue-save-adapter-comparison/README.md | 2715 | 00e7dcd47455e6cde23bab12b5b481082c05a475d10db9a2e332a078e7e7867f |
-| rogue-save-comparison/README.md | 9901 | 400575ffbe4f327f8e46dbe0c41dffeb528988e50cfdeb226aad93c00e2be52d |
-| rogue-save-trace-v2/evidence-latest/ampr_emu.log | 61224 | ba46233dc4e006d8f055f6edbc91bbadb2a9329f3cfb391ce4207437d51de092 |
-| rogue-save-trace-v2/evidence-latest/findings.md | 1377 | e6630e027c7dcd71f67888c65c56fb5344e93a0251a8370e20584abb07736b8a |
-| rogue-save-trace-v2/evidence-latest/rogue_auth_details.log | 5526 | 4edcadde46cd2a8652226fa622c7f24a98eb815d10050a81c9e0c5a2ed7a8c75 |
-| rogue-save-trace-v2/evidence-two-launches/ampr_emu_relaunched.log | 374288 | 1b105608c4be9cbd25acd91c11cbba0a4481d6db4816821b6e5ee37a5b5473f1 |
-| rogue-save-trace-v2/evidence-two-launches/ampr_emu._first_save.log | 857161 | a04a03b93a906c8b174e15b98a3e9a8e6402c28e7ab7eb7c4d3b9a808c406190 |
-| rogue-save-trace-v2/evidence-two-launches/console.log | 132801 | 8b29c4fd06e8740847f22679f58ffc7fcdf1b41d248bf561960721a57c225e2d |
-| rogue-save-trace-v2/evidence-two-launches/findings.md | 3266 | 189919461a42c291a77f0cc7b8e1a87b73830e9ddcc0eeaacbe2b1f072b006a7 |
-| rogue-save-trace-v2/evidence-two-launches/rogue_auth_details_first_save.log | 2616 | 6101533b0c73f96614e466f5753e12fa4c0ccf3963b877481327b5aed32f6144 |
-| rogue-save-trace-v2/evidence-two-launches/rogue_auth_details_relaunched.log | 1954 | 1e2d4a849d16d8dab306991b7828cc120170a57a2c323d00cf6dd4d836e4a717 |
-| rogue-save-trace-v2/evidence-two-launches/summary.json | 1335 | 763dc9e7a1199c8fc9a44174e5cad624530ecfa9f64a217a4ffee6db17588e53 |
-| rogue-save-trace-v2/README.md | 4069 | 29fa4b7e3805de2a2cb1e52b36a9b312a1a32b3f05e2f86c75be806625a71e21 |
-| rogue-save-trace/evidence-20261010/ampr_emu.log | 1125115 | d5649d8fcd8a115aaebfbb8274578e477249d165616c18809518c77c53b517e7 |
-| rogue-save-trace/evidence-20261010/findings.md | 3873 | 79c4bc61aac6a383ef2ca3e4ca1978ea348cbd394693b5ff777e2fb753314f6f |
-| rogue-save-trace/evidence-20261010/rogue_auth_details.log | 2404 | c43a7f4601c823788e7f8c076683f1a8eac01fcceb5369494ea39b3e073a7c31 |
-| rogue-save-trace/README.md | 4873 | 69dda2915077a729e6360694a0c2dafcb3c49b2b29a797ec4b6ed670fb18a5ae |
-| rogue-sku-offline-fallback/evidence/ampr_emu_offline.log | 386494 | f290cc6dff9e9e5b942bcd2f7b5f1792d14bb575c701a7d392bba4558fbed7c7 |
-| rogue-sku-offline-fallback/evidence/ampr_emu_online.log | 111208 | ab5ef5f4488d1348cf107ea55436fef636a412913edc6dfbb0f7c19da25c125e |
-| rogue-sku-offline-fallback/evidence/rogue_auth_details_offline.log | 930 | 996b7349eed54c09747ecf052b5729845aebb16f4b7bb0731bd556ce5425c2e9 |
-| rogue-sku-offline-fallback/evidence/rogue_auth_details_online.log | 1082 | 75c2a5ef369f255eb6e2bcf66aeedc03c7cf171be1dbf690ceb7b52d0ab97173 |
-| rogue-sku-offline-fallback/README.md | 4312 | cc432dabedc9fa41fa02bf8f7b361f155cd036e9c15274221eedd03d4a1ded90 |
-
-### Cleanup inventory
-
-Original work files (excluding this report and its temporary consolidation helper): **6406**. Logical size: **26483545836 bytes (24.665 GiB)**. This is file length, not guaranteed physical disk-space recovery; hard links/compression can differ.
-
-| Original top-level entry | Files | Logical MiB |
-| --- | ---: | ---: |
-| ampr-ghidra | 31 | 1.262 |
-| ampr-source-0.3.6.6.zip | 1 | 0.327 |
-| ampr-source-validation | 85 | 2.077 |
-| app-check | 124 | 564.759 |
-| audit | 5 | 0.36 |
-| cli-artifacts | 50 | 1.341 |
-| codebase-memory-install-0.11.0.ps1 | 1 | 0.018 |
-| CONTROL_elf | 12 | 131.475 |
-| crow-diagnostics | 130 | 282.719 |
-| crow-fixed-library | 103 | 599.127 |
-| game-analysis | 166 | 2264.729 |
-| GT7_fakelib_elf | 5 | 2.243 |
-| GT7_root_elf | 3 | 136.121 |
-| GT7_sce_module_elf | 3 | 12.03 |
-| GT7_sce_sys_elf | 1 | 0.064 |
-| import-library-audit | 70 | 2.448 |
-| NOT_BACKPORT_elf | 9 | 148.558 |
-| p4_gt7 | 14 | 149.775 |
-| package-smoke.ps1 | 1 | 0.004 |
-| packages | 3527 | 2799.193 |
-| phase3 | 300 | 179.324 |
-| phase4 | 37 | 0.769 |
-| phase5 | 738 | 7658.209 |
-| phase6 | 159 | 1126.616 |
-| phase7 | 4 | 0.381 |
-| phase8 | 48 | 0.307 |
-| popup-build-diagnostic.log | 1 | 1.495 |
-| ppsa34008 | 64 | 638.139 |
-| rogue-auth-fallback | 10 | 544.557 |
-| rogue-auth-trace | 12 | 695.711 |
-| rogue-auth-trace-details | 12 | 695.711 |
-| rogue-auth-trace-file | 12 | 695.711 |
-| rogue-auth-trace-v2 | 12 | 695.71 |
-| rogue-offline-comparison | 9 | 549.435 |
-| rogue-offline-popups | 44 | 696.546 |
-| rogue-offline-reachability | 3 | 72.11 |
-| rogue-save-adapter-comparison | 5 | 0.091 |
-| rogue-save-comparison | 5 | 72.18 |
-| rogue-save-trace | 16 | 696.874 |
-| rogue-save-trace-v2 | 21 | 697.09 |
-| rogue-sku-general | 2 | 302.538 |
-| rogue-sku-offline-fallback | 16 | 696.187 |
-| test-artifacts | 401 | 1140.399 |
-| tools | 4 | 0.023 |
-| ubisoft-popup-verification | 85 | 297.119 |
-| verification | 45 | 4.812 |
-
-Cleanup status: completed. All other work entries were deleted, including the temporary consolidation helper. A final directory check confirmed exactly one file remains: CONFIRMED_FINDINGS.md.

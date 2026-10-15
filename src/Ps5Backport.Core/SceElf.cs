@@ -93,6 +93,9 @@ public sealed class SceElf
             if (type == PtLoad && ((filesz > 0 && filesz - 1 > ulong.MaxValue - vaddr) ||
                                    (memsz > 0 && memsz - 1 > ulong.MaxValue - vaddr)))
                 throw new InvalidDataException($"ELF load segment #{i} has an overflowing virtual address range");
+            // The loader maps only memsz bytes, so file bytes past it would be "backed" for Off() but never loaded.
+            if (type == PtLoad && filesz > memsz)
+                throw new InvalidDataException($"ELF load segment #{i} has a file size larger than its memory size");
             phdrs.Add(new Phdr(i, type, U32(at + 4), (long)offset, vaddr, (long)filesz, (long)memsz));
         }
         Phdrs = phdrs;

@@ -15,6 +15,7 @@ internal static class Program
         string root = Directory.GetCurrentDirectory();
         var cases = Checks.Run();
         var emitters = Checks.Emitters(root);
+        var comments = Checks.Comments(root);
         var workloads = new List<object>();
         foreach (int mib in new[] { 1, 16 })
         {
@@ -38,10 +39,10 @@ internal static class Program
         var assembly = typeof(Decoder).Assembly;
         var result = new { Utc = DateTimeOffset.UtcNow, Runtime = Environment.Version.ToString(), ProcessorCount = Environment.ProcessorCount,
             Decoder = assembly.GetName().FullName, DecoderDllBytes = new FileInfo(assembly.Location).Length,
-            Cases = cases, Emitters = emitters, Workloads = workloads,
+            Cases = cases, Emitters = emitters, Comments = comments, Workloads = workloads,
             Limits = "Linear decoding is not ground truth. Corpus differences need trusted boundaries. Static references do not prove reachability or ABI safety. First timing is workload-first, after synthetic checks; no process-cold claim." };
         File.WriteAllText(report, JsonSerializer.Serialize(result, new JsonSerializerOptions { WriteIndented = true }));
-        Console.WriteLine($"Passed {cases.Count} reference cases and emitter checks. Local report: {report}");
+        Console.WriteLine($"Passed {cases.Count} reference cases, emitter checks and the comment round trip. Local report: {report}");
     }
 
     static object Measure(string name, SceElf elf, ImportStatus[] statuses, bool corpus)

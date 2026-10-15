@@ -46,6 +46,24 @@ public sealed partial class OptionRow(FixOption o, Action<OptionRow>? select = n
     [ObservableProperty] public partial bool IsEnabled { get; set; }
     /// <summary>Shown in the details strip.</summary>
     [ObservableProperty] public partial bool IsSelected { get; set; }
+    /// <summary>The requirements probe's verdict for the loaded game (<see cref="Pipeline.Verdict"/> spelling), empty before Analyze.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasVerdict), nameof(VerdictLabel), nameof(IsNeeded), nameof(IsApplicable), nameof(IsNotApplicable), nameof(IsConsoleChoice), nameof(RowOpacity))]
+    public partial string Verdict { get; set; } = "";
+    /// <summary>Why the probe decided so (static evidence, not console compatibility).</summary>
+    [ObservableProperty] public partial string Evidence { get; set; } = "";
+
+    public bool HasVerdict => Verdict.Length > 0;
+    public string VerdictLabel => Verdict switch
+    {
+        "needed" => "needed", "applicable" => "applicable", "not-applicable" => "not applicable", "console-choice" => "console choice", _ => Verdict,
+    };
+    public bool IsNeeded => Verdict == "needed";
+    public bool IsApplicable => Verdict == "applicable";
+    public bool IsNotApplicable => Verdict == "not-applicable";
+    public bool IsConsoleChoice => Verdict == "console-choice";
+    /// <summary>Not-applicable rows are dimmed but stay selectable (an expert override is still possible).</summary>
+    public double RowOpacity => IsNotApplicable ? 0.55 : 1.0;
 
     [CommunityToolkit.Mvvm.Input.RelayCommand]
     void Select() => select?.Invoke(this);

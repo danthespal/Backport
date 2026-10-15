@@ -129,10 +129,12 @@ public static partial class Pipeline
                 cancel.ThrowIfCancellationRequested();
                 string origin = fixes.TryGetValue(p.Nid, out var f) ? (f.Proven ? "known fix, proven" : "known fix, derived")
                               : k.Candidates.ContainsKey(p.Nid) ? "candidate (AnyPS5), derived" : "requested";
+                var nativeFrom = FirmwareDb.Introduced(p.Nid, newerDbs, k);
                 mod.StubbedNow.Add(new StubbedEntry
                 {
                     Nid = p.Nid, Name = Name(o.Names, p.Nid), Stub = p.Stub, Got = $"0x{p.GotVaddr:x}", At = $"0x{p.StubVaddr:x}",
                     KnownFix = fixes.ContainsKey(p.Nid), Origin = origin,
+                    Introduced = nativeFrom is { } x ? $"{x.Firmware} / {x.Source}" : "",
                 });
             }
             changed = true;
@@ -194,6 +196,14 @@ public static partial class Pipeline
                 LeftBy = string.Join(", ", k.LeftUnpatched.GetValueOrDefault(s.Nid) ?? []),
                 Introduced = intro is { } x ? $"{x.Firmware} / {x.Source}" : "",
             });
+        }
+
+        // imports the target exports but a later firmware list does not: the cook runs on every newer console too
+        foreach (var s in statuses.Where(s => (s.Status is Imports.Reference or Imports.Patched) && reference.Nids.Contains(s.Nid)))
+        {
+            var missingOn = newerDbs.Where(db => !db.Nids.Contains(s.Nid)).Select(db => db.Firmware).ToList();
+            if (missingOn.Count > 0)
+                mod.LaterMissing.Add(new LaterMissingEntry { Nid = s.Nid, Name = Name(o.Names, s.Nid), Library = s.Library, MissingOn = string.Join(", ", missingOn) });
         }
 
         cancel.ThrowIfCancellationRequested();

@@ -133,4 +133,153 @@ internal static class Checks
         return result;
     }
     internal static void Require(bool condition, string message) { if (!condition) throw new InvalidOperationException(message); }
+
+    /// <summary>
+    /// The "; asm" comment of every adapter instruction and every stub body documents hand-encoded bytes. This decodes the
+    /// bytes with Iced and compares mnemonic and operands with the comment structurally: registers, memory base/index/scale/
+    /// displacement, immediates under 8/16/32/64-bit masks, branch targets relative to the block start, {state+N} placeholders.
+    /// Size words and "ptr" in the comment are not checked (the bytes decide), notes after two spaces or " (" are ignored, and a
+    /// label operand (".ret") checks the mnemonic only. Any disagreement fails with the full list.
+    /// </summary>
+    internal static object Comments(string root)
+    {
+        var knowledge = new Knowledge(Path.Combine(root, "data"));
+        var mismatches = new List<string>();
+        int checkedInstructions = 0, withoutComment = 0;
+        var owned = knowledge.Fixes.Values.Select(f => ("fixes", f))
+            .Concat(knowledge.Options.SelectMany(o => o.Value.Fixes.Values.Select(f => ($"options.{o.Key}", f))));
+        foreach (var (owner, fix) in owned)
+        {
+            ulong ip = 0;
+            foreach (var insn in fix.Insns)
+            {
+                if (insn.CallGot) { ip += 6; continue; }
+                var decoder = Decoder.Create(64, new ByteArrayCodeReader(insn.Bytes)); decoder.IP = ip;
+                decoder.Decode(out var instruction);
+                if (instruction.Code == Code.INVALID || instruction.NextIP != ip + (ulong)insn.Bytes.Length)
+                    mismatches.Add($"{owner}.{fix.Nid}: bytes {insn.Hex} do not decode to exactly one instruction");
+                else if (insn.Asm.Length == 0)
+                    withoutComment++;
+                else
+                    Compare($"{owner}.{fix.Nid} @ {ip:x}", instruction, insn.Asm, insn.StateAt >= 0 ? insn.StateOffset : -1);
+                ip += (ulong)insn.Bytes.Length;
+            }
+        }
+        foreach (var stub in knowledge.Stubs.Values)
+        {
+            var pieces = stub.Asm.Split(';').Select(p => p.Trim()).Where(p => p.Length > 0)
+                .Select(p => p.StartsWith('.') && p.Contains(':') ? p[(p.IndexOf(':') + 1)..].Trim() : p).ToList();
+            var decoder = Decoder.Create(64, new ByteArrayCodeReader(stub.Bytes)); decoder.IP = 0;
+            var decoded = new List<Instruction>();
+            while (decoder.IP < (ulong)stub.Bytes.Length) { decoder.Decode(out var i); decoded.Add(i); }
+            if (decoded.Count != pieces.Count)
+                mismatches.Add($"stubs.{stub.Name}: {decoded.Count} instructions decoded, {pieces.Count} in the comment");
+            else
+                for (int n = 0; n < decoded.Count; n++) Compare($"stubs.{stub.Name} #{n}", decoded[n], pieces[n], -1);
+        }
+        Require(mismatches.Count == 0, "Comment/bytes mismatches:\n  " + string.Join("\n  ", mismatches));
+        return new { Instructions = checkedInstructions, WithoutComment = withoutComment };
+
+        void Compare(string where, in Instruction i, string asm, int stateOffset)
+        {
+            checkedInstructions++;
+            string text = asm.Trim();
+            int cut = new[] { text.IndexOf("  ", StringComparison.Ordinal), text.IndexOf(" (", StringComparison.Ordinal) }
+                .Where(c => c >= 0).DefaultIfEmpty(-1).Min();
+            if (cut >= 0) text = text[..cut].Trim();
+            string[] head = text.Split(' ', 2, StringSplitOptions.RemoveEmptyEntries);
+            string mnemonic = head[0];
+            string rest = head.Length > 1 ? head[1] : "";
+            if (mnemonic is "rep" or "repe" or "repne")
+            {
+                string[] next = rest.Split(' ', 2, StringSplitOptions.RemoveEmptyEntries);
+                mnemonic += " " + next[0];
+                rest = next.Length > 1 ? next[1] : "";
+            }
+            string decodedMnemonic = (i.HasRepPrefix ? "rep " : i.HasRepnePrefix ? "repne " : "") + i.Mnemonic.ToString().ToLowerInvariant();
+            if (mnemonic != decodedMnemonic) { mismatches.Add($"{where}: mnemonic '{mnemonic}' vs decoded '{decodedMnemonic}' ({text})"); return; }
+            var operands = rest.Length == 0 ? new List<string>() : rest.Split(',').Select(o => o.Trim()).ToList();
+            if (operands.Any(o => o.StartsWith('.'))) return;                     // label: mnemonic only
+            var kinds = new List<OpKind>();
+            for (int n = 0; n < i.OpCount; n++) kinds.Add(i.GetOpKind(n));
+            if (operands.Count == 0 && kinds.All(k => k is OpKind.Register or OpKind.MemoryESRDI
+                    or OpKind.MemoryESEDI or OpKind.MemorySegRSI or OpKind.MemorySegESI or OpKind.MemorySegRDI or OpKind.MemorySegEDI))
+                return;                                                           // string instruction: implicit operands only
+            if (operands.Count != i.OpCount) { mismatches.Add($"{where}: {operands.Count} operand(s) in the comment, {i.OpCount} decoded ({text})"); return; }
+            for (int n = 0; n < i.OpCount; n++)
+            {
+                string want = CanonText(operands[n], stateOffset), got = CanonDecoded(i, n, stateOffset);
+                if (want.StartsWith("imm:") && got.StartsWith("imm:"))
+                {
+                    ulong a = Convert.ToUInt64(want[4..], 16), b = Convert.ToUInt64(got[4..], 16);
+                    if (new ulong[] { 0xFF, 0xFFFF, 0xFFFFFFFF, ulong.MaxValue }.Any(mask => ((a ^ b) & mask) == 0)) continue;
+                }
+                else if (want == got) continue;
+                mismatches.Add($"{where}: operand {n} '{operands[n]}' -> {want}, decoded {got} ({text})");
+            }
+        }
+
+        static string Reg(Register r) => System.Text.RegularExpressions.Regex.Replace(r.ToString().ToLowerInvariant(), @"^(r\d+)l$", "$1b");
+
+        static string CanonDecoded(in Instruction i, int n, int stateOffset)
+        {
+            switch (i.GetOpKind(n))
+            {
+                case OpKind.Register: return Reg(i.GetOpRegister(n));
+                case OpKind.NearBranch16 or OpKind.NearBranch32 or OpKind.NearBranch64: return $"imm:{i.NearBranchTarget:x}";
+                case OpKind.Memory:
+                    if (i.IsIPRelativeMemoryOperand)
+                        return stateOffset >= 0 ? $"[rip+state+0x{stateOffset:x}]" : $"[rip->0x{i.IPRelativeMemoryAddress:x}]";
+                    var parts = new List<string>();
+                    if (i.MemoryBase != Register.None) parts.Add(Reg(i.MemoryBase));
+                    if (i.MemoryIndex != Register.None) parts.Add($"{Reg(i.MemoryIndex)}*{i.MemoryIndexScale}");
+                    long disp = (long)i.MemoryDisplacement64;
+                    if (disp != 0 || parts.Count == 0) parts.Add(disp < 0 ? $"-0x{-disp:x}" : $"0x{disp:x}");
+                    return "[" + string.Join("+", parts).Replace("+-", "-") + "]";
+                default: return $"imm:{i.GetImmediate(n):x}";
+            }
+        }
+
+        static string CanonText(string operand, int stateOffset)
+        {
+            string s = System.Text.RegularExpressions.Regex.Replace(operand.ToLowerInvariant(), @"\s+", "").Replace("ptr", "");
+            s = System.Text.RegularExpressions.Regex.Replace(s, @"^(byte|word|dword|qword|xmmword|ymmword)", "");
+            if (s.StartsWith('['))
+            {
+                string inner = s[1..^1];
+                if (inner.Contains("state"))
+                {
+                    var m = System.Text.RegularExpressions.Regex.Match(inner, @"state\+0x([0-9a-f]+)");
+                    return $"[rip+state+0x{(m.Success ? Convert.ToInt64(m.Groups[1].Value, 16) : 0):x}]";
+                }
+                string? baseReg = null, index = null;
+                long disp = 0;
+                foreach (System.Text.RegularExpressions.Match t in System.Text.RegularExpressions.Regex.Matches(inner, @"([+-]?)([a-z0-9*]+)"))
+                {
+                    string sign = t.Groups[1].Value, tok = t.Groups[2].Value;
+                    if (tok.Contains('*')) index = tok;
+                    else if (System.Text.RegularExpressions.Regex.IsMatch(tok, @"^(0x[0-9a-f]+|\d+)$"))
+                        disp += (sign == "-" ? -1 : 1) * (tok.StartsWith("0x") ? Convert.ToInt64(tok[2..], 16) : long.Parse(tok));
+                    else if (baseReg is null) baseReg = tok;
+                    else index = tok + "*1";
+                }
+                var parts = new List<string>();
+                if (baseReg is not null) parts.Add(baseReg);
+                if (index is not null) parts.Add(index);
+                if (disp != 0 || parts.Count == 0) parts.Add(disp < 0 ? $"-0x{-disp:x}" : $"0x{disp:x}");
+                return "[" + string.Join("+", parts).Replace("+-", "-") + "]";
+            }
+            if (System.Text.RegularExpressions.Regex.IsMatch(s, @"^(r[abcd]x|r[sb]p|r[sd]i|r(8|9|1[0-5])[dwb]?|e[abcd]x|e[sb]p|e[sd]i|[abcd]x|[sb]p|[sd]i|[abcd][lh]|[sd]il|[sb]pl|xmm\d+|ymm\d+)$"))
+                return s;
+            bool invert = s.StartsWith('~');
+            if (invert) s = s[1..];
+            bool negative = s.StartsWith('-');
+            if (negative) s = s[1..];
+            if (!System.Text.RegularExpressions.Regex.IsMatch(s, @"^(0x[0-9a-f]+|\d+)$")) return "?" + operand;
+            long value = s.StartsWith("0x") ? Convert.ToInt64(s[2..], 16) : long.Parse(s);
+            if (negative) value = -value;
+            if (invert) value = ~value;
+            return $"imm:{(ulong)value:x}";
+        }
+    }
 }

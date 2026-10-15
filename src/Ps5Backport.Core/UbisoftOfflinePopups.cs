@@ -14,11 +14,27 @@ internal static class UbisoftOfflinePopups
     const string Standalone = HandlerPrefix + " 75 1f 48 85 db 74 ?? 48 8b 7b 40 48 8b 43 18 48 8b 73 28 48 83 c4 20 5b 41 5c 41 5e 41 5f 5d ff e0";
     const string Popup = HandlerPrefix + " 75 1d 31 c0 48 85 db 0f 84 ?? ?? ?? ?? 48 8b 73 28 48 8b 7b 40 ff 53 18 31 c0 e9 ?? ?? ?? ??";
 
+    /// <summary>True when the module has the recognised definitions and handlers; changes nothing. Also true after
+    /// <see cref="Apply"/> (the layout is still there; only the two severities differ).</summary>
+    internal static bool Recognize(SceElf elf, CancellationToken cancel = default) => Locate(elf, cancel) is not null;
+
     /// <summary>Changes only warnings 4520/4521 after validating both existing silent callback handlers.</summary>
     internal static int Apply(SceElf elf, CancellationToken cancel = default)
     {
+        if (Locate(elf, cancel) is not var (at, first, second)) return 0;
+        cancel.ThrowIfCancellationRequested();
+        // The callback branches are left intact; neither authentication nor save outcomes are changed.
+        int count = (first == 0 ? 1 : 0) + (second == 0 ? 1 : 0);
+        elf.Data[at + 22] = 2;
+        elf.Data[at + 94] = 2;
+        return count;
+    }
+
+    /// <summary>(definitions offset, first severity, second severity) of the recognised layout, or null.</summary>
+    static (long At, byte First, byte Second)? Locate(SceElf elf, CancellationToken cancel)
+    {
         var definitions = Find(elf, Definitions, cancel);
-        if (definitions.Count != 1) return 0;
+        if (definitions.Count != 1) return null;
         long at = definitions[0];
         long definitionClass = Relative(elf, at, 7, 3);
         long errorList = Relative(elf, at + 39, 7, 3);
@@ -27,28 +43,23 @@ internal static class UbisoftOfflinePopups
         if (!Readable(elf, definitionClass) || !Readable(elf, errorList) || definitionClass == errorList ||
             definitionClass != Relative(elf, at + 72, 7, 3) || errorList != Relative(elf, at + 111, 7, 3) ||
             allocation != Relative(elf, at + 79, 5, 1) || barrier != Relative(elf, at + 139, 5, 1) ||
-            !Executable(elf, allocation) || !Executable(elf, barrier)) return 0;
+            !Executable(elf, allocation) || !Executable(elf, barrier)) return null;
         int firstField = Int32(elf, at + 35), secondField = Int32(elf, at + 107);
         if (firstField < 0 || firstField % 8 != 0 || secondField != (long)firstField + 8 ||
-            firstField != Int32(elf, at + 56) || secondField != Int32(elf, at + 128)) return 0;
+            firstField != Int32(elf, at + 56) || secondField != Int32(elf, at + 128)) return null;
         byte first = elf.Data[at + 22], second = elf.Data[at + 94];
-        if (first is not (0 or 2) || second is not (0 or 2)) return 0;
+        if (first is not (0 or 2) || second is not (0 or 2)) return null;
         var standalone = Find(elf, Standalone, cancel);
         var popup = Find(elf, Popup, cancel);
-        if (standalone.Count != 1 || popup.Count != 1) return 0;
+        if (standalone.Count != 1 || popup.Count != 1) return null;
         long handler = standalone[0], other = popup[0];
         long errorIdClass = Relative(elf, handler, 7, 3);
         long initialize = Relative(elf, handler + 20, 5, 1);
         long lookup = Relative(elf, handler + 28, 5, 1);
         if (!Readable(elf, errorIdClass) || errorIdClass == definitionClass || errorIdClass == errorList ||
             errorIdClass != Relative(elf, other, 7, 3) || initialize != Relative(elf, other + 20, 5, 1) ||
-            lookup != Relative(elf, other + 28, 5, 1) || !Executable(elf, initialize) || !Executable(elf, lookup)) return 0;
-        cancel.ThrowIfCancellationRequested();
-        // The callback branches are left intact; neither authentication nor save outcomes are changed.
-        int count = (first == 0 ? 1 : 0) + (second == 0 ? 1 : 0);
-        elf.Data[at + 22] = 2;
-        elf.Data[at + 94] = 2;
-        return count;
+            lookup != Relative(elf, other + 28, 5, 1) || !Executable(elf, initialize) || !Executable(elf, lookup)) return null;
+        return (at, first, second);
     }
 
     static int Int32(SceElf elf, long at) => BinaryPrimitives.ReadInt32LittleEndian(elf.Data.AsSpan((int)at, 4));

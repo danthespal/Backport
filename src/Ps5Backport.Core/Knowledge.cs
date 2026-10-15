@@ -60,9 +60,22 @@ public sealed record FixPattern(string Name, byte[] Find, byte[] Replace, IReadO
 /// <see cref="Group"/>: the area the option is listed under in the app (see <see cref="Knowledge.OptionGroups"/>).</summary>
 public sealed record FixOption(string Key, string Name, string Description, string Warning,
                                IReadOnlyList<string> Sources, IReadOnlyDictionary<string, Fix> Fixes,
-                               string FakelibVariant, IReadOnlyList<FixPattern> Patterns, string Group = FixOption.DefaultGroup)
+                               string FakelibVariant, IReadOnlyList<FixPattern> Patterns, string Group = FixOption.DefaultGroup,
+                               OptionProbe? Probe = null)
 {
     public const string DefaultGroup = "Other";
+    /// <summary>How the requirements probe judges this option (data/fixes.json option "probe"; default: by imports and patterns).</summary>
+    public OptionProbe Probe { get; init; } = Probe ?? OptionProbe.Default;
+}
+
+/// <summary>An option's probe rule. <see cref="Kind"/>: "" (imports/patterns), <see cref="KindConsole"/> (the tester's or console's
+/// choice), <see cref="KindDetector"/> (engine recogniser; <see cref="Recognized"/> = "needed" or "applicable" when it matches) or
+/// <see cref="KindArgument"/> (the constant the game passes in argument <see cref="Argument"/> of <see cref="Nid"/>; above
+/// <see cref="Above"/> means needed).</summary>
+public sealed record OptionProbe(string Kind = "", string Nid = "", int Argument = 0, long Above = 0, string Recognized = "")
+{
+    public const string KindConsole = "console", KindDetector = "detector", KindArgument = "argument", Needed = "needed", Applicable = "applicable";
+    public static readonly OptionProbe Default = new();
 }
 
 public sealed record StubBody(string Name, byte[] Bytes, string Asm, string Note);
@@ -170,8 +183,13 @@ public sealed class Knowledge
                         p.Value.GetProperty("fixes").EnumerateObject().Select(ReadFix).ToDictionary(f => f.Nid, StringComparer.Ordinal),
                         Str(p.Value, "fakelib_variant"),
                         p.Value.TryGetProperty("patterns", out var pats) ? pats.EnumerateArray().Select(ReadPattern).ToList() : [],
-                        Str(p.Value, "group", FixOption.DefaultGroup));
+                        Str(p.Value, "group", FixOption.DefaultGroup),
+                        p.Value.TryGetProperty("probe", out var probe) ? ReadProbe(probe) : null);
             Options = options;
+
+            static OptionProbe ReadProbe(JsonElement x) => new(
+                Str(x, "kind"), Str(x, "nid"), x.TryGetProperty("argument", out var a) ? a.GetInt32() : 0,
+                x.TryGetProperty("above", out var b) ? b.GetInt64() : 0, Str(x, "recognized"));
             var declared = root.TryGetProperty("option_groups", out var og) ? og.EnumerateArray().Select(StringValue).ToList() : [];
             OptionGroups = declared.Concat(options.Values.Select(o => o.Group)).Distinct(StringComparer.Ordinal).ToList();
             Patterns = root.TryGetProperty("patterns", out var defaults) ? defaults.EnumerateArray().Select(ReadPattern).ToList() : [];
@@ -317,6 +335,7 @@ public sealed class Knowledge
                     throw new ArgumentException("option group must not be empty");
                 if (option.FakelibVariant.Length > 0)
                     _ = FakelibStore.VariantFolder(DataDir, option.FakelibVariant);
+                ValidateProbe(option);
                 foreach (var fix in option.Fixes.Values)
                     ValidateFix(fix, allowNone: true);
                 foreach (var pattern in option.Patterns)
@@ -389,6 +408,28 @@ public sealed class Knowledge
         }
     }
 
+    static void ValidateProbe(FixOption option)
+    {
+        var probe = option.Probe;
+        switch (probe.Kind)
+        {
+            case "" or OptionProbe.KindConsole:
+                break;
+            case OptionProbe.KindDetector:
+                if (probe.Recognized is not (OptionProbe.Needed or OptionProbe.Applicable))
+                    throw new ArgumentException("probe 'detector' needs recognized = needed or applicable");
+                break;
+            case OptionProbe.KindArgument:
+                if (!option.Fixes.TryGetValue(probe.Nid, out var fix) || fix.Kind == Fix.KindNone)
+                    throw new ArgumentException($"probe 'argument' needs nid to be one of the option's fixes (got '{probe.Nid}')");
+                if (probe.Argument is < 0 or > 5)
+                    throw new ArgumentException("probe 'argument' needs argument 0..5 (rdi, rsi, rdx, rcx, r8, r9)");
+                break;
+            default:
+                throw new ArgumentException($"unknown probe kind '{probe.Kind}'");
+        }
+    }
+
     void ValidatePattern(FixPattern pattern)
     {
         if (pattern.Find.Length == 0 || pattern.Find.Length != pattern.Replace.Length)
@@ -400,6 +441,30 @@ public sealed class Knowledge
         }
     }
 
+    /// <summary>Keys each record may carry. A misspelt key would otherwise be ignored and silently change a rule
+    /// (<c>belo</c> makes it unconditional, <c>proovn</c> marks it proven, <c>contiguos</c> splits a branching adapter), so
+    /// unknown keys are errors. Keys starting with '_' are comments and allowed everywhere.</summary>
+    static readonly IReadOnlyDictionary<string, string[]> RootKeys = new Dictionary<string, string[]>(StringComparer.Ordinal)
+    {
+        ["fixes"] = ["sources", "umtx_op", "fixes", "option_groups", "options", "patterns"],
+        ["stubs"] = ["stubs"],
+        ["candidates"] = ["candidates"],
+        ["left_unpatched"] = ["left_unpatched"],
+        ["introduced"] = ["introduced"],
+        ["known_builds"] = ["builds"],
+        ["sony_builds"] = ["builds", "evidence"],
+    };
+    static readonly string[] FixKeys = ["kind", "name", "area", "sources", "stub", "new_nid", "new_library", "insns", "export_nid", "when",
+                                        "post_call", "proven", "note", "rationale", "below", "contiguous", "state", "state_size"];
+    static readonly string[] OptionKeys = ["name", "group", "description", "warning", "sources", "fixes", "fakelib_variant", "patterns", "probe"];
+    static readonly string[] ProbeKeys = ["kind", "nid", "argument", "above", "recognized"];
+    static readonly string[] PatternKeys = ["name", "area", "sources", "find", "replace", "files", "code", "note", "rationale"];
+    static readonly string[] StubKeys = ["hex", "asm", "note"];
+    static readonly string[] CandidateKeys = ["name", "value", "source"];
+    static readonly string[] IntroducedKeys = ["firmware", "source"];
+    static readonly string[] BuildKeys = ["module", "build_date", "state", "note"];
+    static readonly string[] EvidenceKeys = ["firmware", "source"];
+
     JsonDocument Open(string name)
     {
         byte[] bytes = File.ReadAllBytes(Path.Combine(DataDir, name + ".json"));
@@ -408,9 +473,70 @@ public sealed class Knowledge
         try
         {
             ValidateKeys(doc.RootElement, "$");
+            ValidateShape(doc.RootElement, name);
             return doc;
         }
         catch { doc.Dispose(); throw; }
+
+        void ValidateShape(JsonElement root, string file)
+        {
+            if (root.ValueKind != JsonValueKind.Object || !RootKeys.TryGetValue(file, out var rootKeys))
+                return;                                             // type errors are reported by the typed readers
+            Known(root, "$", rootKeys);
+            switch (file)
+            {
+                case "fixes":
+                    Records(root, "fixes", FixKeys);
+                    if (root.TryGetProperty("options", out var options) && options.ValueKind == JsonValueKind.Object)
+                        foreach (var option in options.EnumerateObject())
+                        {
+                            if (option.Value.ValueKind != JsonValueKind.Object) continue;
+                            string at = $"$.options.{option.Name}";
+                            Known(option.Value, at, OptionKeys);
+                            Records(option.Value, "fixes", FixKeys, at);
+                            Items(option.Value, "patterns", PatternKeys, at);
+                            if (option.Value.TryGetProperty("probe", out var probe) && probe.ValueKind == JsonValueKind.Object)
+                                Known(probe, at + ".probe", ProbeKeys);
+                        }
+                    Items(root, "patterns", PatternKeys);
+                    break;
+                case "stubs": Records(root, "stubs", StubKeys); break;
+                case "candidates": Records(root, "candidates", CandidateKeys); break;
+                case "introduced": Records(root, "introduced", IntroducedKeys); break;
+                case "known_builds": Items(root, "builds", BuildKeys); break;
+                case "sony_builds": Records(root, "evidence", EvidenceKeys); break;
+            }
+        }
+
+        // every object value of parent.<member>: a record with fixed keys (the member's own keys are free: NIDs, option keys, ...)
+        void Records(JsonElement parent, string member, string[] allowed, string at = "$")
+        {
+            if (parent.TryGetProperty(member, out var map) && map.ValueKind == JsonValueKind.Object)
+                foreach (var record in map.EnumerateObject())
+                    if (record.Value.ValueKind == JsonValueKind.Object)
+                        Known(record.Value, $"{at}.{member}.{record.Name}", allowed);
+        }
+
+        void Items(JsonElement parent, string member, string[] allowed, string at = "$")
+        {
+            if (parent.TryGetProperty(member, out var list) && list.ValueKind == JsonValueKind.Array)
+            {
+                int index = 0;
+                foreach (var item in list.EnumerateArray())
+                {
+                    if (item.ValueKind == JsonValueKind.Object)
+                        Known(item, $"{at}.{member}[{index}]", allowed);
+                    index++;
+                }
+            }
+        }
+
+        void Known(JsonElement record, string at, string[] allowed)
+        {
+            foreach (var property in record.EnumerateObject())
+                if (!property.Name.StartsWith('_') && !allowed.Contains(property.Name, StringComparer.Ordinal))
+                    throw new InvalidDataException($"{name}.json: unknown key '{property.Name}' at {at} (allowed: {string.Join(", ", allowed)}; keys starting with '_' are comments)");
+        }
 
         void ValidateKeys(JsonElement node, string path)
         {

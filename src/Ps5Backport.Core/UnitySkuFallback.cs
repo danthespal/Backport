@@ -13,33 +13,13 @@ internal static class UnitySkuFallback
     const string Failure = "48 8b 3d ?? ?? ?? ?? e8 ?? ?? ?? ?? 48 8b 3d ?? ?? ?? ?? 83 bf e4 00 00 00 00 75 0c e8 ?? ?? ?? ?? 48 8b 3d ?? ?? ?? ?? 48 8b 87 b8 00 00 00 48 8b 70 20 eb ??";
     const string Consumer = "48 8b 3d ?? ?? ?? ?? 4c 8b 79 18 83 bf e4 00 00 00 00 75 0c e8 ?? ?? ?? ?? 48 8b 3d ?? ?? ?? ?? 48 8b 87 b8 00 00 00 48 8b 40 70 48 85 c0 0f 84 ?? ?? ?? ?? 8b 70 10 4c 89 ff 31 d2 e8 ?? ?? ?? ?? 84 c0 74 31 48 8b 7b 78 48 85 ff 0f 84 ?? ?? ?? ?? 49 8b 46 20 48 8b 80 c0 00 00 00 48 8b b0 f0 00 00 00 e8 ?? ?? ?? ?? 84 c0 75 65 83 bb 80 00 00 00 00 74 5c";
 
+    /// <summary>True when the module has the unique recognised layout that <see cref="Apply"/> would patch; changes nothing.</summary>
+    internal static bool Recognize(SceElf elf, CancellationToken cancel = default) => Locate(elf, cancel) is not null;
+
     /// <summary>Returns one only for a unique linked producer/consumer; never changes a SKU or success result.</summary>
     internal static int Apply(SceElf elf, CancellationToken cancel = default)
     {
-        var dispatches = Find(elf, Dispatch, cancel);
-        if (dispatches.Count != 1) return 0;
-        long dispatch = dispatches[0];
-        long failureVa = Relative(elf, dispatch + 24, 6, 2);
-        long? failureOffset = ExecutableOffset(elf, failureVa, 53);
-        if (failureOffset is not { } failure || !Matches(elf.Data, failure, Parse(Failure))) return 0;
-        // The NotSet/default branch and the SKU dispatch belong to the same function, in this layout.
-        if (failure <= dispatch + 30 || failure - dispatch > 1024) return 0;
-        long errorClass = Relative(elf, failure + 12, 7, 3);
-        if (errorClass != Relative(elf, failure + 33, 7, 3) || !ReadableData(elf, errorClass)) return 0;
-        var consumers = Find(elf, Consumer, cancel).Where(c =>
-            Relative(elf, c, 7, 3) == errorClass && Relative(elf, c + 25, 7, 3) == errorClass &&
-            Relative(elf, c + 20, 5, 1) == Relative(elf, failure + 28, 5, 1)).ToList();
-        if (consumers.Count != 1) return 0;
-        long consumer = consumers[0];
-        // Both 'has offline mode' and TitleScreen=0 branches must reach the same existing continuation.
-        long continuation = checked((long)elf.Vaddr(consumer + 109) + (sbyte)elf.Data[consumer + 108]);
-        if (continuation != checked((long)elf.Vaddr(consumer + 118) + (sbyte)elf.Data[consumer + 117]) ||
-            ExecutableOffset(elf, continuation, 1) is null) return 0;
-        long entry = failure + 47;
-        long resumeVa = checked((long)elf.Vaddr(entry + 6) + (sbyte)elf.Data[entry + 5]);
-        long? resumeOffset = ExecutableOffset(elf, resumeVa, 12);
-        if (resumeOffset is not { } resume || !Matches(elf.Data, resume,
-            Parse("48 8b 0d ?? ?? ?? ?? 48 89 df 31 d2"))) return 0;
+        if (Locate(elf, cancel) is not var (entry, resumeVa)) return 0;
         cancel.ThrowIfCancellationRequested();
         byte[] body = Convert.FromHexString("488B7020498B5648837A30007504488B7070E900000000");
         long cave = Patching.FindCave(elf, body.Length) ?? throw new PatchException("Matched Unity unset-SKU fallback, but no code padding is available");
@@ -50,6 +30,36 @@ internal static class UnitySkuFallback
         body.CopyTo(elf.Data, cave);
         redirect.CopyTo(elf.Data, entry);
         return 1;
+    }
+
+    /// <summary>(failure-branch entry offset, resume vaddr) of the unique recognised layout, or null.</summary>
+    static (long Entry, long ResumeVa)? Locate(SceElf elf, CancellationToken cancel)
+    {
+        var dispatches = Find(elf, Dispatch, cancel);
+        if (dispatches.Count != 1) return null;
+        long dispatch = dispatches[0];
+        long failureVa = Relative(elf, dispatch + 24, 6, 2);
+        long? failureOffset = ExecutableOffset(elf, failureVa, 53);
+        if (failureOffset is not { } failure || !Matches(elf.Data, failure, Parse(Failure))) return null;
+        // The NotSet/default branch and the SKU dispatch belong to the same function, in this layout.
+        if (failure <= dispatch + 30 || failure - dispatch > 1024) return null;
+        long errorClass = Relative(elf, failure + 12, 7, 3);
+        if (errorClass != Relative(elf, failure + 33, 7, 3) || !ReadableData(elf, errorClass)) return null;
+        var consumers = Find(elf, Consumer, cancel).Where(c =>
+            Relative(elf, c, 7, 3) == errorClass && Relative(elf, c + 25, 7, 3) == errorClass &&
+            Relative(elf, c + 20, 5, 1) == Relative(elf, failure + 28, 5, 1)).ToList();
+        if (consumers.Count != 1) return null;
+        long consumer = consumers[0];
+        // Both 'has offline mode' and TitleScreen=0 branches must reach the same existing continuation.
+        long continuation = checked((long)elf.Vaddr(consumer + 109) + (sbyte)elf.Data[consumer + 108]);
+        if (continuation != checked((long)elf.Vaddr(consumer + 118) + (sbyte)elf.Data[consumer + 117]) ||
+            ExecutableOffset(elf, continuation, 1) is null) return null;
+        long entry = failure + 47;
+        long resumeVa = checked((long)elf.Vaddr(entry + 6) + (sbyte)elf.Data[entry + 5]);
+        long? resumeOffset = ExecutableOffset(elf, resumeVa, 12);
+        if (resumeOffset is not { } resume || !Matches(elf.Data, resume,
+            Parse("48 8b 0d ?? ?? ?? ?? 48 89 df 31 d2"))) return null;
+        return (entry, resumeVa);
     }
 
     static byte?[] Parse(string pattern) => pattern.Split(' ').Select(s => s == "??" ? (byte?)null : Convert.ToByte(s, 16)).ToArray();

@@ -220,7 +220,35 @@
       "sources": [
         "CONTROL"
       ],
-      "stub": "ret0"
+      "stub": "ret0",
+      "note": "GOT pre-fill: live only on consoles below 6.00, where the export is absent; from 6.00 the loader binds the native function",
+      "rationale": "Kept as a plain stub after the review of 2026-10-14 (FINDINGS 6k). On 6.00+ consoles the native function runs; with the default sceSaveDataMount3 rule (systemBlocks -1 -> 0) ShellCore answers a cancel for such a mount with 0x809f800a ('Cancel operation is not supported when systemBlocks is 0'). Both sample games that import it (CONTROL PPSA34547, two call sites; PPSA03671, one) discard the return value, and CONTROL's own backport ran on FW 10.01 in exactly this state. A plt_stub (ret0 everywhere) would hide a cancel that does work on 6.00+ for mounts the adapter leaves alone, so the native call is preferred. Re-check with the call-site method in FINDINGS 6k when a game that tests the result appears."
+    },
+    "ZP4e7rlzOUk": {
+      "kind": "adapter",
+      "name": "sceSaveDataMount3",
+      "area": "save data, entitlements, HTTP2",
+      "sources": [
+        "GT7",
+        "CONTROL",
+        "AC",
+        "BL4",
+        "UFC6",
+        "HADES2",
+        "HKSS",
+        "YOTEI4"
+      ],
+      "insns": [
+        "488b4718  ; mov rax, [rdi+0x18]",
+        "4c8d5801  ; lea r11, [rax+1]",
+        "4d85db  ; test r11, r11",
+        "490f44c3  ; cmove rax, r11",
+        "48894718  ; mov [rdi+0x18], rax"
+      ],
+      "when": "always",
+      "below": "5.00",
+      "note": "SaveDataMount3.systemBlocks (+0x18) -1 -> 0",
+      "rationale": "Argument fix, default since 2026-10-14 (formerly the opt-in option save_mount_compat). libSceSaveData.native picks the create-mount validator by the process's compiled SDK, not by the console firmware: for SDK < 5.00 systemBlocks must be 0 on every firmware read, 1.00-13.60 (FINDINGS 6d, 6g), while SDK 5.00-11.xx accept 0 or -1 and SDK >= 12 refuse 0. A cook stamped below 5.00 therefore needs -1 -> 0 on every console, and a target >= 5.00 keeps the game's -1: below 5.00 is exact. Seven source backports patched this at the call site in their own code; doing it at the import boundary covers every game. Proven (2026-10-14, user decision): PPSA32935 Dynasty Warriors 3's FW 4 cook with this adapter saves and reloads on FW 13.60 (FINDINGS 1.1); Yotei's FW 4 cook mounts saves on 8.60 with systemBlocks=0 (FINDINGS 6a, 6c). Side effect (FINDINGS 6d): with systemBlocks 0, native sceSaveDataCancel fails on 6.00+ consoles ('Cancel operation is not supported when systemBlocks is 0'); the ret0 Cancel stub covers only consoles below 6.00. rax = [rdi+0x18]; r11 = rax+1; if r11 == 0 (value was -1): rax = 0; [rdi+0x18] = rax."
     },
     "y7JD1gfwyfA": {
       "kind": "stub",
@@ -636,9 +664,10 @@
       "rationale": "FW 10.01 libSceVideoOut: (handle, status*); the export returns an error without writing when VideoOut is not initialised or status is null, otherwise the implementation writes exactly 0x50 bytes (+0x00..+0x30 and a 32-byte block at +0x30). A game calling it ignores the return value and reads the struct (+0x04 == 2, bit 0x10 at +0x10, words at +0x30..+0x34), sometimes from uninitialised stack, so ret0 alone is not enough; an all-zero status takes the game's 'VRR off' path. Derived from the firmware code, not console-tested."
     }
   },
-  "option_groups": ["Saves", "Audio", "PS5 Pro", "Libraries", "Engine", "Online", "Diagnostics"],
+  "option_groups": ["Saves", "Audio", "Input", "PS5 Pro", "Libraries", "Engine", "Online", "Diagnostics"],
   "options": {
     "ubisoft_offline_popups": {
+      "probe": {"kind": "detector", "recognized": "applicable"},
       "name": "Ubisoft offline popups",
       "group": "Engine",
       "description": "Suppresses MUFFIN-4520 and MUFFIN-4521 using the existing silent-error callbacks in recognized Unity/Esut Ubisoft code. Detects linked code patterns without a game ID or fixed address.",
@@ -647,6 +676,7 @@
       "fixes": {}
     },
     "unity_sku_offline": {
+      "probe": {"kind": "detector", "recognized": "needed"},
       "name": "Unity unset-SKU offline fallback",
       "group": "Engine",
       "description": "Allows recognized Unity/Esut authentication code to use its existing recoverable startup path when the platform reports an unset SKU. Detects linked code patterns rather than a game ID or fixed address; leaves trial and full-game results unchanged.",
@@ -655,47 +685,13 @@
       "fixes": {}
     },
     "boot_notice": {
+      "probe": {"kind": "console"},
       "name": "Boot notification (Debug toast)",
       "group": "Diagnostics",
       "description": "Redirects the eboot entry point into a cave that writes a user message to /dev/notification0 through the game's own imported libkernel functions (sceKernelOpen/sceKernelWrite/sceKernelClose, plus sceKernelUsleep for the delay), so the console renders it as a 'Debug:' toast after the configured delay, then jumps back to the real entry. The calls go through the game's PLT stubs, keeping the syscalls inside libkernel's text (a native_game process is killed for a direct syscall). The message text is baked into the eboot as immediate-encoded bytes (X-only text cannot hold string constants).",
       "warning": "Opt-in. Not console-tested: /dev/notification0 reachability from a game sandbox and toast rendering are unverified. Delays the whole eboot start by the delay (default 8 s); 0 disables the delay. Requires Known fixes.",
       "sources": ["FINDINGS.md §6f: ShadowMountPlus sceKernelSendNotificationRequest mechanism"],
       "fixes": {}
-    },
-    "save_mount_compat": {
-      "name": "Save mount compatibility",
-      "group": "Saves",
-      "description": "Changes sceSaveDataMount3 systemBlocks from -1 to 0 on target firmware below 5.00. Requires Known fixes enabled.",
-      "warning": "Disabled by default. Derived adapter, not console-tested. Without it, old firmware may reject a save-mount request using -1. Disabling does not undo patches already present in the input.",
-      "sources": ["Existing save-data argument adapter; console testing pending"],
-      "fixes": {
-        "ZP4e7rlzOUk": {
-          "kind": "adapter",
-          "name": "sceSaveDataMount3",
-          "area": "save data, entitlements, HTTP2",
-          "sources": [
-            "GT7",
-            "CONTROL",
-            "AC",
-            "BL4",
-            "UFC6",
-            "HADES2",
-            "HKSS"
-          ],
-          "insns": [
-            "488b4718  ; mov rax, [rdi+0x18]",
-            "4c8d5801  ; lea r11, [rax+1]",
-            "4d85db  ; test r11, r11",
-            "490f44c3  ; cmove rax, r11",
-            "48894718  ; mov [rdi+0x18], rax"
-          ],
-          "when": "always",
-          "below": "5.00",
-          "proven": false,
-          "note": "SaveDataMount3.systemBlocks (+0x18) -1 -> 0",
-          "rationale": "Argument fix: the function exists on old firmware but rejects values newer SDKs pass (AC README: ShellCore rejects -1 when the game SDK is below 5.00, hence below 5.00). All three games patched this at the call site in their own code; doing it at the import boundary covers every game. rax = [rdi+0x18]; r11 = rax+1; if r11 == 0 (value was -1): rax = 0; [rdi+0x18] = rax."
-        }
-      }
     },
     "save_prepare_compat": {
       "name": "Save preparation compatibility",
@@ -1046,10 +1042,11 @@
       }
     },
     "auto_pro": {
+      "probe": {"kind": "console"},
       "name": "Automatic Pro mode",
       "group": "PS5 Pro",
       "description": "Keeps native console-mode queries when available, so the game can choose its base PS5 or PS5 Pro path at runtime. Missing queries fall back to base-console values. Keeps the default Psml initialization guard below firmware 9.00. Requires Known fixes enabled.",
-      "warning": "Experimental; test on both console types. Queries missing from the selected target fall back to fixed base-console answers, even if this cook later runs on a Pro with newer firmware. Preserves automatic selection only for queries the target supports. Replacement libraries must report the actual console correctly. Cannot be combined with Force PS5 Pro mode.",
+      "warning": "Experimental; test on both console types. The four queries are GOT pre-fills: a console whose firmware exports a query binds the native function over the pre-fill (console-confirmed on FW 8.60, FINDINGS 6b), so sceKernelIsTrinityMode and sceKernelHasTrinityMode are native from FW 7.00, sceAgcGetIsTrinityMode from 9.00 and sceKernelGetOperationMode from 11.00; a Pro on those firmwares is detected. The fixed base-console answer applies only on consoles between the target and that firmware. Not a runtime resolver: the stub bodies never check the console. Replacement libraries must report the actual console correctly. Cannot be combined with Force PS5 Pro mode.",
       "sources": ["Native hardware queries with base-console fallback; console testing pending"],
       "fixes": {
         "NH6xARDOVv8": {
@@ -1092,6 +1089,7 @@
       }
     },
     "force_pro": {
+      "probe": {"kind": "console"},
       "name": "Force PS5 Pro mode",
       "group": "PS5 Pro",
       "description": "Makes the game treat the console as a PS5 Pro (Pro graphics mode, PSSR when the game supports it): sceKernelGetOperationMode reports mode 3, sceKernelIsTrinityMode and sceAgcGetIsTrinityMode report true, and scePsmlMfsrInit is called again (the default skips it below FW 9.00).",
@@ -1168,6 +1166,7 @@
       ]
     },
     "playgo_0_6": {
+      "probe": {"kind": "console"},
       "name": "PlayGo 0.6 (experimental)",
       "group": "Libraries",
       "description": "Replaces libScePlayGo.sprx with the official 0.6 build, adding synchronized lifecycle handling and empty-list compatibility. Keeps the current library unless selected.",
@@ -1177,6 +1176,7 @@
       "fakelib_variant": "playgo_0_6"
     },
     "playgo_0_6_log": {
+      "probe": {"kind": "console"},
       "name": "PlayGo 0.6 logging (experimental)",
       "group": "Libraries",
       "description": "Uses the official 0.6 logging build under the runtime name libScePlayGo.sprx. Writes /app0/playlgo.log (upstream spelling) for one diagnostic run.",
@@ -1186,6 +1186,7 @@
       "fakelib_variant": "playgo_0_6_log"
     },
     "psml_kpn9": {
+      "probe": {"kind": "console"},
       "name": "PSSR model as KPN9_v070.psp (experimental)",
       "group": "PS5 Pro",
       "description": "Uses the fakelib set's libScePsml variant that loads the PS5 Pro PSSR model from /app0/KPN9_v070.psp (its FW 13.60 system name) instead of /app0/k9.psp. The same FW 13.60 model file is added under that name.",
@@ -1283,6 +1284,32 @@
           "state_size": 16,
           "note": "closing a dialog clears the suppressed mark, then the real function runs",
           "rationale": "Part of the Hide PSN error dialogs option: a game that closes a suppressed dialog without polling its status must not see the next real dialog reported as finished at once."
+        }
+      }
+    },
+    "pad_vibration_compat": {
+      "probe": {"kind": "argument", "nid": "W2G-yoyMF5U", "argument": 1, "above": 3},
+      "name": "Pad vibration mode compatibility",
+      "group": "Input",
+      "description": "Clamps the mode argument of scePadSetVibrationMode to 3 when a game passes 4 or 5, on targets below firmware 8.00. Requires Known fixes enabled.",
+      "warning": "Opt-in, not console-tested. libScePad accepts modes 4 and 5 only from FW 8.00 and only for a process stamped SDK 8.00 or later, so a 4.00 cook of a game using them gets SCE_PAD_ERROR_INVALID_ARG on every console (the game usually ignores it and keeps the pad's default mode). With the option the call succeeds with mode 3; what modes 3, 4 and 5 change in the haptics is not documented here. Among the samples only EA SPORTS UFC 6 passes mode 4.",
+      "sources": ["UFC6"],
+      "fixes": {
+        "W2G-yoyMF5U": {
+          "kind": "adapter",
+          "name": "scePadSetVibrationMode",
+          "area": "input",
+          "sources": ["UFC6"],
+          "insns": [
+            "83fe03  ; cmp esi, 3",
+            "b803000000  ; mov eax, 3",
+            "0f4ff0  ; cmovg esi, eax"
+          ],
+          "when": "always",
+          "below": "8.00",
+          "proven": false,
+          "note": "scePadSetVibrationMode(handle, mode): mode > 3 -> 3 (signed, so negative modes still reach the native check)",
+          "rationale": "Argument fix (FINDINGS 6l, 6m). libScePad validates the mode against the process's compiled SDK: 1-2 below SDK 3.00, 1-3 from 3.00, 1-5 from 8.00 (the 1-5 branch exists only in the FW 8.00+ libraries; 4.00-7.61 accept at most 3 for any SDK). A cook stamped below 8.00 therefore gets 0x80920001 for modes 4 and 5 on every console 4.00-13.60, and targets >= 8.00 do not need the rule (below: 8.00). Survey of the 14 sample games that import it: UFC 6 (PPSA23566, SDK 12) passes a constant 4 at all six sites and discards the result (its backport ran on a PS5 Pro at FW 9.60 with the error, i.e. with the pad's default mode); BL4, Beast of Reincarnation and PPSA34008 pass a runtime setting of unknown range; everyone else passes 1, 2 or 3. Mode 3 is the highest mode every library in range accepts for the stamp (Dying Light: The Beast sets 1 then 3). Pre-call, branch-free: eax is caller-saved and not an argument."
         }
       }
     }

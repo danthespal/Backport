@@ -1,6 +1,6 @@
-backport_report.json 8ca645b48c1ad87379edebb5f64a0bd20986d35a5a417ec82a6541678b0be401
-backport_report.txt d237f99aaaea80a4903db1392375100d547b17c2f9451c845b3fdfff5da8c33b
-eboot.bin 537ba98922fb44040c18fb1abf844fbce1dab9c973e83fb6a38bf56333ca199b
+backport_report.json abac68b17f4051459bb2e1c43518d89fa66e5796942122906e8dc655b4916100
+backport_report.txt 6934a831fbc47fa185eb81f3722acb5a10f9ba008cbb717485edf28e932cf105
+eboot.bin fdabb0e1c4251e3d070e4bc79b06f9edc6cd6b782a600824d1e99df5950ba382
 fakelib/libSceAgc.sprx 73611ebe0777da0b2a6087eb169d4b997bf14a4f6e7aacdc1e5cbe973ce9d1d6
 fakelib/libSceAgcDriver.sprx d83edb3a0b57c4a2476d902e16da051db82ef36b81b791d6e8d2d998f083e27b
 fakelib/libSceAmpr.sprx 362c84e31e3a06a42f50fe4d6ea124d15e73f77c901470f90823935d7f36ca76
@@ -12,6 +12,21 @@ Backport of <game>
   output: <out>
   reference: firmware_db 4.03 (exact for FW 4.03)
   fakelibs: <repo>\fakelibs\4.03
+  probe not-applicable ubisoft_offline_popups  no module has the recognised code layout
+  probe not-applicable unity_sku_offline  no module has the recognised code layout
+  probe console-choice boot_notice  depends on the console or the tester's intent, not on the game
+  probe applicable     save_prepare_compat  imports 1 of its 1 function(s): sceSaveDataPrepare
+  probe applicable     audio_speaker_compat  imports 1 of its 1 function(s): sceAudioOut2GetSpeakerInfo
+  probe applicable     audio_port_compat  imports 5 of its 5 function(s): sceAudioOut2ContextAdvance, sceAudioOut2ContextCreate, sceAudioOut2PortCreate, sceAudioOut2PortDestroy, sceAudioOut2PortSetAttributes
+  probe not-applicable audio_bed_71  imports 1 of its 1 function(s): sceAudioOut2PortGetState, but its engine pattern(s) do not match
+  probe console-choice auto_pro  imports 3 of its 4 function(s): sceAgcGetIsTrinityMode, sceKernelGetOperationMode, sceKernelIsTrinityMode
+  probe console-choice force_pro  imports 3 of its 3 function(s): sceAgcGetIsTrinityMode, sceKernelGetOperationMode, sceKernelIsTrinityMode
+  probe applicable     gpu_scratch  its byte pattern(s) match 164 time(s)
+  probe console-choice playgo_0_6  depends on the console or the tester's intent, not on the game
+  probe console-choice playgo_0_6_log  depends on the console or the tester's intent, not on the game
+  probe console-choice psml_kpn9  the game uses libScePsml (PS5 Pro only)
+  probe not-applicable np_error_dialogs  none of its 4 function(s) is imported
+  probe not-applicable pad_vibration_compat  none of its 1 function(s) is imported
   refs = direct code references to an unresolved import (0: reachable only through data, e.g. a vtable, or not at all)
   NOTE: 1 derived fix(es) applied, not yet console-tested: scePsmlMfsrInit
   deployment: Assessed profile: ShadowMountPlus 1.7beta5-fix1 (98c524890176c7b474fcb03387bec88c4a559861). Console loader version, settings and launch format are unknown.
@@ -31,8 +46,9 @@ MediaDecoders.Prospero.prx  [PS4-style fake SELF (make_fself.py)]  unchanged
 
 eboot.bin  [PS4-style fake SELF (make_fself.py)]  written
   SDK 0x04030031/0x09040001 (kept)
-  imports: data=42, patched=1, provided=179, reference=604, stubbed=8
+  imports: data=42, patched=2, provided=179, reference=603, stubbed=8
   fixed    3WVD91e12ZQ  scePsmlMfsrInit  (PLT -> ret:0x8a810012 @ 0xd8; DERIVED, not console-tested; from Kingdom Come: Deliverance II PPSA21704 FW4.xx (test status unknown))
+  fixed    ZP4e7rlzOUk  sceSaveDataMount3  (adapter (argument fix) via cave 0x16e2; proven; from GT7 1.71 FW4, CONTROL Resonant 1.300 FW4.03, AC Black Flag Resynced 01.006.038 FW4.xx/10.xx, Borderlands 4 PPSA01494 FW4.xx, EA SPORTS UFC 6 PPSA23566 (tested on PS5 Pro FW 9.60), Hades II PPSA36082 FW4.03 (console-tested), Hollow Knight: Silksong PPSA12544 FW4.xx (test status unknown), Ghost of Yotei 02.002.000 FW4 cook (console-tested on FW 13.60))
   pattern  Wwise 7.1.4 -> 7.1 (channel switch)  x1
   pattern  Wwise 7.1.4 -> 7.1 (packed default)  x1
 

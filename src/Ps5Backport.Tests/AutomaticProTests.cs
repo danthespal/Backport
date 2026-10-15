@@ -81,6 +81,32 @@ namespace Ps5Backport.Tests
             Assert.Throws<ArgumentException>(() => knowledge.FixTable(["force_pro", "auto_pro"]));
         }
 
+        /// <summary>The option's texts describe GOT pre-fills that the loader overrides wherever the firmware exports the query
+        /// (FINDINGS 6b): every auto_pro fix is a plain stub applied only when missing, and the first exporting firmwares named in
+        /// the warning match firmware_db.</summary>
+        [Fact]
+        public void AutomaticMode_UsesLoaderOverridableGotPrefills()
+        {
+            var knowledge = new Knowledge(Repo.Need("data"));
+            var option = knowledge.Options["auto_pro"];
+            Assert.All(option.Fixes.Values, f => Assert.Equal((Fix.KindStub, Fix.WhenMissing), (f.Kind, f.When)));
+            var databases = FirmwareDb.LoadAll(Repo.Need("firmware_db"));
+            var firstExport = new Dictionary<string, string>
+            {
+                ["tU5e3f9gSiU"] = "7.00",   // sceKernelIsTrinityMode
+                ["yu17wG8L5FI"] = "7.00",   // sceKernelHasTrinityMode
+                ["BfBDZGbti7A"] = "9.00",   // sceAgcGetIsTrinityMode
+                ["NH6xARDOVv8"] = "11.00",  // sceKernelGetOperationMode
+            };
+            Assert.Equal(firstExport.Keys.Order(StringComparer.Ordinal), option.Fixes.Keys.Order(StringComparer.Ordinal));
+            foreach (var (nid, firmware) in firstExport)
+                Assert.Equal(firmware, FirmwareDb.Introduced(nid, databases, knowledge)?.Firmware);
+            Assert.Contains("from FW 7.00", option.Warning);
+            Assert.Contains("from 9.00", option.Warning);
+            Assert.Contains("from 11.00", option.Warning);
+            Assert.DoesNotContain("even if this cook later runs", option.Warning);
+        }
+
         [Fact]
         public void Gui_ConsoleModesAreMutuallyExclusive()
         {

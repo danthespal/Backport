@@ -1,8 +1,9 @@
 == eboot.elf
-sha256 e224f50e6bdcafa4cef154c9a4e12571f2381d36b7acccb6fa1d1c74c724537f
+sha256 792217d63c245acd6ec6f3415d9047e1dfc33f03d13f425fb1d8e03e9539c30b
 fix 3WVD91e12ZQ PLT -> ret:0x8a810012 @ 0xd6
-stub NH6xARDOVv8 90043504 opmode_normal 978
-stub La9uyZv4Kvw 90049864 ret:0xff 230
+fix ZP4e7rlzOUk adapter (argument fix) via cave 0xe6
+stub NH6xARDOVv8 90043504 opmode_normal 1395
+stub La9uyZv4Kvw 90049864 ret:0xff 1016
 stub 5tRaBjtdTzY 90044016 ret0 140
 stub T4ucGB8CsnM 90044024 ret0 140
 stub kP2L8t3j-aM 90044040 ret0 140
