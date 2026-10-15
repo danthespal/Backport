@@ -1,5 +1,5 @@
-backport_report.json f70441e27aba3f9b6d85a09d785cbed3b872e9ffa4446f031891ff49294aabe4
-backport_report.txt 559f354e5fc82daccae83746005cf40c301e1925970e3c6b0f1de077099fcb1c
+backport_report.json 7c55e342d0055fdae2e75940b736218eab876193e3ff03fb1673dc3775aabd9b
+backport_report.txt 2bde757f3b9ccc59b86bf1d72460ba3164e240ba6c99a07e4fb75376890bd3fe
 eboot.bin 1d4d35fcbea636dec8d606d34846c8096e0ae2fb1bf3bc0f8071ba06de44f8e3
 libSieRdNNabla.prx 9f4cbe247a07ed88fec921e360d8a90e178e605f820fc3ffaef4d7945843b62e
 logiWheel.prx 1b410e2d1731f25a3fe006ffed7d6ff2d7ce15a755a1bdd0874c5c59f913e3e3
@@ -55,8 +55,8 @@ eboot.bin  [PS5-style SELF]  written
   stubbed  kP2L8t3j-aM  sceVideoOutAddVrrStatusFlagsPrivilege  (ret0 @ 0x8c; known fix, proven; GOT pre-fill, native from FW 5.02 / firmware_db 5.02)
   stubbed  LibwuIonIBw  sceVideoOutAddVrrActiveStatusEvent  (ret0 @ 0x8c; known fix, proven; GOT pre-fill, native from FW 5.02 / firmware_db 5.02)
   stubbed  La9uyZv4Kvw  sceKernelGetAvailableCpumask  (ret:0xff @ 0x418; known fix, proven; GOT pre-fill, native from FW 12.40 / firmware_db 12.40)
-  missing  xNZM9Y5lf-M  xNZM9Y5lf-M  [libScePsml_specularAA]  refs=1   introduced: FW 10.01 / firmware_db 10.01
-  missing  lcZD9tJraAw  lcZD9tJraAw  [libScePsml_quality8K]  refs=1   introduced: FW 10.01 / firmware_db 10.01
+  missing  xNZM9Y5lf-M  scePsmlMfsrEnableSpecularAA  [libScePsml_specularAA]  refs=1   introduced: FW 10.01 / firmware_db 10.01
+  missing  lcZD9tJraAw  scePsmlMfsrEnableQuality8K  [libScePsml_quality8K]  refs=1   introduced: FW 10.01 / firmware_db 10.01
   missing  QxBJF-G2v5k  sceHmd2ReprojectionSetParamWithBuffer  [libSceHmd2]  refs=1   introduced: FW 5.02 / firmware_db 5.02   left unpatched by: GT7 1.71 FW4
   missing  +2KpvixvL6E  scePsmlMfsrGetSharedResourcesInitRequirement  [libScePsml]  refs=1   introduced: FW 9.00 / firmware_db 9.00
   missing  eWoKNeB6V-k  scePsmlMfsrCreateSharedResources  [libScePsml]  refs=1   introduced: FW 9.00 / firmware_db 9.00

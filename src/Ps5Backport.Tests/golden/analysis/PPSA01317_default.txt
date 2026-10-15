@@ -36,9 +36,9 @@ refs +2KpvixvL6E=1 +B-xlbiWDJ4=2 +FYcYefsVX0=1 +KDWny9Y-6k=1 +L98PIbGttk=7 +P6FR
       unknown  Kyy1baXgaVU  scePsmlMfsr2ReleaseContext  (GOT 0x55e0fd0)
       unknown  0GAw7SmkwII  scePsmlMfsr2ReleaseSharedResources  (GOT 0x55e0fb8)
    libScePsml_quality8K:
-      unknown  lcZD9tJraAw  lcZD9tJraAw  (GOT 0x55df458)
+      unknown  lcZD9tJraAw  scePsmlMfsrEnableQuality8K  (GOT 0x55df458)
    libScePsml_specularAA:
-      unknown  xNZM9Y5lf-M  xNZM9Y5lf-M  (GOT 0x55df450)
+      unknown  xNZM9Y5lf-M  scePsmlMfsrEnableSpecularAA  (GOT 0x55df450)
    libSceVideoOut:
       unknown  5tRaBjtdTzY  sceVideoOutVrrPegToFixedRate  (GOT 0x55df670)
       unknown  T4ucGB8CsnM  sceVideoOutVrrUnpegFromFixedRate  (GOT 0x55df678)

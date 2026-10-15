@@ -159148,3 +159148,6 @@ DDVUyPyYHTA scePsmlMfsrGetDispatchMfsrPacket1300
 gWT7X8H0bYs sceVideoOutGetOutputStatusWithVrr
 zCa75KLWWn4 EVP_MD_block_size
 ZVZ++68nNI8 sceNpGetSandboxInfo
+xNZM9Y5lf-M scePsmlMfsrEnableSpecularAA
+lcZD9tJraAw scePsmlMfsrEnableQuality8K
+RvID8BVeg+g sceSaveDataPrepareForTransferring

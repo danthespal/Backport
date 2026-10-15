@@ -42,9 +42,9 @@ reference: firmware_db 4.00 (exact for FW 4)
       missing  Kyy1baXgaVU  scePsmlMfsr2ReleaseContext  (GOT 0x55e0fd0)
       missing  0GAw7SmkwII  scePsmlMfsr2ReleaseSharedResources  (GOT 0x55e0fb8)
    libScePsml_quality8K:
-      missing  lcZD9tJraAw  lcZD9tJraAw  (GOT 0x55df458)
+      missing  lcZD9tJraAw  scePsmlMfsrEnableQuality8K  (GOT 0x55df458)
    libScePsml_specularAA:
-      missing  xNZM9Y5lf-M  xNZM9Y5lf-M  (GOT 0x55df450)
+      missing  xNZM9Y5lf-M  scePsmlMfsrEnableSpecularAA  (GOT 0x55df450)
    libSceVideoOut:
       missing  5tRaBjtdTzY  sceVideoOutVrrPegToFixedRate  (GOT 0x55df670)
       missing  T4ucGB8CsnM  sceVideoOutVrrUnpegFromFixedRate  (GOT 0x55df678)
