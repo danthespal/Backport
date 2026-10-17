@@ -4,7 +4,7 @@ reference: firmware_db 4.03 (exact for FW 4.03)
 
 == libSceAgc.sprx  module=libSceAgc
    build: W:/Build/J03718109/sys/build/integration/orbis-build_0005c/package/target/phase2/usermode/src/graphics/gen2/agc/prx/libSceAgc.prx
-   reference=82, provided=4, stubbed=1, forced=8, patched=0, data=2, missing=0, unknown=0
+   reference=82, provided=4, stubbed=3, forced=6, patched=0, data=2, missing=0, unknown=0
 
 == libSceAgcDriver.sprx  module=libSceAgcDriver
    build: W:/Build/J03718109/sys/build/integration/orbis-build_0005c/package/target/phase2/usermode/src/graphics/gen2/agc_driver/libSceAgcDriver.prx
@@ -20,6 +20,6 @@ reference: firmware_db 4.03 (exact for FW 4.03)
 
 == libScePsml.sprx  module=libScePsml
    build: W:/Build/J03718109/sys/internal/usermode/src/psml/Prospero_Game_PRX_psml_prx/libScePsml.prx
-   reference=284, provided=22, stubbed=5, forced=24, patched=0, data=5, missing=0, unknown=0
+   reference=284, provided=22, stubbed=6, forced=23, patched=0, data=5, missing=0, unknown=0
 
 0 unresolved import(s); a missing function only fails when called (lazy PLT binding)

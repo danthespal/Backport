@@ -1,12 +1,12 @@
 ShaderData.bin 3ec797d34a665fc4c966a9c5a88f81062362f4ad68d7f7825e5c6ac414c823ba
-backport_report.json 9026c0e429c9a412978c1ca33918bafcfd481be13f791cea08bf53a999c5459a
-backport_report.txt 76612e8497f9142562aabaef52135a1ab924b35c3c7f14634f8871e72da23949
+backport_report.json 9472ed3b7e1886a8bded0226c117129486f0c375933e4edb24c93e6c5a91a9a9
+backport_report.txt a712c3c5876d3bb4fd0fb76c66505786c1df1723f4f92919f08fbce0a29c9d0e
 eboot.bin e18cab64501b08290d640b1675cde2976e0d3bcbb798613b397847bd12b7202b
-fakelib/libSceAgc.sprx 51a6e52a4a77cf621915006c40e54ce893eb68b4918306b001dadbe47bb15312
+fakelib/libSceAgc.sprx 8c346d77b3c732522b2af6e569b2ad3cd78aca424799d096c0a234ccc4b219d3
 fakelib/libSceAgcDriver.sprx 6fe51fe3dd3082fa157938bf967a32d5582c5b16fa5e4fcc79ea7f117abae5f5
 fakelib/libSceAmpr.sprx 8248448608f36d8c937c77bd35b9b5b037b14d781544a14a39491a9bf88bc83b
 fakelib/libScePlayGo.sprx a0f20f40107713523ba1a3a0281fb7c4e238b2b5d3fda9354119352d9393d2f0
-fakelib/libScePsml.sprx 27b64831d89235267c22ba32aa23ee338f99f92a6f49d8f4d70c4c44ee62ca98
+fakelib/libScePsml.sprx 7d8c9a20ac0470068568c56069a3adc618534c978435200c1b5249114f5320ea
 k9.psp 22ffbf0618090f4f45137dd6f496a1910eebc94eda3b5f625c16f13cafa95546
 libaegir_f.prx 2b465921416636145c502373d9135657f581fbd48f5534af8bfdd00b891c5750
 libmemorywrapper_f.prx 4364994a30b7715a383038da1a505df8f11bc004a33e049a60b625148f04c597
@@ -127,7 +127,7 @@ sce_sys/about/right.sprx  [PS5-style SELF]  unchanged
 fakelib/libSceAgc.sprx  [PS4-style fake SELF (make_fself.py)]  written
   SDK 0x04000031/0x09040001 (kept)
   Sony build J03828141 = FW 12.70
-  imports: data=2, forced=8, provided=4, reference=82, stubbed=1
+  imports: data=2, forced=6, provided=4, reference=82, stubbed=3
 
 fakelib/libSceAmpr.sprx  [PS4-style fake SELF (make_fself.py)]  written
   SDK 0x02000009/0x08050001 (kept)
@@ -140,7 +140,7 @@ fakelib/libScePlayGo.sprx  [PS4-style fake SELF (make_fself.py)]  written
 fakelib/libScePsml.sprx  [PS4-style fake SELF (make_fself.py)]  written
   SDK 0x04000031/0x09040001 (kept)
   Sony build J03950001 = FW 13.60
-  imports: data=5, forced=27, patched=1, provided=20, reference=275, stubbed=6
+  imports: data=5, forced=25, patched=1, provided=20, reference=275, stubbed=8
   fixed    BfBDZGbti7A  sceAgcGetIsTrinityMode  (PLT -> byte1 @ 0x1fc6; proven; from AC Black Flag Resynced 01.006.038 FW4.xx/10.xx)
 
 fakelib/libSceAgcDriver.sprx  [PS4-style fake SELF (make_fself.py)]  written

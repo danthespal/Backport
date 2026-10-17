@@ -1,11 +1,11 @@
-backport_report.json d11c5dcecfb30cd4d5ea31aa6f3d6a0c4366e4f8ca737d77fe33f56357bc8076
-backport_report.txt 8083833a9351d69f2bb2131d68754db6b304a5be391c2286d036ffbf6a7dd85a
+backport_report.json 37f26ff440677594d1864af50776d5215adb1aa15f0853906783399bd09d63ab
+backport_report.txt b33c216b7409865dc3c620efaf449b5707687a0167215d5393831e27174b942b
 eboot.bin c1f395d572646abb52518083718c508e092556b7585ca8b27133ae7fcc02f578
-fakelib/libSceAgc.sprx 7f6d6794ce4d7f549de2e5a6bfbed6fff4e0cc12fb07c94fbec5fe62247e5f18
+fakelib/libSceAgc.sprx 98d9979c33eb47b41de5f2b8b45fca55987bfd4fada0dadeffa8186b83462baa
 fakelib/libSceAgcDriver.sprx 50d7abac85dfa03fdca898867c4af166fa68c41a4ed9a72453e0ed5e1eaf9adc
 fakelib/libSceAmpr.sprx 362c84e31e3a06a42f50fe4d6ea124d15e73f77c901470f90823935d7f36ca76
 fakelib/libScePlayGo.sprx 35c437b7e9365e3183974ab5bfbf489ea1db12b7f711c829813ff14ce4d1790e
-fakelib/libScePsml.sprx 99dc6d73d34fb87e8556614871dfd6170f2dc7c421773c4bd0cfa105d8d2601c
+fakelib/libScePsml.sprx d3ec2071f4eba8cd94f3288ed0a920add06c9045926c3bef071b3623004d4bd5
 libSieRdNNabla.prx 5a12e5a5be1f56ca7936d8856f1342f7fcd6e32f14570b0343591fd6972a4592
 logiWheel.prx f4b424a250e576b38455087c8b2d82a8d9c5e547eb382f85f8028cd0db7fcac7
 sce_module/libSceNpCppWebApi.prx f636243cea9185daf49703f052d9b9172e096f07b2cf050077a66b32a35cdb5c
@@ -106,7 +106,7 @@ sce_sys/about/right.sprx  [PS5-style SELF]  written
 fakelib/libSceAgc.sprx  [PS4-style fake SELF (make_fself.py)]  written
   SDK 0x04000031/0x09040001 (kept)
   Sony build J03718109 = FW 12.00
-  imports: data=2, forced=8, provided=4, reference=82, stubbed=1
+  imports: data=2, forced=6, provided=4, reference=82, stubbed=3
 
 fakelib/libSceAgcDriver.sprx  [PS4-style fake SELF (make_fself.py)]  written
   SDK 0x04000031/0x09040001 (kept)
@@ -124,4 +124,4 @@ fakelib/libScePlayGo.sprx  [PS4-style fake SELF (make_fself.py)]  written
 fakelib/libScePsml.sprx  [PS4-style fake SELF (make_fself.py)]  written
   SDK 0x04000031/0x09040001 (kept)
   Sony build J03718109 = FW 12.00
-  imports: data=5, forced=24, provided=22, reference=284, stubbed=5
+  imports: data=5, forced=23, provided=22, reference=284, stubbed=6

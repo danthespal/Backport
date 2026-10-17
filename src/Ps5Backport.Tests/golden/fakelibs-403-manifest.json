@@ -5,7 +5,7 @@
     "ps5_sdk": "0x04000031",
     "ps4_sdk": "0x09040001",
     "build_path": "W:/Build/J03718109/sys/build/integration/orbis-build_0005c/package/target/phase2/usermode/src/graphics/gen2/agc/prx/libSceAgc.prx",
-    "sha256": "7f6d6794ce4d7f549de2e5a6bfbed6fff4e0cc12fb07c94fbec5fe62247e5f18",
+    "sha256": "98d9979c33eb47b41de5f2b8b45fca55987bfd4fada0dadeffa8186b83462baa",
     "size": 322432,
     "source": "test source"
   },
@@ -46,7 +46,7 @@
     "ps5_sdk": "0x04000031",
     "ps4_sdk": "0x09040001",
     "build_path": "W:/Build/J03718109/sys/internal/usermode/src/psml/Prospero_Game_PRX_psml_prx/libScePsml.prx",
-    "sha256": "99dc6d73d34fb87e8556614871dfd6170f2dc7c421773c4bd0cfa105d8d2601c",
+    "sha256": "d3ec2071f4eba8cd94f3288ed0a920add06c9045926c3bef071b3623004d4bd5",
     "size": 1510608,
     "source": "test source"
   }

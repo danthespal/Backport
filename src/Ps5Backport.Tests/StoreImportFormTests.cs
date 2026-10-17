@@ -17,6 +17,8 @@ namespace Ps5Backport.Tests
             "yu17wG8L5FI",   // sceKernelHasTrinityMode
             OperationMode,   // sceKernelGetOperationMode
             "TdAc0h4iomU", "XP6c8M4G+fc", "5qXct3c1skg", "4bp9gcNLwMI",   // libc++ _Mtx_init/destroy/lock/unlock
+            "eSgYzXvTPQI", "ciYlptMdvhc",   // Agc: unnamed libkernel Pro-mode queries behind sceAgcGetRegisterDefaults* (from 9.00)
+            "d7xu4QDJw8Q", "TUZlvaB9rlg",   // Psml: sceKernelGetAppInfo2, sceKernelTitleWorkaroundIsEnabled2 (MFSR2 override, from 6.00)
         ];
 
         /// <summary>
@@ -25,23 +27,23 @@ namespace Ps5Backport.Tests
         /// imports except GetOperationMode, whose PLT jumped straight to the stub.
         /// </summary>
         [Theory]
-        [InlineData("4/libSceAgc.sprx", 1, true)]
-        [InlineData("4/agc_mode2/libSceAgc.sprx", 1, true)]
-        [InlineData("4.03/libSceAgc.sprx", 1, true)]
-        [InlineData("4.03/agc_mode2/libSceAgc.sprx", 1, true)]
-        [InlineData("9.60/libSceAgc.sprx", 1, true)]
+        [InlineData("4/libSceAgc.sprx", 3, true)]
+        [InlineData("4/agc_mode2/libSceAgc.sprx", 3, true)]
+        [InlineData("4.03/libSceAgc.sprx", 3, true)]
+        [InlineData("4.03/agc_mode2/libSceAgc.sprx", 3, true)]
+        [InlineData("9.60/libSceAgc.sprx", 3, true)]
         [InlineData("4/libSceAgcDriver.sprx", 1, true)]
         [InlineData("4/gpu_scratch/libSceAgcDriver.sprx", 1, true)]
         [InlineData("4.03/libSceAgcDriver.sprx", 1, true)]
         [InlineData("4.03/gpu_scratch/libSceAgcDriver.sprx", 1, true)]
         [InlineData("9.60/libSceAgcDriver.sprx", 1, true)]
-        [InlineData("4/libScePsml.sprx", 6, true)]
-        [InlineData("4/psml_kpn9/libScePsml.sprx", 6, true)]
-        [InlineData("4.03/libScePsml.sprx", 5, true)]
-        [InlineData("10/libScePsml.sprx", 6, true)]
-        [InlineData("11/libScePsml.sprx", 6, true)]
-        [InlineData("9.60/libScePsml.sprx", 6, false)]
-        [InlineData("9.60/psml_kpn9/libScePsml.sprx", 6, false)]
+        [InlineData("4/libScePsml.sprx", 8, true)]
+        [InlineData("4/psml_kpn9/libScePsml.sprx", 8, true)]
+        [InlineData("4.03/libScePsml.sprx", 6, true)]
+        [InlineData("10/libScePsml.sprx", 8, true)]
+        [InlineData("11/libScePsml.sprx", 8, true)]
+        [InlineData("9.60/libScePsml.sprx", 8, false)]
+        [InlineData("9.60/psml_kpn9/libScePsml.sprx", 8, false)]
         public void ConsoleQueries_AreImportsTheLoaderCanBind(string file, int count, bool prefilled)
         {
             var elf = new SceElf(Self.Unwrap(File.ReadAllBytes(Repo.Need(["fakelibs", .. file.Split('/')]))));
@@ -102,7 +104,8 @@ namespace Ps5Backport.Tests
         {
             byte[] store = Self.Unwrap(File.ReadAllBytes(Repo.Need("fakelibs", "4", "libScePsml.sprx")));
             var elf = new SceElf((byte[])store.Clone());
-            Assert.All(Scoped.Where(n => n != "yu17wG8L5FI"), nid => Assert.Null(Patching.RestoreImport(elf, nid)));
+            var imported = elf.Imports().Select(i => i.Nid).ToHashSet();
+            Assert.All(Scoped.Where(imported.Contains), nid => Assert.Null(Patching.RestoreImport(elf, nid)));
             Assert.Equal(store, elf.Data);
             Assert.Contains("RELA", Assert.Throws<PatchException>(() => Patching.RestoreImport(elf, "9Qe7XFSQ4Lk")).Message);   // std::cout
             Assert.Contains("not imported", Assert.Throws<PatchException>(() => Patching.RestoreImport(elf, "yu17wG8L5FI")).Message);

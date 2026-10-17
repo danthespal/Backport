@@ -40,8 +40,8 @@ YQ0navp+YIc libSceLibcInternal 166776 True reference
 nR6xhiFsOoc libSceAgcDriver 166784 True reference
 SFB48L57OKQ libSceAgcDriver 166792 True provided
 gSRnr79F8tQ libSceAgcDriver 166800 True reference
-eSgYzXvTPQI libkernel 166808 True forced
-ciYlptMdvhc libkernel 166816 True forced
+eSgYzXvTPQI libkernel 166808 True stubbed
+ciYlptMdvhc libkernel 166816 True stubbed
 yuO+lNrj+Do libSceAgcDriver 166824 True reference
 +P6FRGH4LfA libSceLibcInternal 166832 True reference
 0vTn5IDMU9A libkernel 166840 True reference
@@ -357,7 +357,7 @@ gO98NioN5FM libkernel 919352 True reference
 GGeRJk1XdWc libkernel 919360 True reference
 tU5e3f9gSiU libkernel 919368 True stubbed
 HoLVWNanBBc libkernel 919376 True reference
-d7xu4QDJw8Q libkernel 919384 True forced
+d7xu4QDJw8Q libkernel 919384 True stubbed
 aML18Z0J0t0 libkernel 919392 True reference
 NH6xARDOVv8 libkernel 919400 True stubbed
 DfivPArhucg libSceLibcInternal 919408 True reference
@@ -376,7 +376,7 @@ HibOtezzT6M libSceVideoOut 919504 True reference
 jpFjmgAC5AE libkernel 919512 True reference
 fYWVVDKZOCk libSceVideoOut 919520 True reference
 Ygv0S+Hi+hA libSceVideoOut 919528 True reference
-TUZlvaB9rlg libkernel 919536 True forced
+TUZlvaB9rlg libkernel 919536 True stubbed
 vSMAm3cxYTY libkernel 919544 True reference
 23LRUSvYu1M libSceAgc 919552 True reference
 1jfXLRVzisc libkernel 919560 True reference

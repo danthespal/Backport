@@ -1,11 +1,11 @@
-backport_report.json 575267b7ff4112fe390fe80337dcc4b6294970a6cced8918888112a7c1888501
-backport_report.txt b50f1e00ad9297027aecb539e89bd6506b781aaf9bdace03037cc0107f023636
+backport_report.json 6c4c299735adcfd2d403995728efa16ea624a3f2a15ec5847c7c066f43d3bdc9
+backport_report.txt 910d9af2f4559710116f999347294f14e4712fc7249ed7a73f91b064739da9e9
 eboot.bin fdabb0e1c4251e3d070e4bc79b06f9edc6cd6b782a600824d1e99df5950ba382
-fakelib/libSceAgc.sprx 7f6d6794ce4d7f549de2e5a6bfbed6fff4e0cc12fb07c94fbec5fe62247e5f18
+fakelib/libSceAgc.sprx 98d9979c33eb47b41de5f2b8b45fca55987bfd4fada0dadeffa8186b83462baa
 fakelib/libSceAgcDriver.sprx 50d7abac85dfa03fdca898867c4af166fa68c41a4ed9a72453e0ed5e1eaf9adc
 fakelib/libSceAmpr.sprx 362c84e31e3a06a42f50fe4d6ea124d15e73f77c901470f90823935d7f36ca76
 fakelib/libScePlayGo.sprx 35c437b7e9365e3183974ab5bfbf489ea1db12b7f711c829813ff14ce4d1790e
-fakelib/libScePsml.sprx 99dc6d73d34fb87e8556614871dfd6170f2dc7c421773c4bd0cfa105d8d2601c
+fakelib/libScePsml.sprx d3ec2071f4eba8cd94f3288ed0a920add06c9045926c3bef071b3623004d4bd5
 
 Backport of <game>
   title PPSA34547 version 01.300.300 -> FW 4.03
@@ -77,7 +77,7 @@ sce_sys/about/right.sprx  [PS4-style fake SELF (make_fself.py)]  unchanged
 fakelib/libSceAgc.sprx  [PS4-style fake SELF (make_fself.py)]  written
   SDK 0x04000031/0x09040001 (kept)
   Sony build J03718109 = FW 12.00
-  imports: data=2, forced=8, provided=4, reference=82, stubbed=1
+  imports: data=2, forced=6, provided=4, reference=82, stubbed=3
 
 fakelib/libSceAgcDriver.sprx  [PS4-style fake SELF (make_fself.py)]  written
   SDK 0x04000031/0x09040001 (kept)
@@ -95,4 +95,4 @@ fakelib/libScePlayGo.sprx  [PS4-style fake SELF (make_fself.py)]  written
 fakelib/libScePsml.sprx  [PS4-style fake SELF (make_fself.py)]  written
   SDK 0x04000031/0x09040001 (kept)
   Sony build J03718109 = FW 12.00
-  imports: data=5, forced=24, provided=22, reference=284, stubbed=5
+  imports: data=5, forced=23, provided=22, reference=284, stubbed=6
