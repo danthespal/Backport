@@ -208,6 +208,7 @@ public static partial class Pipeline
         }
         var unresolved = statuses.Where(s => Imports.IsUnresolved(s.Status)).ToList();
         var refs = unresolved.Count > 0 ? Imports.CodeReferences(elf, unresolved, cancel) : [];
+        var results = unresolved.Count > 0 ? Imports.CallerResults(elf, unresolved, cancel) : [];
         foreach (var s in unresolved)
         {
             var intro = FirmwareDb.Introduced(s.Nid, newerDbs, k);
@@ -215,7 +216,7 @@ public static partial class Pipeline
             {
                 Nid = s.Nid, Name = Name(o.Names, s.Nid), Library = s.Library,
                 Candidate = k.Candidates.TryGetValue(s.Nid, out var c) ? $"return 0x{c.Value:x8} ({c.Source})" : "",
-                Status = s.Status, CodeRefs = refs[s.Nid],
+                Status = s.Status, CodeRefs = refs[s.Nid], Result = Imports.ResultSummary(results[s.Nid]),
                 LeftBy = string.Join(", ", k.LeftUnpatched.GetValueOrDefault(s.Nid) ?? []),
                 Introduced = intro is { } x ? $"{x.Firmware} / {x.Source}" : "",
             });

@@ -74,7 +74,8 @@ public static partial class Pipeline
                 string hint = u.Candidate.Length > 0 ? $"   candidate: {u.Candidate} (--candidate-fixes)" : "";
                 string intro = u.Introduced.Length > 0 ? $"   introduced: FW {u.Introduced}" : "";
                 string left = u.LeftBy.Length > 0 ? $"   left unpatched by: {u.LeftBy}" : "";
-                lines.Add($"  {u.Status,-8} {u.Nid}  {u.Name}  [{u.Library}]  refs={u.CodeRefs}{hint}{intro}{left}");
+                string use = u.Result.Length > 0 ? $"   result: {u.Result}" : "";
+                lines.Add($"  {u.Status,-8} {u.Nid}  {u.Name}  [{u.Library}]  refs={u.CodeRefs}{use}{hint}{intro}{left}");
             }
             foreach (var l in m.LaterMissing)
                 lines.Add($"  missing-later {l.Nid}  {l.Name}  [{l.Library}]  exported on FW {r.TargetFirmware}, not on FW {l.MissingOn}");
@@ -139,7 +140,7 @@ public static partial class Pipeline
             ["unknown"] = new JsonArray(m.Unknown.Select(u => (JsonNode)new JsonObject
             {
                 ["nid"] = u.Nid, ["name"] = u.Name, ["library"] = u.Library, ["candidate"] = u.Candidate, ["status"] = u.Status,
-                ["code_refs"] = u.CodeRefs, ["left_by"] = u.LeftBy, ["introduced"] = u.Introduced,
+                ["code_refs"] = u.CodeRefs, ["result"] = u.Result, ["left_by"] = u.LeftBy, ["introduced"] = u.Introduced,
             }).ToArray()),
             ["stubbed_now"] = new JsonArray(m.StubbedNow.Select(s => (JsonNode)new JsonObject
             {

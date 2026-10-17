@@ -108,6 +108,8 @@ public sealed class ImportRow
     public required string Status { get; init; }
     public bool Plt { get; init; }
     public int? Refs { get; init; }
+    /// <summary>What the call sites do with the return value ("unused 2", "used 1 (…)"), for unresolved imports.</summary>
+    public string Result { get; init; } = "";
     public string Candidate { get; init; } = "";
     /// <summary>Number of console-tested backports that shipped this import unpatched.</summary>
     public int LeftByCount { get; init; }
@@ -118,6 +120,7 @@ public sealed class ImportRow
 
     public string RefsText => Refs?.ToString() ?? "";
     public bool HasRefs => Refs is not null;
+    public bool HasResult => Result.Length > 0;
     public bool HasApplied => Applied.Length > 0;
     public bool HasCandidate => Candidate.Length > 0;
     public bool HasLeftBy => LeftByCount > 0;

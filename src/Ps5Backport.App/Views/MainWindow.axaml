@@ -512,6 +512,11 @@
                     <TextBlock Classes="caption" Text="Direct code references" />
                     <TextBlock Text="{Binding SelectedImport.RefsText, FallbackValue=''}" />
                   </StackPanel>
+                  <StackPanel IsVisible="{Binding SelectedImport.HasResult, FallbackValue=False}">
+                    <TextBlock Classes="caption" Text="Return value at the call sites" />
+                    <TextBlock Text="{Binding SelectedImport.Result, FallbackValue=''}" TextWrapping="Wrap"
+                               ToolTip.Tip="unused: no path reads eax after the call. error-check: only 'test eax, eax' and a branch, and the success side (0) ignores it. used: anything else, with the first instruction that keeps it. Output arguments are not checked." />
+                  </StackPanel>
                   <Button Content="Show call sites in Code graph" Command="{Binding ShowInCodeGraphCommand}" HorizontalAlignment="Left"
                           ToolTip.Tip="Opens the Code graph page on the functions of this game's eboot.bin that call this import (eboot.bin imports only)" />
                 </StackPanel>

@@ -68,6 +68,8 @@ public sealed class UnresolvedEntry
 {
     public required string Nid, Name, Library, Candidate, Status, LeftBy, Introduced;
     public int CodeRefs;
+    /// <summary>What the PLT call sites do with the return value (<see cref="Imports.ResultSummary"/>); empty without one.</summary>
+    public string Result = "";
 }
 
 /// <summary>One module of a backport (field order = backport_report.json).</summary>

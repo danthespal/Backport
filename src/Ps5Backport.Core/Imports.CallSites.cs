@@ -29,7 +29,7 @@ public static partial class Imports
             return [];
         ulong plt = elf.ReadU64(import.GotVaddr) - 6;
         var result = new List<(ulong, uint?)>();
-        foreach (var range in CodeToDecode(elf, plt, cancel))
+        foreach (var range in CodeToDecode(elf, new HashSet<ulong> { plt }, cancel))
         {
             cancel.ThrowIfCancellationRequested();
             var insns = CodeImage.Decode(elf, range);
@@ -51,12 +51,12 @@ public static partial class Imports
     }
 
     /// <summary>
-    /// The code ranges to decode for calls to <paramref name="plt"/>: the unwind-table functions holding a byte-pattern hit
-    /// (call/jmp/jcc rel32 to it; a superset of the real sites), the gap between two such functions for a hit in code without
-    /// an FDE (Borderlands 4, Beast of Reincarnation and PPSA34008 call the pad import from such code), or, without an unwind
-    /// table, the executable segments with a hit.
+    /// The code ranges to decode for calls to the PLT entries <paramref name="plts"/>: the unwind-table functions holding a
+    /// byte-pattern hit (call/jmp/jcc rel32 to one; a superset of the real sites), the gap between two such functions for a hit
+    /// in code without an FDE (Borderlands 4, Beast of Reincarnation and PPSA34008 call the pad import from such code), or,
+    /// without an unwind table, the executable segments with a hit.
     /// </summary>
-    static List<FunctionRange> CodeToDecode(SceElf elf, ulong plt, CancellationToken cancel)
+    static List<FunctionRange> CodeToDecode(SceElf elf, IReadOnlySet<ulong> plts, CancellationToken cancel)
     {
         var hits = new List<ulong>();
         var segments = new List<FunctionRange>();
@@ -77,7 +77,7 @@ public static partial class Imports
                 else if (b == 0x0F && i + 6 <= seg.Length && seg[i + 1] is >= 0x80 and <= 0x8F) length = 6;
                 else continue;
                 long target = (long)p.Vaddr + i + length + BinaryPrimitives.ReadInt32LittleEndian(seg[(i + length - 4)..]);
-                if ((ulong)target == plt && p.Vaddr + (ulong)i != plt)
+                if (plts.Contains((ulong)target) && !plts.Contains(p.Vaddr + (ulong)i))
                     hits.Add(p.Vaddr + (ulong)i);
             }
             if (hits.Count > before)

@@ -1923,6 +1923,7 @@ Both GT7 (FW 4 set) and Control (4.03 set) ship them unpatched and both run. So 
 ##### Code references per unresolved import
 `imports.code_references` counts instructions in executable segments that call, jump to or load an import's PLT entry or GOT slot (`call/jmp rel32`, `call/jmp [rip+x]`, `mov/lea reg,[rip+x]`; byte-pattern scan, 2 s on GT7's 110 MB eboot). The backport report shows `refs=N` for every unresolved import.
 - `refs=0`: no direct reference. Reachable only through data (vtables, pointer tables), or not at all. In GT7: `sceTextToSpeech2Cancel`.
+- Since 2026-10-17 the line also shows `result:`, what the PLT call sites do with the return value ("Caller results" below).
 - Most of GT7's PSVR2 (`sceHmd2*`, `sceVrTracker2*`), TTS2, Share and privacy imports have **exactly 1** reference: a thin wrapper. Whether that wrapper runs needs Ghidra (who calls it, and is it behind a PSVR2/TTS feature check?).
 
 ##### GT7 keeps every startup module, even ones 3.20 lacks
@@ -2777,3 +2778,12 @@ Engine support: a `stub` rule may carry `insns` (a "derived stub"). The new toke
 ### Store forced stubs, second pass (2026-10-17)
 
 `fakelib restore-imports` restored four more forced imports in the store (FINDINGS §6v, fakelibs/README "Second pass"). In Agc they are the libkernel Pro-mode queries `eSgYzXvTPQI`/`ciYlptMdvhc` (from 9.00) behind `sceAgcGetRegisterDefaults*`; in Psml, `sceKernelGetAppInfo2` and `sceKernelTitleWorkaroundIsEnabled2` (from 6.00), the inputs of Psml's MFSR2 override. These touch 10 files in sets 4, 4.03, 9.60, 10 and 11, including variants. Kept forced, with reasons recorded: the A53/AMM hardware calls, Psml's hardware-cursor overlay, ShaderTranscode (no firmware exports it) and the libc++ throw/locale group. `StoreImportFormTests` now pins 11 NIDs. Rebuilding every store file from the first originals with all 11 gives byte-identical files. Goldens re-recorded (`forced`→`stubbed` for the four, hashes, manifest text). Not console-tested.
+
+### Caller results for unresolved imports (2026-10-17)
+
+The backport report gives each unresolved import a `result:` summary after `refs=N`, for example `result: used 1 (0x3f83aa9 reads the result: mov ebx,eax), error-check 1, unused 2`. The same text is in the JSON's `unknown[].result` field and in the GUI inspector under "Return value at the call sites". `Imports.CallerResults` (Iced) decodes each call to the import's PLT entry and follows every path from the return address, using Decker97's stub-gate rules (FINDINGS §6v):
+- **unused:** on every path `eax` is overwritten (a 32/64-bit write, `xor eax, eax`), or another call, int3, ud2 or hlt comes first, before any read. A return-value stub is safe here.
+- **error-check:** `test eax, eax` then `je`/`jne`/`js`/`jns` right after the call, and the success side (`eax` = 0) never reads it. A `ret0` stub takes the success path.
+- **used:** anything else, with the first reason: a read, a partial write, `ret` (the result goes to the caller), an indirect branch, a tail call (`jmp`/`jcc` to the PLT entry), undecodable bytes or more than 96 instructions.
+
+The check is conservative and covers only part of the picture. Calls through the GOT slot, data references and output arguments are not checked, and a `ret` with `eax` live counts as used even when the caller ignores it (CONTROL's second `sceSaveDataCancel` site, FINDINGS §6k). Call sites of all unresolved imports are found in one pass (`CodeToDecode` now takes a set of PLT entries, shared with `ArgumentConstants`). Tests: `CallerResultTests` (synthetic: three unused, two error-check and five used forms, tail call, summary order, report text and JSON) and `CallerResultSampleTests` (6 sites checked by hand in CONTROL, Wolverine, Beast of Reincarnation and PPSA34015). Goldens re-recorded for the new text only (`BackportParityTests` notbackport-4 and notbackport-4-no-store).

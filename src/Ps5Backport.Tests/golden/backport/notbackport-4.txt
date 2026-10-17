@@ -1,5 +1,5 @@
-backport_report.json 34b4eae5a79df4cd5b9457c906a04e6b9c738cd6ab4c808f2ff8d1ae652c2356
-backport_report.txt 9b473fea89fec092dc04931f428d6474b0872701a124180ae1239a127fbb08d7
+backport_report.json af654b3a4f3f98e5049c8b29cf181c9e2180be768263d4a1ee2ee95bad659c0b
+backport_report.txt 4fb902e21d6e140d23750473c89f5cb341c30953c83924fbbf713511b763ce06
 eboot.bin 1d4d35fcbea636dec8d606d34846c8096e0ae2fb1bf3bc0f8071ba06de44f8e3
 fakelib/libSceAgc.sprx 8c346d77b3c732522b2af6e569b2ad3cd78aca424799d096c0a234ccc4b219d3
 fakelib/libSceAgcDriver.sprx a02ef6ac18ebb7cb4f3bbe5dcbec27354ce31656b2616a17090e2a2c0323a82d
@@ -64,7 +64,7 @@ eboot.bin  [PS5-style SELF]  written
   stubbed  kP2L8t3j-aM  sceVideoOutAddVrrStatusFlagsPrivilege  (ret0 @ 0x8c; known fix, proven; GOT pre-fill, native from FW 5.02 / firmware_db 5.02)
   stubbed  LibwuIonIBw  sceVideoOutAddVrrActiveStatusEvent  (ret0 @ 0x8c; known fix, proven; GOT pre-fill, native from FW 5.02 / firmware_db 5.02)
   stubbed  La9uyZv4Kvw  sceKernelGetAvailableCpumask  (ret:0xff @ 0x418; known fix, proven; GOT pre-fill, native from FW 12.40 / firmware_db 12.40)
-  missing  QxBJF-G2v5k  sceHmd2ReprojectionSetParamWithBuffer  [libSceHmd2]  refs=1   introduced: FW 5.02 / firmware_db 5.02   left unpatched by: GT7 1.71 FW4
+  missing  QxBJF-G2v5k  sceHmd2ReprojectionSetParamWithBuffer  [libSceHmd2]  refs=1   result: unused 1   introduced: FW 5.02 / firmware_db 5.02   left unpatched by: GT7 1.71 FW4
 
 libSieRdNNabla.prx  [PS5-style SELF]  written
   SDK 0x10000040/0x12090001 -> 0x04000031/0x09040001

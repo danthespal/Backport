@@ -760,7 +760,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
                 _allImports.Add(new ImportRow
                 {
                     Module = m.Path, Nid = s.Nid, Name = Names.Name(s.Nid), Library = s.Library, Status = s.Status, Plt = s.Plt,
-                    Refs = u?.CodeRefs, Candidate = u?.Candidate ?? "", LeftByCount = k.LeftUnpatched.GetValueOrDefault(s.Nid)?.Count ?? 0, Introduced = u?.Introduced ?? nativeFrom.GetValueOrDefault(s.Nid, ""),
+                    Refs = u?.CodeRefs, Result = u?.Result ?? "", Candidate = u?.Candidate ?? "", LeftByCount = k.LeftUnpatched.GetValueOrDefault(s.Nid)?.Count ?? 0, Introduced = u?.Introduced ?? nativeFrom.GetValueOrDefault(s.Nid, ""),
                     Applied = applied.GetValueOrDefault(s.Nid, ""), Fix = fixes.GetValueOrDefault(s.Nid),
                 });
             }
