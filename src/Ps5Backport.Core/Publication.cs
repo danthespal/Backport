@@ -8,7 +8,8 @@ namespace Ps5Backport.Core;
 public static class Publication
 {
     public const string ManifestName = "backport_publication.json", EvidenceName = "backport_run.json";
-    internal const string Prefix = ".ps5bp-";
+    /// <summary>Name prefix of transaction folders (stage, backup, incomplete) and scratch folders inside a store or output tree.</summary>
+    public const string Prefix = ".ps5bp-";
     internal sealed record FileRecord(long Size, string Sha256);
     internal sealed record Manifest(int Version, string RunId, Dictionary<string, FileRecord> Files);
 

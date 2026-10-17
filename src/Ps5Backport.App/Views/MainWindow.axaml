@@ -11,10 +11,22 @@
         Width="1280" Height="820" MinWidth="980" MinHeight="600"
         WindowStartupLocation="CenterScreen">
 
-  <Grid ColumnDefinitions="64,*">
+  <Window.KeyBindings>
+    <KeyBinding Gesture="Ctrl+B" Command="{Binding ToggleRailCommand}" />
+  </Window.KeyBindings>
 
-    <!-- navigation rail -->
-    <Border Grid.Column="0" Classes="panel" BorderThickness="0,0,1,0">
+  <Window.Styles>
+    <!-- the rail over the code graph page: a floating panel with a shadow -->
+    <Style Selector="Border#Rail.overlay">
+      <Setter Property="BoxShadow" Value="4 0 18 0 #99000000" />
+    </Style>
+  </Window.Styles>
+
+  <Panel>
+
+    <!-- navigation rail: docked beside the page, or over the code graph page (RailDocked / RailRevealed) -->
+    <Border Name="Rail" Classes="panel" Classes.overlay="{Binding !RailDocked}" BorderThickness="0,0,1,0" Width="64"
+            HorizontalAlignment="Left" ZIndex="2" IsVisible="{Binding RailVisible}">
       <DockPanel Margin="0,10">
         <RadioButton AutomationProperties.Name="Settings" DockPanel.Dock="Bottom" Classes="rail" GroupName="rail" ToolTip.Tip="Settings" IsChecked="{Binding Page, Converter={x:Static app:PageIsConverter.Instance}, ConverterParameter={x:Static vm:AppPage.Settings}}">
           <TextBlock Classes="icon" Text="&#xE713;" />
@@ -34,11 +46,20 @@
           <RadioButton AutomationProperties.Name="Tools" Classes="rail" GroupName="rail" ToolTip.Tip="Tools: SELF files, NID lookup" IsChecked="{Binding Page, Converter={x:Static app:PageIsConverter.Instance}, ConverterParameter={x:Static vm:AppPage.Tools}}">
             <TextBlock Classes="icon" Text="&#xEC7A;" />
           </RadioButton>
+          <RadioButton AutomationProperties.Name="Code graph" Classes="rail" GroupName="rail" ToolTip.Tip="Code graph: an eboot's functions as graphs, compared with its backport" IsChecked="{Binding Page, Converter={x:Static app:PageIsConverter.Instance}, ConverterParameter={x:Static vm:AppPage.CodeGraph}}">
+            <TextBlock Classes="icon" Text="&#xE943;" />
+          </RadioButton>
+          <RadioButton AutomationProperties.Name="Console results" Classes="rail" GroupName="rail" ToolTip.Tip="Console results: what ran on which firmware, evidence per band, promotion" IsChecked="{Binding Page, Converter={x:Static app:PageIsConverter.Instance}, ConverterParameter={x:Static vm:AppPage.Results}}">
+            <TextBlock Classes="icon" Text="&#xE9D9;" />
+          </RadioButton>
         </StackPanel>
       </DockPanel>
     </Border>
 
-    <ThemeVariantScope Grid.Column="1" Classes.gameArtwork="{Binding HasGameBackground}">
+    <!-- the hidden rail's hover edge on the code graph page -->
+    <Border Name="RailEdge" Width="8" HorizontalAlignment="Left" Background="Transparent" ZIndex="1" IsVisible="{Binding !RailDocked}" />
+
+    <ThemeVariantScope Margin="{Binding ContentMargin}" Classes.gameArtwork="{Binding HasGameBackground}">
       <ThemeVariantScope.Styles>
         <Style Selector="ThemeVariantScope.gameArtwork">
           <Setter Property="RequestedThemeVariant" Value="Dark" />
@@ -183,6 +204,50 @@
                     </ItemsControl.ItemTemplate>
                   </ItemsControl>
                 </Expander>
+                </StackPanel>
+              </Border>
+              <!-- console evidence of the applied rules, options and fakelib sets (data/console_results.json) -->
+              <Border Classes="card" IsVisible="{Binding HasConsoleEvidence}">
+                <StackPanel Spacing="8">
+                  <Grid ColumnDefinitions="*,Auto">
+                    <StackPanel Spacing="2">
+                      <TextBlock Classes="section" Text="Console evidence for this cook" />
+                      <TextBlock Classes="caption" Text="Runs per firmware band of the forms this cook applies; experimental items without runs show what to send to testers." TextWrapping="Wrap" />
+                    </StackPanel>
+                    <Button Grid.Column="1" Content="Open Console results" Command="{Binding OpenConsoleResultsCommand}" VerticalAlignment="Top" />
+                  </Grid>
+                  <ItemsControl ItemsSource="{Binding ConsoleEvidenceNotes}">
+                    <ItemsControl.ItemTemplate>
+                      <DataTemplate x:DataType="x:String">
+                        <Border Classes="banner" Classes.failure="{Binding Converter={x:Static app:StartsWithConverter.Instance}, ConverterParameter=⚠}" Margin="0,0,0,6">
+                          <TextBlock Text="{Binding}" TextWrapping="Wrap" />
+                        </Border>
+                      </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                  </ItemsControl>
+                  <Grid ColumnDefinitions="*,90,90,90,90" Margin="0,2">
+                    <TextBlock Classes="caption" Text="APPLIED ITEM" />
+                    <TextBlock Grid.Column="1" Classes="caption" Text="4.XX" />
+                    <TextBlock Grid.Column="2" Classes="caption" Text="5-7" />
+                    <TextBlock Grid.Column="3" Classes="caption" Text="8-9" />
+                    <TextBlock Grid.Column="4" Classes="caption" Text="10+" />
+                  </Grid>
+                  <ItemsControl ItemsSource="{Binding ConsoleEvidence}">
+                    <ItemsControl.ItemTemplate>
+                      <DataTemplate x:DataType="vm:ResultItemRow">
+                        <Grid ColumnDefinitions="*,90,90,90,90" Margin="0,3">
+                          <StackPanel>
+                            <TextBlock Text="{Binding Item}" />
+                            <TextBlock Classes="caption mono" Text="{Binding Label}" TextTrimming="CharacterEllipsis" />
+                          </StackPanel>
+                          <ContentControl Grid.Column="1" Content="{Binding Band0}" />
+                          <ContentControl Grid.Column="2" Content="{Binding Band1}" />
+                          <ContentControl Grid.Column="3" Content="{Binding Band2}" />
+                          <ContentControl Grid.Column="4" Content="{Binding Band3}" />
+                        </Grid>
+                      </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                  </ItemsControl>
                 </StackPanel>
               </Border>
               <Border Classes="card">
@@ -447,6 +512,8 @@
                     <TextBlock Classes="caption" Text="Direct code references" />
                     <TextBlock Text="{Binding SelectedImport.RefsText, FallbackValue=''}" />
                   </StackPanel>
+                  <Button Content="Show call sites in Code graph" Command="{Binding ShowInCodeGraphCommand}" HorizontalAlignment="Left"
+                          ToolTip.Tip="Opens the Code graph page on the functions of this game's eboot.bin that call this import (eboot.bin imports only)" />
                 </StackPanel>
               </Panel>
               </ScrollViewer>
@@ -473,6 +540,15 @@
       <!-- tools page (7.4, 7.5) -->
       <Panel Grid.Row="0" Grid.RowSpan="2" IsVisible="{Binding Page, Converter={x:Static app:PageIsConverter.Instance}, ConverterParameter={x:Static vm:AppPage.Tools}}">
         <views:ToolsView DataContext="{Binding Tools}" />
+      </Panel>
+
+      <!-- code graph page -->
+      <Panel Grid.Row="0" Grid.RowSpan="2" IsVisible="{Binding Page, Converter={x:Static app:PageIsConverter.Instance}, ConverterParameter={x:Static vm:AppPage.CodeGraph}}">
+        <views:CodeGraphView DataContext="{Binding CodeGraph}" />
+      </Panel>
+
+      <Panel Grid.Row="0" Grid.RowSpan="2" IsVisible="{Binding Page, Converter={x:Static app:PageIsConverter.Instance}, ConverterParameter={x:Static vm:AppPage.Results}}">
+        <views:ConsoleResultsView DataContext="{Binding Results}" />
       </Panel>
 
       <!-- settings page (6.6): the same options as the flyout, so the last choice is the default -->
@@ -611,5 +687,5 @@
       </ThemeVariantScope>
     </Grid>
     </ThemeVariantScope>
-  </Grid>
+  </Panel>
 </Window>

@@ -1,0 +1,658 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Ps5Backport.App.ViewModels"
+             xmlns:app="using:Ps5Backport.App"
+             xmlns:views="using:Ps5Backport.App.Views"
+             x:Class="Ps5Backport.App.Views.CodeGraphView"
+             x:DataType="vm:CodeGraphViewModel">
+
+  <!-- The compact workbench (work/mockups/code-graph-v2.html, design A, 15 October 2026): one command bar, one toolbar
+       row, a function list and an inspector that fold away (‹ / ›, F11 for both), the navigation rail hidden by the window. -->
+  <UserControl.Styles>
+    <Style Selector="Border.chip">
+      <Setter Property="BorderThickness" Value="1" />
+      <Setter Property="Padding" Value="6,0" />
+      <Setter Property="VerticalAlignment" Value="Center" />
+    </Style>
+    <Style Selector="Border.chip TextBlock">
+      <Setter Property="FontSize" Value="11" />
+    </Style>
+    <!-- command bar and toolbar controls: one row of 26 px -->
+    <Style Selector="Button.bar, DropDownButton.bar">
+      <Setter Property="MinHeight" Value="26" />
+      <Setter Property="Padding" Value="8,2" />
+      <Setter Property="FontSize" Value="12" />
+      <Setter Property="VerticalAlignment" Value="Center" />
+    </Style>
+    <Style Selector="Button.bar.icon">
+      <Setter Property="Padding" Value="6,2" />
+      <Setter Property="MinWidth" Value="26" />
+    </Style>
+    <Style Selector="Button.bar.ghost">
+      <Setter Property="Background" Value="Transparent" />
+      <Setter Property="BorderBrush" Value="Transparent" />
+      <Setter Property="Foreground" Value="{DynamicResource StatusMuted}" />
+    </Style>
+    <Style Selector="Button.bar.ghost:pointerover /template/ ContentPresenter">
+      <Setter Property="Foreground" Value="{DynamicResource InkBrush}" />
+    </Style>
+    <Style Selector="ComboBox.bar">
+      <Setter Property="MinHeight" Value="26" />
+      <Setter Property="Padding" Value="8,0" />
+      <Setter Property="FontSize" Value="12" />
+      <Setter Property="VerticalAlignment" Value="Center" />
+    </Style>
+    <Style Selector="TextBox.bar">
+      <Setter Property="MinHeight" Value="26" />
+      <Setter Property="Padding" Value="8,3" />
+      <Setter Property="FontSize" Value="12" />
+    </Style>
+    <Style Selector="Border.vsep">
+      <Setter Property="Width" Value="1" />
+      <Setter Property="Height" Value="18" />
+      <Setter Property="Margin" Value="2,0" />
+      <Setter Property="Background" Value="{DynamicResource HairlineBrush}" />
+      <Setter Property="VerticalAlignment" Value="Center" />
+    </Style>
+    <Style Selector="TextBlock.crumb">
+      <Setter Property="FontFamily" Value="{StaticResource MonoFont}" />
+      <Setter Property="FontSize" Value="12" />
+      <Setter Property="MaxWidth" Value="240" />
+      <Setter Property="TextTrimming" Value="PathSegmentEllipsis" />
+      <Setter Property="VerticalAlignment" Value="Center" />
+    </Style>
+    <Style Selector="RadioButton.seg">
+      <Setter Property="Template">
+        <ControlTemplate>
+          <Border Name="bg" BorderThickness="1" BorderBrush="{DynamicResource HairlineBrush}" Padding="7,3" Background="Transparent">
+            <ContentPresenter Content="{TemplateBinding Content}" HorizontalAlignment="Center" VerticalAlignment="Center" />
+          </Border>
+        </ControlTemplate>
+      </Setter>
+      <Setter Property="FontSize" Value="12" />
+      <Setter Property="HorizontalAlignment" Value="Stretch" />
+      <Setter Property="VerticalAlignment" Value="Center" />
+    </Style>
+    <Style Selector="RadioButton.seg:pointerover /template/ Border#bg">
+      <Setter Property="BorderBrush" Value="{DynamicResource CyanBrush}" />
+    </Style>
+    <Style Selector="RadioButton.seg:checked /template/ Border#bg">
+      <Setter Property="BorderBrush" Value="{DynamicResource MagentaBrush}" />
+      <Setter Property="Background" Value="{DynamicResource HairlineBrush}" />
+    </Style>
+    <Style Selector="RadioButton.seg:disabled">
+      <Setter Property="Opacity" Value="0.45" />
+    </Style>
+    <Style Selector="RadioButton.seg.small /template/ Border#bg">
+      <Setter Property="Padding" Value="7,1" />
+    </Style>
+    <Style Selector="RadioButton.seg.small">
+      <Setter Property="FontSize" Value="11" />
+      <Setter Property="HorizontalAlignment" Value="Left" />
+    </Style>
+    <!-- inspector section heads: a toggle with the count, folding the section under it -->
+    <Style Selector="ToggleButton.head">
+      <Setter Property="Background" Value="Transparent" />
+      <Setter Property="BorderThickness" Value="0" />
+      <Setter Property="Padding" Value="0,8,0,3" />
+      <Setter Property="MinHeight" Value="0" />
+      <Setter Property="HorizontalAlignment" Value="Stretch" />
+      <Setter Property="HorizontalContentAlignment" Value="Left" />
+      <Setter Property="Cursor" Value="Hand" />
+    </Style>
+    <Style Selector="ToggleButton.head:checked /template/ ContentPresenter, ToggleButton.head:pointerover /template/ ContentPresenter">
+      <Setter Property="Background" Value="Transparent" />
+    </Style>
+    <Style Selector="ToggleButton.head TextBlock.label">
+      <Setter Property="FontSize" Value="11" />
+      <Setter Property="FontWeight" Value="SemiBold" />
+      <Setter Property="Foreground" Value="{DynamicResource StatusMuted}" />
+    </Style>
+    <Style Selector="ToggleButton.head TextBlock.arrow">
+      <Setter Property="FontSize" Value="10" />
+      <Setter Property="Foreground" Value="{DynamicResource StatusMuted}" />
+      <Setter Property="Width" Value="12" />
+    </Style>
+    <Style Selector="ToggleButton.head TextBlock.cnt">
+      <Setter Property="FontSize" Value="11" />
+      <Setter Property="FontFamily" Value="{StaticResource MonoFont}" />
+      <Setter Property="Foreground" Value="{DynamicResource CyanBrush}" />
+    </Style>
+    <Style Selector="Button.link">
+      <Setter Property="Background" Value="Transparent" />
+      <Setter Property="BorderThickness" Value="0" />
+      <Setter Property="Padding" Value="0,2" />
+      <Setter Property="MinHeight" Value="0" />
+      <Setter Property="HorizontalAlignment" Value="Stretch" />
+      <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+    </Style>
+    <Style Selector="Button.link:disabled /template/ ContentPresenter">
+      <Setter Property="Background" Value="Transparent" />
+    </Style>
+    <Style Selector="Button.link:disabled TextBlock.mono">
+      <Setter Property="Foreground" Value="{DynamicResource InkBrush}" />
+    </Style>
+    <Style Selector="Border.tagline">
+      <Setter Property="Background" Value="{DynamicResource PanelBrush}" />
+      <Setter Property="BorderBrush" Value="{DynamicResource HairlineBrush}" />
+      <Setter Property="BorderThickness" Value="1" />
+      <Setter Property="Padding" Value="6,1" />
+      <Setter Property="Margin" Value="10,8" />
+      <Setter Property="HorizontalAlignment" Value="Left" />
+      <Setter Property="VerticalAlignment" Value="Top" />
+      <Setter Property="IsHitTestVisible" Value="False" />
+    </Style>
+    <!-- a folded side panel: a 26 px strip with the button that brings it back -->
+    <Style Selector="Border.strip">
+      <Setter Property="Width" Value="26" />
+      <Setter Property="Background" Value="{DynamicResource PanelBrush}" />
+    </Style>
+    <Style Selector="Border.strip TextBlock">
+      <Setter Property="FontSize" Value="11" />
+      <Setter Property="Foreground" Value="{DynamicResource StatusMuted}" />
+      <Setter Property="Margin" Value="0,10,0,0" />
+    </Style>
+  </UserControl.Styles>
+
+  <Grid RowDefinitions="Auto,*">
+
+    <!-- command bar: the files and settings as crumbs with menus, the comparison's numbers as chips -->
+    <Border Classes="panel" BorderThickness="0,0,0,1" Padding="6,4" ClipToBounds="True">
+      <DockPanel>
+        <StackPanel DockPanel.Dock="Left" Orientation="Horizontal" Spacing="6">
+          <Button Classes="bar icon ghost" Content="≡" Command="{Binding $parent[Window].((vm:MainViewModel)DataContext).ToggleRailCommand}"
+                  AutomationProperties.Name="Studio pages" ToolTip.Tip="Studio pages (Ctrl+B, or move the mouse to the left edge)" />
+          <TextBlock Classes="caption" Text="EBOOT" VerticalAlignment="Center" />
+          <Button Classes="bar" ToolTip.Tip="{Binding EbootPath}" AutomationProperties.Name="Eboot">
+            <StackPanel Orientation="Horizontal" Spacing="6">
+              <TextBlock Classes="crumb" Text="{Binding EbootCrumb}" />
+              <TextBlock Classes="caption" Text="▾" />
+            </StackPanel>
+            <Button.Flyout>
+              <MenuFlyout>
+                <MenuItem Header="Choose an eboot…" Command="{Binding ChooseEbootCommand}" />
+                <MenuItem Header="Current game" Command="{Binding CurrentGameCommand}" IsEnabled="{Binding HasCurrentGame}"
+                          ToolTip.Tip="The game open on the Backport page: its eboot.bin, compared with its last backport or, if none was written yet, with Studio's cook" />
+              </MenuFlyout>
+            </Button.Flyout>
+          </Button>
+          <TextBlock Classes="caption" Text="vs" VerticalAlignment="Center" />
+          <Button Classes="bar" ToolTip.Tip="{Binding CompareText}" AutomationProperties.Name="Compare with">
+            <StackPanel Orientation="Horizontal" Spacing="6">
+              <TextBlock Classes="crumb" Text="{Binding CompareCrumb}" />
+              <TextBlock Classes="caption" Text="▾" />
+            </StackPanel>
+            <Button.Flyout>
+              <MenuFlyout>
+                <MenuItem Header="Choose a backport or another version…" Command="{Binding ChooseCompareCommand}"
+                          ToolTip.Tip="A backport made from this eboot: what it changed, byte by byte. Another build of the game (a later version): its functions matched with this one's, BinDiff-style." />
+                <MenuItem Header="Studio's cook (dry run)" Command="{Binding PreviewCookCommand}" IsEnabled="{Binding !Busy}"
+                          ToolTip.Tip="Compare with the backport Studio would make from this eboot's game folder, using the Backport page's firmware and options. Nothing is written." />
+                <MenuItem Header="No comparison" Command="{Binding ClearCompareCommand}" IsEnabled="{Binding HasComparePath}" />
+              </MenuFlyout>
+            </Button.Flyout>
+          </Button>
+          <Border Classes="vsep" />
+          <TextBlock Classes="caption" Text="FW" VerticalAlignment="Center" />
+          <ComboBox Classes="bar" ItemsSource="{Binding CheckFirmwares}" SelectedItem="{Binding CheckFirmware}" MinWidth="72"
+                    AutomationProperties.Name="Firmware to check imports against"
+                    ToolTip.Tip="Check imports on this firmware: calls to imports it lacks (firmware_db) are coloured, counting the modules and fakelibs shipped next to the eboot" />
+          <TextBlock Classes="caption" Text="CRASH" VerticalAlignment="Center" />
+          <Button Classes="bar" ToolTip.Tip="{Binding CrashText}" IsEnabled="{Binding HasImage}" AutomationProperties.Name="Crash log">
+            <StackPanel Orientation="Horizontal" Spacing="6">
+              <TextBlock Classes="crumb" Text="{Binding CrashCrumb}" MaxWidth="160" />
+              <TextBlock Classes="caption" Text="▾" />
+            </StackPanel>
+            <Button.Flyout>
+              <MenuFlyout>
+                <MenuItem Header="Choose a crash log…" Command="{Binding ChooseCrashLogCommand}"
+                          ToolTip.Tip="A console crash log (fatal signal dump or ShadowMount summary): its addresses are mapped onto this eboot" />
+                <MenuItem Header="Clear" Command="{Binding ClearCrashCommand}" IsEnabled="{Binding HasCrashPath}" />
+              </MenuFlyout>
+            </Button.Flyout>
+          </Button>
+          <ProgressBar IsIndeterminate="True" IsVisible="{Binding Busy}" Width="90" VerticalAlignment="Center" />
+        </StackPanel>
+        <!-- what the comparison and the check found: counts, the long texts as tooltips; ⤢ puts both side panels away -->
+        <StackPanel Orientation="Horizontal" Spacing="6" HorizontalAlignment="Right" VerticalAlignment="Center">
+          <TextBlock Classes="caption" Text="{Binding Status}" VerticalAlignment="Center" MaxWidth="320" TextTrimming="CharacterEllipsis"
+                     ToolTip.Tip="{Binding Status}" Foreground="{Binding StatusTone, Converter={x:Static app:ToneBrushConverter.Instance}}" />
+          <Border Classes="chip" BorderBrush="{DynamicResource MagentaBrush}" IsVisible="{Binding VersionChip, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" ToolTip.Tip="{Binding VersionText}">
+            <TextBlock Text="{Binding VersionChip}" Foreground="{DynamicResource MagentaBrush}" />
+          </Border>
+          <Border Classes="chip" BorderBrush="{DynamicResource MagentaBrush}" IsVisible="{Binding PatchedChip, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" ToolTip.Tip="{Binding PatchedText}">
+            <TextBlock Text="{Binding PatchedChip}" Foreground="{DynamicResource MagentaBrush}" />
+          </Border>
+          <Border Classes="chip" BorderBrush="{DynamicResource StatusWarn}" IsVisible="{Binding StubChip, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" ToolTip.Tip="{Binding StubText}">
+            <TextBlock Text="{Binding StubChip}" Foreground="{DynamicResource StatusWarn}" />
+          </Border>
+          <Border Classes="chip" BorderBrush="{DynamicResource StatusWarn}" IsVisible="{Binding RedirectChip, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" ToolTip.Tip="{Binding RedirectText}">
+            <TextBlock Text="{Binding RedirectChip}" Foreground="{DynamicResource StatusWarn}" />
+          </Border>
+          <Border Classes="chip" BorderBrush="{DynamicResource CyanBrush}" IsVisible="{Binding FakelibChip, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" ToolTip.Tip="{Binding FakelibText}">
+            <TextBlock Text="{Binding FakelibChip}" Foreground="{DynamicResource CyanBrush}" />
+          </Border>
+          <Border Classes="chip" BorderBrush="{DynamicResource StatusWarn}" IsVisible="{Binding PatternChip, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" ToolTip.Tip="{Binding PatternText}">
+            <TextBlock Text="{Binding PatternChip}" Foreground="{DynamicResource StatusWarn}" />
+          </Border>
+          <Border Classes="chip" BorderBrush="{DynamicResource StatusError}" IsVisible="{Binding MissingChip, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" ToolTip.Tip="{Binding MissingText}">
+            <TextBlock Text="{Binding MissingChip}" Foreground="{DynamicResource StatusError}" />
+          </Border>
+          <TextBlock Classes="caption" Text="{Binding FunctionsChip}" VerticalAlignment="Center" IsVisible="{Binding FunctionsChip, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+            <ToolTip.Tip>
+              <StackPanel Spacing="4" MaxWidth="420">
+                <TextBlock Text="{Binding SummaryText}" TextWrapping="Wrap" />
+                <TextBlock Text="{Binding OtherText}" TextWrapping="Wrap" IsVisible="{Binding OtherText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+              </StackPanel>
+            </ToolTip.Tip>
+          </TextBlock>
+          <Button Classes="bar icon ghost" Content="⤢" Command="{Binding ToggleFocusCommand}" ToolTip.Tip="Focus: put both side panels away, or bring them back (F11)" />
+        </StackPanel>
+      </DockPanel>
+    </Border>
+
+    <Grid Grid.Row="1" ColumnDefinitions="Auto,*,Auto">
+
+      <!-- function list, or its strip when folded -->
+      <Panel Grid.Column="0">
+        <Border Classes="panel" BorderThickness="0,0,1,0" Width="280" IsVisible="{Binding ListVisible}">
+          <DockPanel>
+            <Grid DockPanel.Dock="Top" ColumnDefinitions="*,Auto" ColumnSpacing="4" Margin="8,8,8,6">
+              <TextBox Name="SearchBox" Classes="bar" Text="{Binding Search}" PlaceholderText="Search names, imports, strings, hex address (Ctrl+K)" IsEnabled="{Binding HasImage}"
+                       AutomationProperties.Name="Search functions" />
+              <Button Grid.Column="1" Classes="bar icon ghost" Content="‹" Command="{Binding ToggleListCommand}" ToolTip.Tip="Hide the function list (F11 hides both panels)" />
+            </Grid>
+            <WrapPanel DockPanel.Dock="Top" ItemSpacing="4" LineSpacing="4" Margin="8,0,8,6" IsEnabled="{Binding HasImage}">
+              <RadioButton Classes="seg small" GroupName="filter" Content="All" IsChecked="{Binding FilterAll}" />
+              <RadioButton Classes="seg small" GroupName="filter" Content="Changed" IsChecked="{Binding FilterChanged}" />
+              <RadioButton Classes="seg small" GroupName="filter" Content="Calls fakelib" IsChecked="{Binding FilterFakelib}" />
+              <RadioButton Classes="seg small" GroupName="filter" Content="{Binding MissingFilterText}" IsChecked="{Binding FilterMissing}"
+                           ToolTip.Tip="Functions that call an import the checked firmware lacks" />
+              <RadioButton Classes="seg small" GroupName="filter" Content="Rule patterns" IsChecked="{Binding FilterPatterns}"
+                           ToolTip.Tip="Functions where a data/fixes.json byte pattern or an engine recogniser matches" />
+            </WrapPanel>
+            <TextBlock DockPanel.Dock="Bottom" Classes="caption" Text="{Binding ListFooter}" Margin="10,5" />
+            <ListBox ItemsSource="{Binding Rows}" SelectedItem="{Binding SelectedRow}" Background="Transparent">
+              <ListBox.ItemTemplate>
+                <DataTemplate x:DataType="vm:FunctionRow">
+                  <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+                    <StackPanel>
+                      <TextBlock Classes="mono" Text="{Binding Name}" TextTrimming="CharacterEllipsis" />
+                      <TextBlock Classes="caption" FontSize="11" Text="{Binding Detail}" TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding Detail}" />
+                    </StackPanel>
+                    <Border Grid.Column="1" Classes="chip" IsVisible="{Binding HasChip}"
+                            BorderBrush="{Binding Chip, Converter={x:Static app:ChipBrushConverter.Instance}}">
+                      <TextBlock Text="{Binding Chip}" Foreground="{Binding Chip, Converter={x:Static app:ChipBrushConverter.Instance}}" />
+                    </Border>
+                  </Grid>
+                </DataTemplate>
+              </ListBox.ItemTemplate>
+            </ListBox>
+          </DockPanel>
+        </Border>
+        <Border Classes="strip" BorderBrush="{DynamicResource HairlineBrush}" BorderThickness="0,0,1,0" IsVisible="{Binding !ListVisible}">
+          <StackPanel>
+            <Button Classes="bar icon ghost" Content="›" Command="{Binding ToggleListCommand}" ToolTip.Tip="Show the function list" HorizontalAlignment="Center" Margin="0,6,0,0" />
+            <LayoutTransformControl HorizontalAlignment="Center">
+              <LayoutTransformControl.LayoutTransform><RotateTransform Angle="90" /></LayoutTransformControl.LayoutTransform>
+              <TextBlock Text="FUNCTIONS" />
+            </LayoutTransformControl>
+          </StackPanel>
+        </Border>
+      </Panel>
+
+      <!-- graph -->
+      <DockPanel Grid.Column="1">
+        <Border DockPanel.Dock="Top" BorderBrush="{DynamicResource HairlineBrush}" BorderThickness="0,0,0,1" Padding="6,3">
+          <WrapPanel ItemSpacing="4" LineSpacing="4">
+              <RadioButton Classes="seg" GroupName="mode" Content="Overlay" IsChecked="{Binding Overlay}" IsEnabled="{Binding IsCompare}"
+                           ToolTip.Tip="One graph of the backport: changed lines highlighted, the original code under them" />
+              <RadioButton Classes="seg" GroupName="mode" Content="Side by side" IsChecked="{Binding SideBySide}" IsEnabled="{Binding IsCompare}"
+                           ToolTip.Tip="The original and the backport next to each other, moving together" />
+              <Border Classes="vsep" />
+              <RadioButton Classes="seg" GroupName="view" Content="Graph" IsChecked="{Binding GraphView}"
+                           ToolTip.Tip="Blocks and their edges (Space in the graph switches)" />
+              <RadioButton Classes="seg" GroupName="view" Content="Listing" IsChecked="{Binding Listing}"
+                           ToolTip.Tip="The blocks one under the other in address order, like a disassembly listing; the wheel scrolls, Ctrl+wheel zooms (Space switches)" />
+              <RadioButton Classes="seg" GroupName="view" Content="Calls" IsChecked="{Binding CallsView}" IsEnabled="{Binding HasImage}"
+                           ToolTip.Tip="The functions around this one: its callers above, what it calls below, two levels each way (at most 10 per node, then 5)" />
+              <Border Classes="vsep" />
+              <Button Classes="bar icon" Content="←" Command="{Binding BackCommand}" IsEnabled="{Binding CanGoBack}" ToolTip.Tip="Back to the previous function (Alt+Left, mouse back button)" />
+              <Button Classes="bar icon" Content="→" Command="{Binding ForwardCommand}" IsEnabled="{Binding CanGoForward}" ToolTip.Tip="Forward again after Back (Alt+Right, mouse forward button)" />
+              <ComboBox Classes="bar" ItemsSource="{Binding Recent}" SelectedItem="{Binding HistoryPick}" PlaceholderText="History" MinWidth="84" MaxDropDownHeight="420"
+                        AutomationProperties.Name="Recently shown functions" ToolTip.Tip="Functions shown since the eboot was loaded, the latest first">
+                <ComboBox.ItemTemplate>
+                  <DataTemplate x:DataType="vm:LinkRow">
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                      <TextBlock Classes="mono" Text="{Binding Name}" MaxWidth="260" TextTrimming="CharacterEllipsis" />
+                      <TextBlock Classes="caption" Text="{Binding Detail}" VerticalAlignment="Center" />
+                    </StackPanel>
+                  </DataTemplate>
+                </ComboBox.ItemTemplate>
+              </ComboBox>
+              <Border Classes="vsep" />
+              <Button Name="ZoomOut" Classes="bar icon" Content="−" ToolTip.Tip="Zoom out" />
+              <TextBlock Classes="mono" Text="{Binding Viewport.ZoomText}" Width="40" TextAlignment="Center" VerticalAlignment="Center" />
+              <Button Name="ZoomIn" Classes="bar icon" Content="+" ToolTip.Tip="Zoom in" />
+              <Button Name="FitButton" Classes="bar" Content="Fit" ToolTip.Tip="Show the whole graph" />
+              <Border Classes="vsep" />
+              <Button Classes="bar" Content="Export ▾" IsEnabled="{Binding HasScene}" ToolTip.Tip="Copy the function as text, or save the graph as SVG or the view as PNG">
+                <Button.Flyout>
+                  <MenuFlyout>
+                    <MenuItem Header="Copy as text" Command="{Binding CopyTextCommand}" />
+                    <MenuItem Name="SaveSvgItem" Header="Save the whole graph as SVG…" />
+                    <MenuItem Name="SavePngItem" Header="Save the view as PNG…" />
+                  </MenuFlyout>
+                </Button.Flyout>
+              </Button>
+          </WrapPanel>
+        </Border>
+        <Border DockPanel.Dock="Top" IsVisible="{Binding InModule}" Background="{DynamicResource PanelBrush}" Padding="8,3"
+                BorderBrush="{DynamicResource HairlineBrush}" BorderThickness="0,0,0,1">
+          <StackPanel Orientation="Horizontal" Spacing="10">
+            <TextBlock Classes="caption" Text="FOLLOWED INTO" VerticalAlignment="Center" />
+            <TextBlock Classes="mono" Text="{Binding ModuleTrail}" Foreground="{DynamicResource CyanBrush}" VerticalAlignment="Center" />
+            <Button Classes="bar" Content="{Binding ReturnText}" Command="{Binding ReturnToModuleCommand}" />
+          </StackPanel>
+        </Border>
+        <Panel Name="GraphArea">
+          <UniformGrid Rows="1">
+            <Panel IsVisible="{Binding ShowOriginal}">
+              <views:GraphCanvas Name="OriginalCanvas" Scene="{Binding OriginalScene}" Viewport="{Binding Viewport}" />
+              <Border Classes="tagline"><TextBlock Classes="caption" Text="{Binding OriginalLabel}" /></Border>
+            </Panel>
+            <Panel>
+              <views:GraphCanvas Name="MainCanvas" Scene="{Binding Scene}" Viewport="{Binding Viewport}" Leads="True" />
+              <Border Classes="tagline" IsVisible="{Binding IsCompare}">
+                <Panel>
+                  <TextBlock Classes="caption" Text="{Binding ShownLabel, StringFormat='{}{0} · CHANGES HIGHLIGHTED'}" IsVisible="{Binding Overlay}" />
+                  <TextBlock Classes="caption" Text="{Binding ShownLabel}" IsVisible="{Binding SideBySide}" />
+                </Panel>
+              </Border>
+            </Panel>
+          </UniformGrid>
+          <Border Classes="tagline" HorizontalAlignment="Right" VerticalAlignment="Bottom" IsVisible="{Binding ShowCallsLegend}">
+            <TextBlock Classes="caption" Text="callers above · callees and imports below · cyan: this function · double-click a node to centre on it" />
+          </Border>
+          <Border Classes="tagline" HorizontalAlignment="Right" VerticalAlignment="Bottom" IsVisible="{Binding ShowLegend}">
+            <StackPanel Orientation="Horizontal" Spacing="12">
+              <StackPanel Orientation="Horizontal" Spacing="4"><Border Width="16" Height="2" Background="{DynamicResource StatusOk}" /><TextBlock Classes="caption" Text="true" /></StackPanel>
+              <StackPanel Orientation="Horizontal" Spacing="4"><Border Width="16" Height="2" Background="{DynamicResource StatusError}" /><TextBlock Classes="caption" Text="false" /></StackPanel>
+              <StackPanel Orientation="Horizontal" Spacing="4"><Border Width="16" Height="2" Background="{DynamicResource StatusMuted}" /><TextBlock Classes="caption" Text="jump" /></StackPanel>
+              <StackPanel Orientation="Horizontal" Spacing="4"><Border Width="16" Height="2" Background="{DynamicResource CyanBrush}" /><TextBlock Classes="caption" Text="case" /></StackPanel>
+              <TextBlock Classes="caption" Text="dashed = loop · drag to pan, wheel to zoom, double-click a call to open it" />
+            </StackPanel>
+          </Border>
+          <TextBlock Classes="muted" Text="{Binding GraphMessage}" HorizontalAlignment="Center" VerticalAlignment="Center" TextWrapping="Wrap" MaxWidth="420"
+                     IsVisible="{Binding GraphMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+        </Panel>
+      </DockPanel>
+
+      <!-- inspector, or its strip when folded -->
+      <Panel Grid.Column="2">
+        <Border Classes="panel" BorderThickness="1,0,0,0" Width="300" IsVisible="{Binding InspectorVisible}">
+          <DockPanel>
+            <!-- the function stays in view while the sections scroll -->
+            <Border DockPanel.Dock="Top" BorderBrush="{DynamicResource HairlineBrush}" BorderThickness="0,0,0,1" Padding="12,6,6,6">
+              <Grid ColumnDefinitions="*,Auto" ColumnSpacing="6">
+                <StackPanel>
+                  <SelectableTextBlock FontFamily="{StaticResource MonoFont}" FontWeight="SemiBold" Text="{Binding FunctionTitle}" TextWrapping="Wrap"
+                                       IsVisible="{Binding HasFunction}" />
+                  <TextBlock Classes="caption" Text="{Binding FunctionInfo}" TextWrapping="Wrap" IsVisible="{Binding HasFunction}" />
+                  <TextBlock Classes="caption" Text="{Binding MatchText}" TextWrapping="Wrap" Foreground="{DynamicResource MagentaBrush}"
+                             IsVisible="{Binding MatchText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+                  <TextBlock Classes="caption" Text="Select a function in the list." IsVisible="{Binding !HasFunction}" />
+                </StackPanel>
+                <Button Grid.Column="1" Classes="bar icon ghost" Content="›" Command="{Binding ToggleInspectorCommand}" VerticalAlignment="Top"
+                        ToolTip.Tip="Hide the inspector (F11 hides both panels)" />
+              </Grid>
+            </Border>
+            <ScrollViewer>
+              <StackPanel Margin="12,0,12,14">
+                <StackPanel IsVisible="{Binding HasCrash}">
+                  <ToggleButton Name="CrashHead" Classes="head" IsChecked="True">
+                    <StackPanel Orientation="Horizontal" Spacing="6">
+                      <TextBlock Classes="arrow" Text="▾" IsVisible="{Binding #CrashHead.IsChecked}" /><TextBlock Classes="arrow" Text="▸" IsVisible="{Binding !#CrashHead.IsChecked}" />
+                      <TextBlock Classes="label" Text="CRASH" Foreground="{DynamicResource StatusError}" /><TextBlock Classes="cnt" Text="{Binding CrashRows.Count}" />
+                    </StackPanel>
+                  </ToggleButton>
+                  <ItemsControl ItemsSource="{Binding CrashRows}" IsVisible="{Binding #CrashHead.IsChecked}">
+                    <ItemsControl.ItemTemplate>
+                      <DataTemplate x:DataType="vm:CrashRow">
+                        <Button Classes="link" IsEnabled="{Binding CanOpen}"
+                                Command="{Binding $parent[ItemsControl].((vm:CodeGraphViewModel)DataContext).OpenCrashCommand}" CommandParameter="{Binding}">
+                          <StackPanel Margin="0,1">
+                            <TextBlock Classes="mono" Text="{Binding Title}" FontWeight="SemiBold" IsVisible="{Binding Header}" Foreground="{DynamicResource StatusError}" TextWrapping="Wrap" />
+                            <TextBlock Classes="mono" Text="{Binding Title}" IsVisible="{Binding !Header}" Foreground="{DynamicResource CyanBrush}" />
+                            <TextBlock Classes="caption" FontSize="11" Text="{Binding Detail}" TextWrapping="Wrap" />
+                          </StackPanel>
+                        </Button>
+                      </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                  </ItemsControl>
+                </StackPanel>
+
+                <StackPanel IsVisible="{Binding HasOldOnly}">
+                  <ToggleButton Name="OldOnlyHead" Classes="head" IsChecked="False">
+                    <StackPanel Orientation="Horizontal" Spacing="6">
+                      <TextBlock Classes="arrow" Text="▾" IsVisible="{Binding #OldOnlyHead.IsChecked}" /><TextBlock Classes="arrow" Text="▸" IsVisible="{Binding !#OldOnlyHead.IsChecked}" />
+                      <TextBlock Classes="label" Text="ONLY IN THE OLD BUILD" /><TextBlock Classes="cnt" Text="{Binding OldOnlyRows.Count}" />
+                    </StackPanel>
+                  </ToggleButton>
+                  <ItemsControl ItemsSource="{Binding OldOnlyRows}" IsVisible="{Binding #OldOnlyHead.IsChecked}">
+                    <ItemsControl.ItemTemplate>
+                      <DataTemplate x:DataType="vm:CrashRow">
+                        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="6" Margin="0,1">
+                          <TextBlock Classes="mono" Text="{Binding Title}" TextTrimming="CharacterEllipsis" />
+                          <TextBlock Grid.Column="1" Classes="caption" FontSize="11" Text="{Binding Detail}" />
+                        </Grid>
+                      </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                  </ItemsControl>
+                </StackPanel>
+
+                <StackPanel IsVisible="{Binding HasFunction}">
+                  <StackPanel IsVisible="{Binding HasChanges}">
+                    <ToggleButton Name="ChangesHead" Classes="head" IsChecked="True">
+                      <StackPanel Orientation="Horizontal" Spacing="6">
+                        <TextBlock Classes="arrow" Text="▾" IsVisible="{Binding #ChangesHead.IsChecked}" /><TextBlock Classes="arrow" Text="▸" IsVisible="{Binding !#ChangesHead.IsChecked}" />
+                        <TextBlock Classes="label" Text="CHANGES IN THE BACKPORT" /><TextBlock Classes="cnt" Text="{Binding Changes.Count}" />
+                      </StackPanel>
+                    </ToggleButton>
+                    <ItemsControl ItemsSource="{Binding Changes}" IsVisible="{Binding #ChangesHead.IsChecked}">
+                      <ItemsControl.ItemTemplate>
+                        <DataTemplate x:DataType="vm:ChangeRow">
+                          <StackPanel Spacing="4" Margin="0,0,0,10">
+                            <Grid ColumnDefinitions="*,Auto">
+                              <TextBlock Classes="mono" Text="{Binding Title}" VerticalAlignment="Center" />
+                              <Border Grid.Column="1" Classes="chip" BorderBrush="{Binding Chip, Converter={x:Static app:ChipBrushConverter.Instance}}">
+                                <TextBlock Text="{Binding Kind}" Foreground="{Binding Chip, Converter={x:Static app:ChipBrushConverter.Instance}}" />
+                              </Border>
+                            </Grid>
+                            <Border Classes="card" Padding="8,5" BorderThickness="2,1,1,1" BorderBrush="{DynamicResource StatusError}">
+                              <StackPanel>
+                                <SelectableTextBlock FontFamily="{StaticResource MonoFont}" FontSize="12" Text="{Binding Before}" TextWrapping="Wrap" />
+                                <TextBlock Classes="caption" FontFamily="{StaticResource MonoFont}" FontSize="11" Text="{Binding BeforeBytes, StringFormat='{}{0} · original'}" TextWrapping="Wrap" />
+                              </StackPanel>
+                            </Border>
+                            <Border Classes="card" Padding="8,5" BorderThickness="2,1,1,1" BorderBrush="{DynamicResource MagentaBrush}">
+                              <StackPanel>
+                                <SelectableTextBlock FontFamily="{StaticResource MonoFont}" FontSize="12" Text="{Binding After}" TextWrapping="Wrap" />
+                                <TextBlock Classes="caption" FontFamily="{StaticResource MonoFont}" FontSize="11" Text="{Binding AfterBytes, StringFormat='{}{0} · backport'}" TextWrapping="Wrap" />
+                              </StackPanel>
+                            </Border>
+                            <TextBlock Classes="caption" Text="{Binding Note}" TextWrapping="Wrap" IsVisible="{Binding HasNote}" />
+                          </StackPanel>
+                        </DataTemplate>
+                      </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                  </StackPanel>
+
+                  <StackPanel IsVisible="{Binding HasRedirected}">
+                    <ToggleButton Name="RedirectedHead" Classes="head" IsChecked="True">
+                      <StackPanel Orientation="Horizontal" Spacing="6">
+                        <TextBlock Classes="arrow" Text="▾" IsVisible="{Binding #RedirectedHead.IsChecked}" /><TextBlock Classes="arrow" Text="▸" IsVisible="{Binding !#RedirectedHead.IsChecked}" />
+                        <TextBlock Classes="label" Text="IMPORTS REDIRECTED HERE (GOT)" /><TextBlock Classes="cnt" Text="{Binding Redirected.Count}" />
+                      </StackPanel>
+                    </ToggleButton>
+                    <StackPanel IsVisible="{Binding #RedirectedHead.IsChecked}">
+                      <ItemsControl ItemsSource="{Binding Redirected}">
+                        <ItemsControl.ItemTemplate>
+                          <DataTemplate x:DataType="vm:LinkRow">
+                            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8" Margin="0,1">
+                              <TextBlock Classes="mono" Text="{Binding Name}" TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding Name}" />
+                              <TextBlock Grid.Column="1" Classes="caption" FontSize="11" Text="{Binding Detail}" />
+                            </Grid>
+                          </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                      </ItemsControl>
+                      <TextBlock Classes="caption" Text="Every call to these imports lands here instead of the system library." TextWrapping="Wrap" Margin="0,4,0,0" />
+                    </StackPanel>
+                  </StackPanel>
+
+                  <ToggleButton Name="CallsHead" Classes="head" IsChecked="True">
+                    <StackPanel Orientation="Horizontal" Spacing="6">
+                      <TextBlock Classes="arrow" Text="▾" IsVisible="{Binding #CallsHead.IsChecked}" /><TextBlock Classes="arrow" Text="▸" IsVisible="{Binding !#CallsHead.IsChecked}" />
+                      <TextBlock Classes="label" Text="CALLS" /><TextBlock Classes="cnt" Text="{Binding Calls.Count}" />
+                    </StackPanel>
+                  </ToggleButton>
+                  <StackPanel IsVisible="{Binding #CallsHead.IsChecked}">
+                    <TextBlock Classes="caption" Text="None." IsVisible="{Binding !HasCalls}" />
+                    <ItemsControl ItemsSource="{Binding Calls}">
+                      <ItemsControl.ItemTemplate>
+                        <DataTemplate x:DataType="vm:LinkRow">
+                          <StackPanel Margin="0,0,0,2">
+                            <DockPanel>
+                              <Button DockPanel.Dock="Right" Classes="link" Content="Imports" FontSize="11" Margin="8,0,0,0" IsVisible="{Binding HasNid}"
+                                      IsEnabled="{Binding $parent[ItemsControl].((vm:CodeGraphViewModel)DataContext).CanOpenImports}"
+                                      ToolTip.Tip="Show this import in the Backport page's Imports tab (needs this game's analysis there)"
+                                      Command="{Binding $parent[ItemsControl].((vm:CodeGraphViewModel)DataContext).OpenInImportsCommand}" CommandParameter="{Binding}" />
+                              <Button Classes="link" IsEnabled="{Binding CanOpen}" ToolTip.Tip="{Binding Name}"
+                                      Command="{Binding $parent[ItemsControl].((vm:CodeGraphViewModel)DataContext).OpenCommand}" CommandParameter="{Binding}">
+                                <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="6">
+                                  <TextBlock Classes="mono" Text="{Binding Name}" TextTrimming="CharacterEllipsis" Foreground="{DynamicResource CyanBrush}" />
+                                  <Border Grid.Column="1" Classes="chip" BorderBrush="{DynamicResource CyanBrush}" IsVisible="{Binding Fakelib}">
+                                    <TextBlock Text="fakelib" Foreground="{DynamicResource CyanBrush}" />
+                                  </Border>
+                                  <TextBlock Grid.Column="2" Classes="caption" FontSize="11" Text="{Binding Detail}" VerticalAlignment="Center" />
+                                </Grid>
+                              </Button>
+                            </DockPanel>
+                            <TextBlock FontSize="11" Text="{Binding Status}" Foreground="{DynamicResource StatusError}" TextWrapping="Wrap" IsVisible="{Binding HasStatus}" Margin="10,0,0,1" />
+                            <TextBlock Classes="caption" FontSize="11" FontFamily="{StaticResource MonoFont}" Text="{Binding Arguments}" TextWrapping="Wrap"
+                                       IsVisible="{Binding HasArguments}" Margin="10,0,0,1" ToolTip.Tip="Constants in the argument registers at each call" />
+                            <TextBlock Classes="caption" FontSize="11" Text="{Binding Rule}" TextWrapping="Wrap" IsVisible="{Binding HasRule}" Margin="10,0,0,2" />
+                          </StackPanel>
+                        </DataTemplate>
+                      </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                  </StackPanel>
+
+                  <ToggleButton Name="CallersHead" Classes="head" IsChecked="True">
+                    <StackPanel Orientation="Horizontal" Spacing="6">
+                      <TextBlock Classes="arrow" Text="▾" IsVisible="{Binding #CallersHead.IsChecked}" /><TextBlock Classes="arrow" Text="▸" IsVisible="{Binding !#CallersHead.IsChecked}" />
+                      <TextBlock Classes="label" Text="CALLERS" /><TextBlock Classes="cnt" Text="{Binding Callers.Count}" />
+                    </StackPanel>
+                  </ToggleButton>
+                  <StackPanel IsVisible="{Binding #CallersHead.IsChecked}">
+                    <TextBlock Classes="caption" Text="{Binding CallersNote}" TextWrapping="Wrap" IsVisible="{Binding CallersNote, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+                    <ItemsControl ItemsSource="{Binding Callers}">
+                      <ItemsControl.ItemTemplate>
+                        <DataTemplate x:DataType="vm:LinkRow">
+                          <Button Classes="link" Command="{Binding $parent[ItemsControl].((vm:CodeGraphViewModel)DataContext).OpenCommand}" CommandParameter="{Binding}">
+                            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="6">
+                              <TextBlock Classes="mono" Text="{Binding Name}" TextTrimming="CharacterEllipsis" Foreground="{DynamicResource CyanBrush}" />
+                              <TextBlock Grid.Column="1" Classes="caption" FontSize="11" Text="{Binding Detail}" VerticalAlignment="Center" />
+                            </Grid>
+                          </Button>
+                        </DataTemplate>
+                      </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                  </StackPanel>
+
+                  <StackPanel IsVisible="{Binding HasDataRefs}">
+                    <ToggleButton Name="DataHead" Classes="head" IsChecked="False">
+                      <StackPanel Orientation="Horizontal" Spacing="6">
+                        <TextBlock Classes="arrow" Text="▾" IsVisible="{Binding #DataHead.IsChecked}" /><TextBlock Classes="arrow" Text="▸" IsVisible="{Binding !#DataHead.IsChecked}" />
+                        <TextBlock Classes="label" Text="STRINGS AND DATA" /><TextBlock Classes="cnt" Text="{Binding DataRefs.Count}" />
+                      </StackPanel>
+                    </ToggleButton>
+                    <ItemsControl ItemsSource="{Binding DataRefs}" IsVisible="{Binding #DataHead.IsChecked}">
+                      <ItemsControl.ItemTemplate>
+                        <DataTemplate x:DataType="vm:DataRow">
+                          <Button Classes="link" IsEnabled="{Binding CanOpen}" ToolTip.Tip="A string: list the functions that use it · a function pointer: open it"
+                                  Command="{Binding $parent[ItemsControl].((vm:CodeGraphViewModel)DataContext).OpenDataCommand}" CommandParameter="{Binding}">
+                            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="6">
+                              <TextBlock Classes="mono" FontSize="11" Text="{Binding Text}" TextTrimming="CharacterEllipsis" Foreground="{DynamicResource StatusOk}" />
+                              <TextBlock Grid.Column="1" Classes="caption" FontSize="11" Text="{Binding Detail}" VerticalAlignment="Center" />
+                            </Grid>
+                          </Button>
+                        </DataTemplate>
+                      </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                  </StackPanel>
+                </StackPanel>
+
+                <StackPanel IsVisible="{Binding HasPatterns}">
+                  <ToggleButton Name="PatternsHead" Classes="head" IsChecked="True">
+                    <StackPanel Orientation="Horizontal" Spacing="6">
+                      <TextBlock Classes="arrow" Text="▾" IsVisible="{Binding #PatternsHead.IsChecked}" /><TextBlock Classes="arrow" Text="▸" IsVisible="{Binding !#PatternsHead.IsChecked}" />
+                      <TextBlock Classes="label" Text="RULE PATTERNS IN THIS EBOOT" /><TextBlock Classes="cnt" Text="{Binding PatternRows.Count}" />
+                    </StackPanel>
+                  </ToggleButton>
+                  <ItemsControl ItemsSource="{Binding PatternRows}" IsVisible="{Binding #PatternsHead.IsChecked}">
+                    <ItemsControl.ItemTemplate>
+                      <DataTemplate x:DataType="vm:CrashRow">
+                        <Button Classes="link" IsEnabled="{Binding CanOpen}"
+                                Command="{Binding $parent[ItemsControl].((vm:CodeGraphViewModel)DataContext).OpenCrashCommand}" CommandParameter="{Binding}">
+                          <StackPanel Margin="0,1">
+                            <TextBlock Text="{Binding Title}" Foreground="{DynamicResource StatusWarn}" TextWrapping="Wrap" />
+                            <TextBlock Classes="caption" FontSize="11" Text="{Binding Detail}" TextWrapping="Wrap" />
+                          </StackPanel>
+                        </Button>
+                      </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                  </ItemsControl>
+                </StackPanel>
+
+                <StackPanel IsVisible="{Binding HasCaves}">
+                  <ToggleButton Name="CavesHead" Classes="head" IsChecked="False">
+                    <StackPanel Orientation="Horizontal" Spacing="6">
+                      <TextBlock Classes="arrow" Text="▾" IsVisible="{Binding #CavesHead.IsChecked}" /><TextBlock Classes="arrow" Text="▸" IsVisible="{Binding !#CavesHead.IsChecked}" />
+                      <TextBlock Classes="label" Text="CODE CAVES (WHERE STUBS AND ADAPTERS GO)" />
+                    </StackPanel>
+                  </ToggleButton>
+                  <StackPanel IsVisible="{Binding #CavesHead.IsChecked}">
+                    <TextBlock Classes="caption" Text="{Binding CaveText}" TextWrapping="Wrap" />
+                    <ItemsControl ItemsSource="{Binding CaveBars}" Margin="0,6,0,4">
+                      <ItemsControl.ItemTemplate>
+                        <DataTemplate x:DataType="vm:CaveBar">
+                          <Grid ColumnDefinitions="40,Auto,*" ColumnSpacing="6" Margin="0,1">
+                            <TextBlock Classes="mono" FontSize="11" Text="{Binding Label}" Foreground="{DynamicResource StatusMuted}" />
+                            <Border Grid.Column="1" Width="{Binding Width}" Height="10" Background="{DynamicResource StatusWarn}" VerticalAlignment="Center" />
+                            <TextBlock Grid.Column="2" Classes="caption" FontSize="11" Text="{Binding CountText}" />
+                          </Grid>
+                        </DataTemplate>
+                      </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                    <TextBlock Classes="caption" Text="{Binding CaveRoomText}" TextWrapping="Wrap" />
+                    <TextBlock Classes="caption" Text="{Binding CaveUsedText}" TextWrapping="Wrap" Foreground="{DynamicResource MagentaBrush}" IsVisible="{Binding HasCaveUse}" Margin="0,4,0,0" />
+                  </StackPanel>
+                </StackPanel>
+              </StackPanel>
+            </ScrollViewer>
+          </DockPanel>
+        </Border>
+        <Border Classes="strip" BorderBrush="{DynamicResource HairlineBrush}" BorderThickness="1,0,0,0" IsVisible="{Binding !InspectorVisible}">
+          <StackPanel>
+            <Button Classes="bar icon ghost" Content="‹" Command="{Binding ToggleInspectorCommand}" ToolTip.Tip="Show the inspector" HorizontalAlignment="Center" Margin="0,6,0,0" />
+            <LayoutTransformControl HorizontalAlignment="Center">
+              <LayoutTransformControl.LayoutTransform><RotateTransform Angle="90" /></LayoutTransformControl.LayoutTransform>
+              <TextBlock Text="INSPECTOR" />
+            </LayoutTransformControl>
+          </StackPanel>
+        </Border>
+      </Panel>
+    </Grid>
+  </Grid>
+</UserControl>

@@ -4,15 +4,21 @@ using System.Text;
 namespace Ps5Backport.Core;
 
 /// <summary>
-/// Opt-in boot notification: redirect the eboot's <c>e_entry</c> into a cave that writes a user
-/// message to <c>/dev/notification0</c>, optionally after a delay, then jumps back into the real
-/// entry. The console renders the write as a "Debug:" toast. See FINDINGS.md §6f.
+/// Opt-in boot notification: redirect a startup function into a cave that writes a user message to
+/// <c>/dev/notification0</c>, optionally after a delay, then jumps back into the real function. The console renders
+/// the write as a "Debug:" toast. See FINDINGS.md §6f and §6p.
 ///
 /// A <c>native_game</c> process may not issue the <c>syscall</c> instruction directly — the kernel
-/// kills it with <c>SYSTEM_ILLEGAL_FUNCTION_CALL</c> (0xa002030a). The cave therefore calls the
-/// eboot's own libkernel imports (<c>sceKernelOpen</c>/<c>sceKernelWrite</c>/<c>sceKernelClose</c>/
-/// <c>sceKernelUsleep</c>) through their PLT stubs, so the syscalls run from libkernel's sanctioned
-/// text. The request is the ShadowMount/ppr-patch <c>notify_request_t</c>: 3120 bytes, message at +45.
+/// kills it with <c>SYSTEM_ILLEGAL_FUNCTION_CALL</c> (0xa002030a). The cave therefore calls the module's
+/// own libkernel imports (open/write/close and a sleep for the delay) through their PLT stubs, so the syscalls
+/// run from libkernel's sanctioned text. The request is the ShadowMount/ppr-patch <c>notify_request_t</c>:
+/// 3120 bytes, message at +45.
+///
+/// The hook is the eboot's SDK <c>_start</c> when the eboot imports the functions (console-confirmed). Otherwise it
+/// is the initializer (<c>DT_INIT</c>) of the game's bundled <c>sce_module/libc.prx</c>: every sample libc starts it
+/// with the same prologue and imports <c>_open</c>/<c>_write</c>/<c>_close</c>/<c>_nanosleep</c>. Exactly one module
+/// per game carries the notice (<see cref="Assess"/>). <c>sceKernelDlsym</c> on libkernel fails in a game process
+/// (console, §6p), so missing functions are never looked up at run time.
 /// </summary>
 internal static class BootNotice
 {
@@ -23,47 +29,81 @@ internal static class BootNotice
     const int MaxMessageBytes = 256;
     const int ReqSize = 3120;                       // notify_request_t { char unused[45]; char message[3075]; }
 
-    // Stack layout below rsp after "sub rsp, StackAlloc". _start is entered like a normal function (rsp = 8 mod 16)
-    // and the cave pushes 11 registers (88 bytes), so StackAlloc % 16 == 0 keeps call sites 16-aligned.
+    // Stack layout below rsp after "sub rsp, StackAlloc". The hooked function is entered like a normal function
+    // (rsp = 8 mod 16) and the cave pushes 11 registers (88 bytes), so StackAlloc % 16 == 0 keeps call sites 16-aligned.
     const int Path = 0x000;        // "/dev/notification0\0" (19 bytes)
     const int Req = 0x020;         // notify_request_t (3120 bytes)
     const int Msg = Req + 45;      // message offset inside the request
     const int FdSlot = 0xC50;      // saved fd (8 bytes)
-    const int StackAlloc = 0xC60;
+    const int Timespec = 0xC60;    // { tv_sec, tv_nsec } for a nanosleep-style delay (16 bytes)
+    const int StackAlloc = 0xC70;
 
     /// <summary>Largest delay: sceKernelUsleep takes a 32-bit microsecond count.</summary>
     internal const int MaxDelaySeconds = (int)(uint.MaxValue / 1000000);
 
-    // libkernel NIDs (imported by every game eboot; stable across firmware).
-    const string SceKernelOpenNid = "1G3lF1Gg1k8";
-    const string SceKernelWriteNid = "4wSze92BhLI";
-    const string SceKernelCloseNid = "UK2Tl2DWUns";
-    const string SceKernelUsleepNid = "1jfXLRVzisc";
+    const ulong DtInit = 12;
+    const string LibcModule = "libc";
+
+    // Each call uses the first alternative the module imports; all take the same arguments (NIDs stable across firmware).
+    static readonly (string Name, string Nid)[] Opens = [("sceKernelOpen", "1G3lF1Gg1k8"), ("_open", "6c3rCVE-fTU"), ("open", "wuCroIGjt2g")];
+    static readonly (string Name, string Nid)[] Writes = [("sceKernelWrite", "4wSze92BhLI"), ("_write", "FxVZqBAA7ks"), ("write", "FN4gaPmuFV8")];
+    static readonly (string Name, string Nid)[] Closes = [("sceKernelClose", "UK2Tl2DWUns"), ("_close", "NNtFaKJbPt0"), ("close", "bY-PO6JhzhQ")];
+    static readonly (string Name, string Nid)[] Usleeps = [("sceKernelUsleep", "1jfXLRVzisc"), ("usleep", "QcteRwbsnV0")];
+    static readonly (string Name, string Nid)[] Nanosleeps =
+        [("sceKernelNanosleep", "QvsZxomvUHs"), ("_nanosleep", "NhpspxdjEKU"), ("nanosleep", "yS8U2TGCe1A")];
 
     // SDK _start: "push rbp; mov rbp,rsp; push r15" (6 bytes) then later "mov r14d,[rdi]; mov rbx,rsi".
     static readonly byte[] Prologue = [0x55, 0x48, 0x89, 0xE5, 0x41, 0x57];
     static readonly byte[] StartSignature = [0x44, 0x8B, 0x37, 0x48, 0x89, 0xF3];
+    // libc DT_INIT (every sample, SDK 9.00-10.00): push rbp; mov rbp,rsp; push r15; push r14; push r13; push r12; push rbx; push rax.
+    static readonly byte[] LibcInitPrologue = [0x55, 0x48, 0x89, 0xE5, 0x41, 0x57, 0x41, 0x56, 0x41, 0x55, 0x41, 0x54, 0x53, 0x50];
 
-    /// <summary>Returns 1 when the eboot entry was redirected, else 0 (module left unchanged).</summary>
+    /// <summary>The cave for one module: hook point and PLT entries; Sleep = 0 for no delay.</summary>
+    sealed record Plan(ulong EntryVa, long EntryOff, ulong Open, ulong Write, ulong Close, ulong Sleep, bool Nanosleep);
+
+    /// <summary>The cave for this module, or null when it has no hook point or does not import open/write/close.</summary>
+    static Plan? PlanFor(SceElf elf, bool delay)
+    {
+        if (Hook(elf) is not { } entry)
+            return null;
+        ulong open = First(elf, Opens), write = First(elf, Writes), close = First(elf, Closes);
+        if (open == 0 || write == 0 || close == 0)
+            return null;
+        ulong sleep = delay ? First(elf, Usleeps) : 0;
+        bool nanosleep = delay && sleep == 0 && (sleep = First(elf, Nanosleeps)) != 0;
+        return new(entry.Va, entry.Off, open, write, close, sleep, nanosleep);   // no sleep import: no delay
+    }
+
+    /// <summary>
+    /// The one module that carries the notice — the eboot's <c>_start</c> when it can, else the bundled libc's
+    /// initializer — or null with the reason. The evidence is the requirements probe's text and the cook's warning.
+    /// </summary>
+    internal static (string? Host, string Evidence) Assess(IEnumerable<(string Path, SceElf Elf)> modules)
+    {
+        var hooks = modules.Where(m => Hook(m.Elf) is not null).OrderBy(m => IsLibc(m.Elf)).ToList();
+        if (hooks.Count == 0)
+            return (null, "no module has the SDK _start entry or the bundled libc initializer the notice hooks");
+        foreach (var (path, elf) in hooks)
+            if (PlanFor(elf, delay: true) is not null)
+                return (path, path == hooks[0].Path
+                    ? "depends on the console or the tester's intent, not on the game"
+                    : $"depends on the tester's intent; {hooks[0].Path} imports {Missing(hooks[0].Elf)}, so the notice runs in {path}'s initializer");
+        return (null, string.Join("; ", hooks.Select(h => $"{h.Path} imports {Missing(h.Elf)}")));
+    }
+
+    /// <summary>"no X (A, B or C)" for every call the module cannot make.</summary>
+    static string Missing(SceElf elf) => string.Join(", ", new[] { ("open", Opens), ("write", Writes), ("close", Closes) }
+        .Where(r => First(elf, r.Item2) == 0)
+        .Select(r => $"no {r.Item1} ({string.Join(", ", r.Item2[..^1].Select(f => f.Name))} or {r.Item2[^1].Name})"));
+
+    /// <summary>Returns 1 when the module's hook point was redirected, else 0 (module left unchanged).</summary>
     internal static int Apply(SceElf elf, string message, int delaySeconds, CancellationToken cancel)
     {
         cancel.ThrowIfCancellationRequested();
         ArgumentOutOfRangeException.ThrowIfGreaterThan(delaySeconds, MaxDelaySeconds);
-        ulong entryVa = elf.U64(0x18);          // ELF64 e_entry
-        long entryOff;
-        try { entryOff = elf.Off(entryVa); }
-        catch (InvalidDataException) { return 0; }
-        if (!Matches(elf.Data, entryOff, Prologue) ||
-            !ContainsWithin(elf.Data, entryOff, entryOff + 64, StartSignature))
-            return 0;
-
-        // Route through the game's own libkernel imports (no raw syscalls).
-        ulong openPlt = ResolvePlt(elf, SceKernelOpenNid);
-        ulong writePlt = ResolvePlt(elf, SceKernelWriteNid);
-        ulong closePlt = ResolvePlt(elf, SceKernelCloseNid);
-        ulong usleepPlt = delaySeconds > 0 ? ResolvePlt(elf, SceKernelUsleepNid) : 0;
-        if (openPlt == 0 || writePlt == 0 || closePlt == 0)
-            return 0;                            // missing imports: leave the module unchanged
+        // Route through the module's own libkernel imports (no raw syscalls).
+        if (PlanFor(elf, delaySeconds > 0) is not { } plan)
+            return 0;                            // no hook point, or no way to call open/write/close: unchanged
 
         byte[] msg = Encoding.UTF8.GetBytes(string.IsNullOrEmpty(message) ? DefaultMessage : message);
         if (msg.Length > MaxMessageBytes)
@@ -74,43 +114,40 @@ internal static class BootNotice
             msg = msg[..cut];
         }
 
-        var (body, calls) = BuildCave(msg, delaySeconds, usleepPlt != 0);
+        var (body, calls) = BuildCave(msg, delaySeconds, plan);
         long cave = Patching.FindContiguousCave(elf, body.Length)
             ?? throw new PatchException("Matched boot notification, but no contiguous code padding is available");
         ulong caveVa = elf.Vaddr(cave);
 
-        // Patch each `call rel32` to its PLT entry (calls: [usleep?], open, write, close).
-        ulong[] targets = usleepPlt != 0
-            ? [usleepPlt, openPlt, writePlt, closePlt]
-            : [openPlt, writePlt, closePlt];
-        for (int i = 0; i < calls.Length; i++)
-            BinaryPrimitives.WriteInt32LittleEndian(body.AsSpan(calls[i] + 1),
-                checked((int)((long)targets[i] - (long)caveVa - calls[i] - 5)));
+        // Patch each `call rel32` to its PLT entry.
+        foreach (var (at, target) in calls)
+            BinaryPrimitives.WriteInt32LittleEndian(body.AsSpan(at + 1),
+                checked((int)((long)target - (long)caveVa - at - 5)));
 
-        // Tail "jmp rel32" resumes the real entry at +6 (past the overwritten push rbp/mov rbp,rsp/push r15).
+        // Tail "jmp rel32" resumes the real function at +6 (past the overwritten push rbp/mov rbp,rsp/push r15).
         BinaryPrimitives.WriteInt32LittleEndian(body.AsSpan(body.Length - 4),
-            checked((int)((long)(entryVa + 6) - (long)caveVa - body.Length)));
+            checked((int)((long)(plan.EntryVa + 6) - (long)caveVa - body.Length)));
         body.CopyTo(elf.Data, cave);
 
-        // Redirect e_entry (6 bytes): jmp rel32 -> cave, then nop.
+        // Redirect the hook point (6 bytes): jmp rel32 -> cave, then nop.
         byte[] redirect = [0xE9, 0, 0, 0, 0, 0x90];
         BinaryPrimitives.WriteInt32LittleEndian(redirect.AsSpan(1),
-            checked((int)(caveVa - (entryVa + 5))));
-        redirect.CopyTo(elf.Data, entryOff);
+            checked((int)(caveVa - (plan.EntryVa + 5))));
+        redirect.CopyTo(elf.Data, plan.EntryOff);
         return 1;
     }
 
-    static (byte[] Body, int[] Calls) BuildCave(byte[] msg, int delaySeconds, bool hasUsleep)
+    static (byte[] Body, List<(int At, ulong Target)> Calls) BuildCave(byte[] msg, int delaySeconds, Plan plan)
     {
         var b = new List<byte>();
-        var calls = new List<int>();
+        var calls = new List<(int At, ulong Target)>();    // call rel32 sites and their PLT targets
 
-        // Replicate the 6 overwritten _start bytes: push rbp; mov rbp, rsp; push r15.
+        // Replicate the 6 overwritten bytes: push rbp; mov rbp, rsp; push r15.
         b.Add(0x55);                       // push rbp
         b.AddRange([0x48, 0x89, 0xE5]);    // mov rbp, rsp
         b.AddRange([0x41, 0x57]);          // push r15
 
-        // Save the caller-saved registers _start still needs (rdi/rsi/rdx) and the call-clobbered set.
+        // Save the argument registers the hooked function still needs (rdi/rsi/rdx) and the call-clobbered set.
         b.Add(0x57);                       // push rdi
         b.Add(0x56);                       // push rsi
         b.Add(0x52);                       // push rdx
@@ -135,44 +172,48 @@ internal static class BootNotice
         b.AddRange([0xF3, 0x48, 0xAB]);      // rep stosq
 
         // Message bytes as immediates (the request is already zeroed, so it stays NUL-terminated).
-        int chunks = (msg.Length + 7) / 8;
-        for (int c = 0; c < chunks; c++)
+        for (int c = 0; c < (msg.Length + 7) / 8; c++)
         {
             ulong word = 0;
-            for (int i = 0; i < 8; i++)
-            {
-                int idx = c * 8 + i;
-                if (idx < msg.Length)
-                    word |= (ulong)msg[idx] << (i * 8);
-            }
+            for (int i = 0; i < 8 && c * 8 + i < msg.Length; i++)
+                word |= (ulong)msg[c * 8 + i] << (i * 8);
             EmitMovabsRax(b, word);
             EmitStoreRax(b, Msg + c * 8);
         }
 
-        if (delaySeconds > 0 && hasUsleep)
+        if (plan.Sleep != 0 && plan.Nanosleep)
+        {
+            EmitStoreQwordImm(b, Timespec, delaySeconds);   // tv_sec
+            EmitStoreQwordImm(b, Timespec + 8, 0);          // tv_nsec
+            EmitLeaRdi(b, Timespec);
+            b.AddRange([0x31, 0xF6]);                       // xor esi, esi (no remainder)
+            calls.Add((EmitCallRel32(b), plan.Sleep));      // nanosleep(&ts, NULL)
+        }
+        else if (plan.Sleep != 0)
         {
             b.AddRange([0xBF]); EmitU32(b, (uint)((long)delaySeconds * 1000000));   // mov edi, usec
-            calls.Add(EmitCallRel32(b));       // call sceKernelUsleep@plt
+            calls.Add((EmitCallRel32(b), plan.Sleep));      // usleep(usec)
         }
 
-        // open("/dev/notification0", O_WRONLY=1, 0)
+        // open("/dev/notification0", O_WRONLY=1, 0); al = 0 because POSIX open is variadic
         EmitLeaRdi(b, Path);
         b.AddRange([0xBE]); EmitU32(b, 1);   // mov esi, 1 (O_WRONLY)
         b.AddRange([0x31, 0xD2]);            // xor edx, edx (mode = 0)
-        calls.Add(EmitCallRel32(b));          // call sceKernelOpen@plt
+        b.AddRange([0x31, 0xC0]);            // xor eax, eax
+        calls.Add((EmitCallRel32(b), plan.Open));
         EmitStoreEax(b, FdSlot);             // save fd
 
         // write(fd, &req, 3120)
         EmitLoadEdi(b, FdSlot);
         EmitLeaRsi(b, Req);
         b.AddRange([0xBA]); EmitU32(b, ReqSize);   // mov edx, 3120
-        calls.Add(EmitCallRel32(b));          // call sceKernelWrite@plt
+        calls.Add((EmitCallRel32(b), plan.Write));
 
         // close(fd)
         EmitLoadEdi(b, FdSlot);
-        calls.Add(EmitCallRel32(b));          // call sceKernelClose@plt
+        calls.Add((EmitCallRel32(b), plan.Close));
 
-        // Restore caller-saved registers; rbp/r15 stay pushed (the real entry's frame).
+        // Restore the saved registers; rbp/r15 stay pushed (the real function's frame).
         EmitAddRspImm(b, StackAlloc);
         b.AddRange([0x41, 0x5B]);    // pop r11
         b.AddRange([0x41, 0x5A]);    // pop r10
@@ -186,7 +227,39 @@ internal static class BootNotice
         b.Add(0xE9);                 // jmp rel32 (displacement patched by the caller)
         EmitU32(b, 0);
 
-        return (b.ToArray(), calls.ToArray());
+        return (b.ToArray(), calls);
+    }
+
+    /// <summary>
+    /// The hook point and its file offset: e_entry when it is the SDK <c>_start</c>, or DT_INIT of the bundled libc
+    /// when it has the libc initializer prologue; else null.
+    /// </summary>
+    static (ulong Va, long Off)? Hook(SceElf elf)
+    {
+        if (At(elf, elf.U64(0x18)) is { } start && Matches(elf.Data, start.Off, Prologue)       // ELF64 e_entry
+            && ContainsWithin(elf.Data, start.Off, start.Off + 64, StartSignature))
+            return start;
+        if (IsLibc(elf) && elf.Dyn.TryGetValue(DtInit, out ulong init) && At(elf, init) is { } entry
+            && Matches(elf.Data, entry.Off, LibcInitPrologue))
+            return entry;
+        return null;
+    }
+
+    static bool IsLibc(SceElf elf) => elf.ModuleName == LibcModule;
+
+    static (ulong Va, long Off)? At(SceElf elf, ulong va)
+    {
+        try { return (va, elf.Off(va)); }
+        catch (InvalidDataException) { return null; }
+    }
+
+    /// <summary>PLT entry of the first imported alternative, or 0.</summary>
+    static ulong First(SceElf elf, (string Name, string Nid)[] alternatives)
+    {
+        foreach (var (_, nid) in alternatives)
+            if (ResolvePlt(elf, nid) is var plt and not 0)
+                return plt;
+        return 0;
     }
 
     static ulong ResolvePlt(SceElf elf, string nid)
@@ -216,6 +289,7 @@ internal static class BootNotice
     static void EmitStoreRax(List<byte> b, int disp) { b.AddRange([0x48, 0x89, 0x84, 0x24]); EmitU32(b, disp); }        // mov [rsp+disp], rax
     static void EmitStoreEax(List<byte> b, int disp) { b.AddRange([0x89, 0x84, 0x24]); EmitU32(b, disp); }             // mov [rsp+disp], eax
     static void EmitStoreDwordImm(List<byte> b, int disp, int imm) { b.AddRange([0xC7, 0x84, 0x24]); EmitU32(b, disp); EmitU32(b, imm); }
+    static void EmitStoreQwordImm(List<byte> b, int disp, int imm) { b.AddRange([0x48, 0xC7, 0x84, 0x24]); EmitU32(b, disp); EmitU32(b, imm); }   // mov qword [rsp+disp], imm32
     static void EmitLoadEdi(List<byte> b, int disp) { b.AddRange([0x8B, 0xBC, 0x24]); EmitU32(b, disp); }              // mov edi, [rsp+disp]
     static void EmitLeaRdi(List<byte> b, int disp) { b.AddRange([0x48, 0x8D, 0xBC, 0x24]); EmitU32(b, disp); }         // lea rdi, [rsp+disp]
     static void EmitLeaRsi(List<byte> b, int disp) { b.AddRange([0x48, 0x8D, 0xB4, 0x24]); EmitU32(b, disp); }         // lea rsi, [rsp+disp]

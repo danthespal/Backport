@@ -6,163 +6,163 @@ exact 9e68a20bc3bac9231abbc7a97754b82afa1aa6578a1c9cdbf2eff5df150c12eb
 refs +P6FRGH4LfA=47 0TyVk4MSLt0=2 2MOy+rUfuhQ=5 2WE3BTYVwKM=10 2Z+PpY6CaJg=10 6XG4B33N09g=1 6sJWiWSRuqk=1 7H0iTOciTLo=8 8zTFvBIAIN8=214 9LCjpWyQ5Zc=3 AEJdIVZTEmo=9 H2e8t5ScQGc=1 H8ya2H00jbI=9 JBcgYuW8lPU=10 JrwFIMzKNr0=6 K-jXhbt2gn4=2 Ls4tzzhimqQ=1 NVadfnzQhHQ=9 OXmauLdQ8kY=26 Op8TBGY5KHg=6 Ou3iL1abvng=454 OxhIB8LB-PQ=1 P330P3dFF68=0 Q2V+iqvjgC0=1 Q3VBxCXhUHs=139 RXXqi4CtF8w=3 aesyjrHVWy4=3 cpCOXWMgha0=3 d08RCvZNNR8=6 eLdDw6l0-bU=11 f7uOxY9mM1U=838 gNQ1V2vfXDE=7 h9CcP3J0oVM=1 j4ViWNHEgww=9 jMB7EFyu30Y=22 kiZSXIWd9vg=5 lKEN2IebgJ0=1 lYDzBVE5mZs=150 ltCfaGr2JGE=4 rtV7-jWC6Yg=13 ttHNfU+qDBU=2 uMei1W9uyNo=1 zr094EQ39Ww=0
 == MediaDecoders.Prospero.prx  module=MediaDecoders.Prospero
    build: D:/b6/cohtml/src/Projects/VS/MediaDecoders.Prospero/../../../../Build/bin_Prospero/Release/MediaDecoders.Prospero.prx
-   reference=40, provided=1, stubbed=0, patched=0, data=2, missing=0, unknown=0
+   reference=40, provided=1, stubbed=0, forced=0, patched=0, data=2, missing=0, unknown=0
 == eboot.bin
-lower a87fb26a077f388e61502895fdce0e1383f678a5cec4a45f2a321916c54db1a0
-exact bd742a9a93984c045f27db364b5c94ef7058557f028191391935b36b5612d1c4
+lower a2232cbe78835cdabd32bf67bd0855cb2368f0f0a8c9f1b27805daa0d1e78427
+exact e52afce840fc8a03ca00b453035cbb34126457998b616f215fb5ae3439f27871
 refs +2KpvixvL6E=1 +BzXYkqYeLE=2 +L98PIbGttk=2 +P6FRGH4LfA=19880 +fAmL52-yfQ=1 +kSrjIVxKFE=1 +r3rMFwItV4=1 -4GCfYdNF1s=2 -El4B0xJF2U=0 -HOOCn0JY48=183 -KRzWekV120=1 -LFO7jhD5CE=2 -Ozn0F1AFRg=1 -P6FNMzk2Kc=157 -Q1-u1a7p0g=1 -RJWNMK3fC8=1 -RnpfpxIhec=2 -VVn74ZyhEs=2 -Wreprtu0Qs=1 -eNSKAypRz0=3 -kU6bB4M-+k=1 -qLsfDAywIY=3 -t5ahslJGZs=1 0-KXaS70xy4=1 0D4-FVvEikw=1 0HBYxYAjmf0=1 0IL1keINExQ=1 0K1yQ6Lv-Yc=1 0PUNSRS3Ar0=0 0TyVk4MSLt0=1 0WMHDb5Dt94=2 0a2TBNfE3BU=1 0aR2aWmQal4=1 0fWWK5uG9rQ=1 0gCZj7kfj-I=0 0gYjPTR-6cY=1 0hlfW1O4Aa4=1 0x6o1VVAYSY=3 1-LFLmRFxxM=1 13wBGJrxnSc=1 15TBQ3jmXvo=1 188x57JYp0g=3 1D0H2KNjshE=292 1FGvU0i9saQ=35 1G3lF1Gg1k8=9 1cKlQv7Kvmg=1 1e2BNwI-XzE=1 1fOA53oGwU8=0 1jfXLRVzisc=28 1rZSWUv1IRc=1 1uJgoVq3bQU=8 1xxcMiGu2fo=2 23CPPI1tyBY=1 23LRUSvYu1M=1 24m4Z4bUaoY=8 27bAgiJmOh0=1 2JgFB2n9oUM=1 2JtWUUiYBXs=1 2Of0f+3mhhE=45 2Q0z6rnBrTE=1 2Tb92quprl0=6 2WE3BTYVwKM=176 2Z+PpY6CaJg=31 2bbBBOkH4CY=1 2cXiHqvKFUM=1 2emaaluWzUw=2250 2gbcltk3swE=2 2ozFS9GCs+A=2 2s6aLdPIA4I=1 2sWzhYqFH4E=11 2vDqwBlpF-o=19 2vxXHkZlhbw=32 3-zCDXatSU4=1 3310gBtLU9M=15 39WxhR-ePew=1 3GPpjQdAMTw=68622 3KDcnM3lrcU=1 3PbA4AE88VQ=12 3PxvyV7qPPQ=0 3RQ5aQfnstU=1 3WVD91e12ZQ=1 3cUUypQzMiI=8741 3m2ro+Di+Ck=2 3qxgM4ezETA=3 3rHWaV-1KC4=1 3rew70M0SmY=1 3s8cHiCBKBE=2 3sssb+7Wn9M=24 4+h9EzwKF4I=2 40j9vVFx3do=3 47RvLSo2HN8=1 47UAEuQl+iI=1 4AAcTU9R3XM=3 4CI9DrkapVg=1 4I8vEpuEhZ8=1 4ITMYcbipA0=3 4Le0SBPvnF8=0 4R6-OvI2cEA=2 4bp9gcNLwMI=1347 4czppHBiriw=9 4dq2rblWlg0=1 4jt8pMDudgk=1 4llLk7YJRTE=1 4tPhsP6FpDI=1 4wSze92BhLI=2 5+FD4VpX+nw=1 52NcYU9+lEo=1 57labkp+rSQ=121 5CdQTZIQPxM=1 5OqszGpy7Mg=23 5TjaJwkLWxE=68 5XVWOcxpuJ4=10 5Xa2ACNECdo=10 5bBacGLyLOs=1 5bvvbUSiFs4=2 5czuG5NjGx8=9 5ldnD16rYZw=1 5qXct3c1skg=1287 5tOfnaClcqM=1 5txKfcMUAok=1 5wjxESwX68I=2 5zBnau1uIEo=1 62KCwEMmzcM=3 656LMQSrg6U=1 65VH0Qaaz6s=1 6BpEZuDT7YI=1 6PaNuQipllM=5 6ULAa0fq4jA=1 6UgtwV+0zb4=3 6XG4B33N09g=2 6c2FkLIH5mE=4 6f5f-qx4ucA=9 6fIC3XKt2k0=1 6lNcCp+fxi4=1 6mFxkVqdmbQ=1 6pa-Aa4kTHk=3 6sJWiWSRuqk=39 7-a7sBHeUQ8=2 73fF1MFU8hA=2 77z+OH5zp5I=2 7H0iTOciTLo=30 7KPYZ-jSAto=2 7Ly52zaL44Q=3 7PkSz+qnTto=1 7fEv1HeQZ0E=0 7gxh+5QubhY=1 7hn5DAs2bLk=3 7oxv3PPCumo=7 802pFCwC9w0=8 85zul--eGXs=1 86f0wFtxn0k=4 88Vv-AzHVj8=50 8EYWdAM2-R0=0 8G2LB+A3rzg=2 8Lo6Zv94aho=1 8N2tmT3jmC8=1 8XTArSPyWHk=11 8Y9ARRfgQc4=395 8aI7R7WaOlc=1 8fe55ktlNVo=2 8mql9OcQnd4=27 8u8lPzUEq+U=20 8zTFvBIAIN8=6322 8zsu04XNsZ4=111 919aYFGRv-k=10 94iBp3KvIuI=1 9BcDykPmo1I=22 9ByRMdo7ywg=0 9DLXsbvd+ao=0 9GTC+lQ453U=4 9LCjpWyQ5Zc=65 9Qe7XFSQ4Lk=1 9U0bvCIzgIo=1 9UK1vLZQft4=388 9bGvfp1zbKo=0 9nf8joUTSaQ=36 9rAeANT2tyE=68621 9yDWMxEFdJU=11 A9cVMUtEp4Y=1 AEJdIVZTEmo=6 AEuF3F2f8TA=3 AHalTX9wFZY=1 AOLcoIkQDgM=1 AUIHb7jUX3I=1 AUXVxWeJU-A=3 AV6ipCNa4Rw=1 Abendgtz+3o=1 Aeu5wVKkF9w=1 AhGvpITrf4M=1 ApkYaHb8Sek=1 AqBgviIjLjw=1 Av3zjWi64Kw=2 AxoDrINp4J8=1 B+vc2AO2Zrc=6 BB+kb08Tl9A=1 BKSCW2bCACA=3494 BNowx2l588E=4 BVmR1H8l+XI=1 Bagshr7OQ6Q=1 BfBDZGbti7A=1 BhL-ZtSHmB8=0 BmMjYxmew1w=3 BpFoboUJoZU=13 C0f7TJcbfac=1 C4UgDHHPvdw=1 C6gWCWJKM+U=5 CBiu4mCE1DA=1 CSEjkTYt5dw=0 CdWp0oHWGr0=7 Cg4srZ6TKbU=2 CjQROLB88a4=2 CocNmY-sEb0=0 CtB+A9-VxO0=83 CzkKf7ahIyU=1 D0OdFMjp46I=3 D9sr1xGUriE=2 DGMG3JshrZU=3 DImz2Ft9E2g=2 DbEnA+MnVIw=258 Ddwk4gLT5j0=1 DfSCDRA3EjY=1 DfivPArhucg=13 Dh9fjqU8ixc=1 DnSrcExa0xU=1 DscD1i9HX1w=1 DwH3gdbYfZo=5 DzES9hQF4f4=2 EG4kqkxLU3Q=0 EGHjT+lDWvA=3 EH-x713A99c=220 EI-5-jlq2dE=4 EIyErVBW9QI=8 EMNG6cHitlQ=5 EMhQNylkSwk=0 EMwrSFcyowE=28 EY28T2bkN7k=1 EotR8a3ASf4=4 ErH6tKS7fzE=1 EvPpDIUyQPI=1 EvS9U4rxAQk=21 EwNylPdWUTM=1 F0Y42t-3e18=1 F6e0kwo4cnk=6 F8bUHwAG284=35 FG9VRZfson0=0 FIs3-UQT9sg=1 FJmglmTMdr4=1 FJrT5LuUBAU=1 FXPWHNk8Of0=1 FY63kd4r9Ko=0 GHna9-DvnUk=1 GJY0MvuTcs8=1 GPbUp9jXQa8=1 GTfJ64qFCPw=1 GZWjF-YIFFk=29 GfQLhE8AoFI=0 GfxAp9Xyiqs=1 GlelR9EEeck=2 GnxKOHEawhk=1 GuchCTefuZw=1 Gz1rmUZpROM=1 H7uZqCoNuWk=1 H896Pt-yB4I=1 H8AprKeZtNg=190 H8wG9Bk-nPc=3 H8ya2H00jbI=5 HF7lK46xzjY=1 HFLNP4R4Elc=8 HHXmPak83kQ=3 HQF4O9D+Di4=2 HUbZmOnT-Dg=4 HXzjK9yI30k=1 HaBgPgv4ju0=2 Hfzw5iJ2WwY=0 IOnSvHzqu6A=175 IaZXJ9M79uo=5 Ik-KpLTlf7Q=1 Ikfdt-rIqCE=1 JBcgYuW8lPU=3 JGgj7Uvrl+A=16 JK2wamZPzwM=7 JLejb5LnLBA=0 JM4EBvWT9rc=3 JTvBflhYazQ=11 JaLBe0P3jSU=1 Jg-AgkdJHkk=1 JkdNCocpu1M=1 JrtiDtKeS38=1 JrwFIMzKNr0=5 K+RGofJEoj8=0 K+YIrBadUlc=6 K2mciNVxUCE=1 K7RlrTkI-mw=2 KI4dHLlTNl0=1 KK3Bdg1RWK0=2 KSs6Q1X5ABk=14 KT-hTp-Ch14=123 KnsfHKmZqFA=1 L-Q3LEjIbgA=1 L1SBTkC+Cvw=1298 LA4RCNKnFjg=1 LDnEhRGbB4g=58 LJDwdSNTnDg=1 LR5cwFMMCVE=1 LWe+u8SHKgU=1 LfjFksmiu4Y=1 Ljp75QXUi7s=1 Lr8ovHH9l6A=1 Ls4tzzhimqQ=3 LtTouSCZjHM=2 LwG8g3niqwA=1 M1Gma1ocrGE=1 MBuItvba6z8=8 MCJ8SkzsQxY=1 MHur6qCsUus=1 MLWl90SFWNE=8 MOBxtefPZUg=15 MPe0EeBGM-E=1 MQ8-UG0KYnQ=10 MQFPAqQPt1s=14 MUjC4lbHrK4=3 MWiElSNE8j8=1 Mcrl2crhxu0=5 MfDb+4Nln64=1 MmKMg9mgd+M=0 MmpF1XsQiHw=2 MmytiDdoGBA=1 MpxhMh8QFro=84 Mt6co-yzyjg=6 N+mr7GjTvr8=1 N-FSPA4S3nI=1 N5KDtkIjjJ4=1 NEemVJeMwd0=0 NFLs+dRJGNg=1 NH6xARDOVv8=10 NKIzURsgV7I=1 NLq2b1jOaN0=2 NLwJ3q+64bY=11 NVDXiUesSbA=1 NVadfnzQhHQ=6 NcaWUxfMNIQ=2 NmVsRWgsKt4=0 Nv8c-Kb+DUM=1 O3aVZ5BqPr4=10 ONEnhMinebs=1 OOVWEv5wb2c=1 OVV3+UimpiY=1 OXmauLdQ8kY=7 Oa7AB0wiixE=4 Op8TBGY5KHg=1 Ou3iL1abvng=61317 Ovb2dSJOAuE=303 Ox9i0c7L5w0=1 OxhIB8LB-PQ=1 P30mDR3cUlA=1 P330P3dFF68=0 P5pdoykPYTk=1 P6A3ytpsiYc=1 PE2zHMqLSHs=3 PI7jIZj4pcE=1 PMVehSlfZ94=2 PSkGTb2o1q8=30 PdOmR8dy1fM=1 PjS5uASwcV8=1 Pp4te4H5hd4=1 PrdHuuDekhY=1 PsrRUg671K0=4 PtsB1Q9wsFA=1 Q1BL70XVV0o=4 Q2V+iqvjgC0=10 Q3VBxCXhUHs=2722 Q3dyFuwGn64=3 Q3utJvma4Mo=1 Q4rRL34CEeE=150 Q8pvJimUWis=1 QI-x0SL8jhw=186 QKd0qM58Qes=4 QMFyLoqNxIg=1 QZP6I9ZZxpE=1 QZrlitEgURM=0 QcteRwbsnV0=4 QrZZdJ8XsX0=1 Qrj4c+61z4A=1 Qs0wWulgl7U=1 Qs1xtplKo0U=1 QsfAnVfdCyc=2 R1Jvn8bSCW8=5 R3KEtoTUMTc=0 R7d0F1g2qsU=6 R9lA82OraNs=1 RLN3gRlXJLE=5 RPCAhx-aabE=1 RPydv-Jr1bc=1 RQXLbdT2lc4=67 RR4novUEENY=1 RXXqi4CtF8w=2 RY8mQlhg7mI=1 RalyfwiTt8o=2 RaqxZIf6DvE=1 RbLbuKv8zho=1 Rbmh2atp24s=0 Rlnw-UcmA5k=4 RmaJwLtc8rY=100 Rw4J-22tu1U=6 S0FJ-HONta8=2 S1GkePI17zQ=1 SHlt7EhOtqA=2 SJ3i0DXP8vg=1 SRI6S9B+-a4=2 ShHKOkWgZRM=596 SkEwpiu3tZg=1 Slmz4HMpNGs=5 SwcNvp-Af6c=7 Sygnk9dr5WQ=1 T6xuVw0KUJo=1 T72hz6ffq08=1 T7uyNqP7vQA=15 TRO721eVt4g=1 TViD1EZXkNI=1 TdAc0h4iomU=4 Ter8YCVZ9tQ=0 TmVP8LzcFcY=2 TpT-GpWLpEo=17 TywrFKCoLGY=1 U2JJtSqNKZI=3 U46NwOiJpys=1 UK2Tl2DWUns=10 UTXzJbWhhTE=3 UZbQjYAwwXM=567 UaLjloJinow=1 Uco1I0dlDi8=1 UglJIZjGssM=1 UhVg8P8OCOQ=1 Up36PTk687E=1 V++UgBtQhn0=3 V7KGze2XjJc=2 VANhIWcqYak=1 VGjrQa-WqdU=1 VPbJwTCgME0=2 VUuuFOtYYXk=0 Vf3tagVW5Wc=2 VmW0Tdpy420=3 Vo5V8KAwCmk=3 VzhxjXDzYSI=0 W0Hpm2X0uPE=2 W5z4eZrjEas=64 W8FMUZJE5Cg=0 WIOMxTfWuYo=0 WKAXJ4XBPQ4=6 WLxUN2WMim8=1 WMoNWnmCnVU=1 WT-5NKy42fw=1 Wi7DtlLV+KI=3 WkkeywLJcgU=146 WmAc2MEj6Io=3 WmYDzdC4EHI=1 WrOLvHU0yQM=1 WuMbPBKN1TU=10 WvEu7yl3Ivg=1 Wxbg5x3pTXA=1 X-Nm5KLREeg=3 X3FzDPzpD2Y=1 XD3mDeybCnk=1 XDmCPWa3MEo=1 XHl38ZNknbs=1 XKRegsFpEpk=1 XO3N4SBvCy0=1 XP6c8M4G+fc=78 XUe8OAKB-vQ=1 XXOOIxrIKDM=5 XgvSuIdnMlw=1 Xjoosiw+XPI=1 Xs9hdiD7sAA=1 XwLA5cTHjt4=0 Y5DhuDKGlnQ=3 Y6Sl4Xw7gfA=1 Y7aJ1uydPMo=7 YBiIdcDPrxs=2 YE4dbtbz6OE=1 YNzNkJzYqEg=2 YUeqkyT7mEQ=1 YWB9Vhfj3Wo=0 Yn8KT+VTZaE=1 YoHAXkBV06c=0 YoN0COULSvY=2 YuH2FA7azqQ=1 Yw0jKSqop+E=2 Z+vcX3rnECg=1 Z9XFJCfmId4=2 ZE6RNL+eLbk=116 ZHGgdWeYTo8=1 ZIXln2K3XMk=2 ZL9FV4mJXxo=1612 ZLvf6lVAc4M=1 ZP4e7rlzOUk=8 ZdF3BhEh5sk=1 Ze2I81YNykw=21 Zf7ewes1VtY=49 ZjtRqSMJwdw=3 ZvwO9euwYzc=5 Zw7uUVPulbw=1 Zxa0VhQVTsk=4 ZyciM6GWVO8=1 a2d1iefnHTk=16 a4E5dJh0onE=73 a8uLzYY--tM=1 aFYb4pr4bjI=2 aFxknk3hTog=4 aI+OeCz8xrQ=36 aII9h5nli9U=2 aJf+j5yntiU=126 aNz11fnnzi4=2 aRtxlukU9WQ=1 aZK8lNei-Qw=5 aeHxLWwq0gQ=0 aesyjrHVWy4=12 b-ySQcZQNGE=1 b06Hh0DPEaE=1 b6I1MMimJXA=109 bBfz7kMF2Ho=3 bIDov3wBu5Q=1 bIHoZCTomsI=1 bL2UrZ-G0Hk=3 bMmid3pfyjo=3 bRPUrNROyOI=49 bXdNk0ZHk00=6 blvwzOvsEAA=0 bt3CTBKmGyI=5 bwFjS+bX9mA=1 bxGoVxpdSPQ=2 byV+FWlAnB4=0 bzQExy189ZI=1 cAnT0Rw-IwU=2 cE7wIsqXdZ8=3 cFazmnXpJOE=118 cIAHg-0N6Kg=5 cQke9UuBQOk=3 cVSk9y8URbc=1 cWndD2EH524=0 cd+Rtw+D1x8=14 cfAXurvfl5o=283 cmo1RIYva9o=39 cpCILPya5Zk=1 cpCOXWMgha0=158 d-6uF9sZDIU=1 d08RCvZNNR8=212 d8P11CI40KE=1 dQHWEsJtoE4=1 dYDAfB+cJEU=1 dbOlWdppb4o=3 dgJBaeJnGpo=2 dhK16CKwhQg=1 dl+4eHSzUu4=1 dlNEq6BfzDk=316 dnaeGXbjP6E=5 dyIhnXq-0SM=1 e1DFTg+Sd8U=1 e6y3WMBYbiM=2 eLdDw6l0-bU=8 ePw-kqZmelo=1 eR2bZFAAU0Q=6 eV9wAD2riIA=5 eWoKNeB6V-k=1 eXbUSpEaTsA=1 eZ4+17OQz4Q=58 eaFXjfJv3xs=1 eb-gvTYQcoY=1 ef0jk36lGzM=1 efhK-YSUYYQ=3 ejekcaNQNq0=1 eml0e0UN67c=41 ezM2OhNxzck=1 f1zwJ3jAI2k=39611 f3dg2CSgRKY=64 f7uOxY9mM1U=87934 fJnpuVVBbKk=779 fNvtExaHN4U=0 fPSCdQxgpSw=1 fPhymKNvK-A=3 fTx66l5iWIA=1 fUs4X3mpTi4=356 fZo48un7LK4=1 fccGInHrj8A=1 fffwELXNVFA=12 fgIsQ10xYVA=1 fgxnMeTNUtY=32 fiiNDnNBKVY=2 fs-9cvP-VCo=0 fzyMKs9kim0=5 g+PZd2hiacg=6 g0mZgRTFPoQ=254 g10DkPARoa8=3 g2tViFIohHE=3 g8cM39EUZ6o=7 gQX+4GDQjpM=25 gSRnr79F8tQ=1 gatEUKG+Ea4=2 geDaqgH9lTg=1 gjP9-KQzoUk=2 gjRZNnw0JPE=1 gjSyfzSsDcE=1 gntpWkgb4sQ=2 gwAf8VMkXS0=1 h9CcP3J0oVM=1 h9z6+0hEydk=1 hMAe+TWS9mQ=33 hT0IAEvN+M0=1 hdm0YfMa7TQ=3 hdpVEUDFW3s=1 hr-C3WzDomo=0 hsi9drzHR2k=50 htn36gPnBk4=2 hv1luiJrqQM=1 hvUfkUIQcOE=2 i1jyy49AjXU=61 i8DeU1sI6I4=1 iKJMWrAumPE=1 iMp8QpE+XO4=34 ie7qhZ4X0Cc=1 igt3a6Q0VMc=40 isruqthpYcw=1 iz2shAGFIxc=1 j2AIqSqJP0w=2 j3EtxFkSIhQ=83 j3YMu1MVNNo=1 j4ViWNHEgww=2633 jEIXUAr9XE8=1 jEevBXmagOQ=1 jMB7EFyu30Y=13 jO8DM8oyego=1 jRuJ1frROF8=1 jpFjmgAC5AE=7 k3GhuSNmBLU=178 kA-TdiOCsaY=2 kALvdgEv5ME=22 kBJzF8x4SyE=2 kBwCPsYX-m4=6 kDZvoVssCgQ=1 kDh-NfxgMtE=7 kHg45qPC6f0=6 kJlYH5uMAWI=1 kKUH0Viib3c=1 kSLphkBuz6E=10 kUlvghKs-mA=1 khbdMADH4cQ=5 kiZSXIWd9vg=42 klLbZjteYdw=3 kn0yiYeExgA=5 kwGyyjohI50=1 kzfKNNi3eew=2 l4fM9K-Lyks=1 lA94ZgT+vMM=12 lDqxaY1UbEo=1 lEeJadNvMbo=1 lJUQuaKqoKY=2 lLMT9vJAck0=1 lX+4FNUklF0=14069 lYDzBVE5mZs=2256 lbB+UlZqVG0=2 lhpd6Wk6ccs=13 loJ5Ef3MZrs=0 lt6pE0WHY94=4 ltCfaGr2JGE=2 luv6hxzFAhY=22 m+y2TtGJp54=1 m-I92Ab50W8=4 m5-2bsNfv7s=2 m7iLTaO9RMs=3 m87BHxt-H60=1 mDmgMOGVUqg=1 mJ7aghmgvfc=1 mPpPxv5CZt4=2 mQ16-QdKv7k=1 mXlxhmLNMPg=4 mkx2fVhNMsg=1 mqULNdimTn0=1 mqdNorrB+gI=1 n1-v6FgU7MQ=2 n2fD4A+pb+g=368 n2kx+OmFUis=0 n88vx3C5nW8=1 nBDD66kiFW8=1 nKWi-N2HBV4=1 nOIEswYD4Ig=142 naInUjYt3so=1 nhn1ds+I2t4=0 nsYoNRywwNg=3 nwujzxOPXzQ=5 o+ok6Y+DtgY=1 o69RpYO-Mu0=4 oLoo17ObE4A=1 ob5xAW4ln-0=66 oib76F-12fk=5 okSBuQ1sJdQ=1 olQf-vTaj2Q=2 on6ZH7Abo10=5 onNY9Byn-W8=10 p+GcLqwpL9M=1 pBxafllkvt0=4 pDBDcY6uLSA=1 pDmme7Bgm6E=2 pKwslsMUmSk=5 pO96TwzOm5E=3 pWLG7WOpVcw=1 pZ9WXcClPO8=0 pztV4AF18iI=205 q0F6yS-rCms=1 q1cHNfGycLI=1 q88lQ+GP5Yk=1 qKQiNX91IGo=1 qOD-ksTkE08=0 qYhnoevd9bI=4 qe7oZ+v4PWA=5 qgxDBjorUxs=1 qj7QZpgr9Uw=2 qk4w2Dq5RT4=0 qnYxp6VUtbI=2 qvMUCyyaCSI=1 qxTZXxipaZY=2 qzMN2XKGA4k=1 r42bWcQbtZY=1 rDMyAf1Jhug=11 rF07weLXJu8=3 rI1nGVUICkA=5 rJMPHxZ3SYc=0 rKBUtgRrtbk=1 rM6tiqEPq2E=0 rPl0INNc-M8=1 rPo6tV8D9bM=1 rQFVBXp-Cxg=2 rTXw65xmLIA=2 rVjRvHJ0X6c=4 rWSuTWY2JN0=1 rWUTcKdkUzQ=3 rab76FYRSZc=2 rcQCUr0EaRU=1 rcrVFJsQWRY=1 rqwFKI4PAiM=1 rtV7-jWC6Yg=13 rtuk8eFQQ1U=4 rvBSfTimejE=1 ryUxD-60bKM=11 s6W4Zl4Slgk=1 s9e3+YpRnzw=1 sDCBrmc61XU=1 sJ41UnZr6dQ=1 sN6aG8RF2Cs=0 sSAUCCU1dv4=1 sUP1hBaouOw=118 sjaobBgqeB4=1 smWEktiyyG0=35 sysY2FHYff4=35 t+OHUjVWIwU=4 t5YrizufpQc=2 t7PlZ9nt5Lc=1 tG3LJfAOH3k=0 tIhsqj0qsFE=80 tRaHAUA6oOw=4 tSBxhAPyytQ=3 tU5e3f9gSiU=1 tVHE+C8vGXk=1 tZDDEo2tE5k=1 taOj6NIm7DM=7 tdcAqgCS+uI=1 tn3VlD0hG60=656 tpFJ8LIKvPw=1 ts6GlZOKRrE=1 tsvEmnenz48=11037 ttHNfU+qDBU=6 tyHd3P7oDrU=0 u04PD3lnHUU=2 u1GRHp+oWoY=13 u70oWo92SYQ=1 uJ3m8INuikg=1 uMei1W9uyNo=8 uRVLj6Mz+bA=1 uW4vfTwMQVo=8 uWIYLFkkwqk=1 uoUpLGNkygk=1 uodLYyUip20=1 upoVrzMHFeE=4 uquVH4-Du78=1 utPrVdxio-8=2 v6EZ-YWRdMs=1 v7S7LhP2OJc=1 v8iOE+j8a5o=3 vRoArM9zaIk=1 vSMAm3cxYTY=3 vWU-odnS+fU=1 vcmNN+AAXnY=1 viiwFMaNamA=11 vkuuLfhnSZI=186 vlmAvJqR7mQ=1 vsw4c+uWXGQ=1 w0hLuNarQxY=1 w2rJhmD+dsE=2 wB7IWzGp2v0=35 wG+84pnNIuo=2 wLlFkwG9UcQ=11 wRbq6ZjNop4=1 waPcxYiR3WA=2 weDug8QD-lE=16 wr23dPKyWc0=10 wtkt-teR1so=1 wuAQt-j+p4o=55 wzvqT4UqKX8=2 x68HPh+vxsE=0 x8qnXqh-tiM=1 xE51MX+B2G4=6 xEszJVGpybs=26 xSAR0LTcRKM=1 xcc6DTcL8QA=9 xddD23+8TfQ=4 xk0AcarP3V4=1 xoDfcsVCMeU=0 xywYcRB7nbQ=3 y6UNQtnr0wY=0 y7JD1gfwyfA=1 yH17Q6NWtVg=2 yKDy8S5yLA0=2 ynwqogpIbL0=2 ypVBz4uPKcQ=1 yrx+40YKqiI=1 yuO2H2Uvnos=1 yvsw9isfKZw=0 z+P+xCnWLBk=163 z2duB-hHQSM=1 zDONI7p8WVE=2 zEniuuzG2W0=3 zHchY8ft5pk=1 zgXifHT9ErY=1 ziPDcIjO0Vk=1 zlfEH8FmyUA=26 zr094EQ39Ww=0
 == eboot.bin  module=Game_ps5_ship
    build: W:/tcws/a7b8445c00e2776/code/remedy/build/game/../../../../build_output/ps5/shipping/none/game_ps5_shipping/Game_ps5_ship.elf
-   reference=604, provided=180, stubbed=8, patched=0, data=42, missing=0, unknown=0
+   reference=604, provided=180, stubbed=2, forced=6, patched=0, data=42, missing=0, unknown=0
    libSceAcm:
-      stubbed  GTfJ64qFCPw  sceAcmBatchJobPriority  (GOT 0x5475ff0)
+      forced   GTfJ64qFCPw  sceAcmBatchJobPriority  (GOT 0x5475ff0)
    libSceAudioOut2:
-      stubbed  TViD1EZXkNI  sceAudioOut2Set3DLatency  (GOT 0x5476340)
+      forced   TViD1EZXkNI  sceAudioOut2Set3DLatency  (GOT 0x5476340)
    libSceNpEntitlementAccess:
       stubbed  y7JD1gfwyfA  sceNpEntitlementAccessGetGameTrialsFlag  (GOT 0x5476530)
    libSceSaveData_native:
-      stubbed  e6y3WMBYbiM  sceSaveDataCancel  (GOT 0x5476780)
+      forced   e6y3WMBYbiM  sceSaveDataCancel  (GOT 0x5476780)
    libSceVideoOut:
-      stubbed  eb-gvTYQcoY  sceVideoOutLatencyControlWaitBeforeInput  (GOT 0x5476850)
-      stubbed  MCJ8SkzsQxY  sceVideoOutLatencyMeasureSetStartPoint  (GOT 0x5476858)
+      forced   eb-gvTYQcoY  sceVideoOutLatencyControlWaitBeforeInput  (GOT 0x5476850)
+      forced   MCJ8SkzsQxY  sceVideoOutLatencyMeasureSetStartPoint  (GOT 0x5476858)
    libkernel:
+      forced   tU5e3f9gSiU  sceKernelIsTrinityMode  (GOT 0x5476fe0)
       stubbed  NH6xARDOVv8  sceKernelGetOperationMode  (GOT 0x54772d8)
-      stubbed  tU5e3f9gSiU  sceKernelIsTrinityMode  (GOT 0x5476fe0)
 == libRenoirCore.PS5.prx
 lower 5b4302e5080ce585879d9b54e622aaea02b05b4c109475a1160e95881b66924b
 exact 5b4302e5080ce585879d9b54e622aaea02b05b4c109475a1160e95881b66924b
 refs +P6FRGH4LfA=521 -P6FNMzk2Kc=3 0dQrYWd7g94=4 0hlfW1O4Aa4=2 1D0H2KNjshE=20 1cKlQv7Kvmg=1 1uJgoVq3bQU=17 2ozFS9GCs+A=32 3-zCDXatSU4=1 3EDeSsnqsYc=1 3GPpjQdAMTw=18 3PxvyV7qPPQ=0 3ZotGOwzi9k=1 3sssb+7Wn9M=2 4ITMYcbipA0=1 4bp9gcNLwMI=158 5+FD4VpX+nw=1 5TjaJwkLWxE=9 5qXct3c1skg=135 6sJWiWSRuqk=2 77z+OH5zp5I=2 88Vv-AzHVj8=3 8u8lPzUEq+U=1 8zTFvBIAIN8=292 9nf8joUTSaQ=8 9rAeANT2tyE=18 9yDWMxEFdJU=1 AEJdIVZTEmo=10 EH-x713A99c=16 EIyErVBW9QI=2 EvS9U4rxAQk=1 H2e8t5ScQGc=1 HFLNP4R4Elc=5 HHXmPak83kQ=2 Jk7KrKMQzDw=3 K+YIrBadUlc=1 L1SBTkC+Cvw=10 LPtBDdftNWI=4 LfjFksmiu4Y=1 Ls4tzzhimqQ=2 MLWl90SFWNE=1 MOBxtefPZUg=2 MUjC4lbHrK4=1 Mcrl2crhxu0=6 MmytiDdoGBA=1 MpxhMh8QFro=1 NLwJ3q+64bY=1 NesIgTmfF0Q=27 O3aVZ5BqPr4=2 Ou3iL1abvng=1119 Ovb2dSJOAuE=61 P30mDR3cUlA=1 PtsB1Q9wsFA=1 Q2V+iqvjgC0=1 Q3VBxCXhUHs=387 Q8pvJimUWis=6 QI-x0SL8jhw=3 Qazy8LmXTvw=1 QvYwwfBxkAQ=10 Rlnw-UcmA5k=1 ShHKOkWgZRM=127 TdAc0h4iomU=3 XP6c8M4G+fc=21 XXOOIxrIKDM=5 Y7aJ1uydPMo=1 YZk9sHO0yNg=1 Z+vcX3rnECg=1 ZE6RNL+eLbk=5 Ze2I81YNykw=19 Zf7ewes1VtY=1 a2d1iefnHTk=8 aFxknk3hTog=3 aRtxlukU9WQ=2 aZK8lNei-Qw=1 aesyjrHVWy4=13 b6I1MMimJXA=21 bRPUrNROyOI=1 byV+FWlAnB4=0 d08RCvZNNR8=1 dhK16CKwhQg=1 eLdDw6l0-bU=10 f7uOxY9mM1U=2045 fJnpuVVBbKk=9 gNQ1V2vfXDE=2 gQX+4GDQjpM=2 gntpWkgb4sQ=2 gwAf8VMkXS0=1 j4ViWNHEgww=68 kA-TdiOCsaY=1 kALvdgEv5ME=6 kiZSXIWd9vg=2 kn0yiYeExgA=1 lA94ZgT+vMM=6 lKEN2IebgJ0=3 lYDzBVE5mZs=77 lbB+UlZqVG0=1 mXlxhmLNMPg=5 ob5xAW4ln-0=3 pXvbDfchu6k=3 pztV4AF18iI=15 q0F6yS-rCms=2 qxTZXxipaZY=10 rQFVBXp-Cxg=3 ryUxD-60bKM=1 tIhsqj0qsFE=3 taOj6NIm7DM=3 tsvEmnenz48=2 tyHd3P7oDrU=0 uodLYyUip20=3 vNe1w4diLCs=387 viiwFMaNamA=29 wLlFkwG9UcQ=1 xE51MX+B2G4=3 xEszJVGpybs=7 xeYO4u7uyJ0=2 z+P+xCnWLBk=2 zlfEH8FmyUA=6 zr094EQ39Ww=0
 == libRenoirCore.PS5.prx  module=libRenoirCore.PS5
    build: D:/b6/cohtml/External/renoir/Apps/Dev/RenoirCore/RenoirCore.PS5/../../../../Build/binProspero/Release/libRenoirCore.PS5.prx
-   reference=72, provided=36, stubbed=0, patched=0, data=10, missing=0, unknown=0
+   reference=72, provided=36, stubbed=0, forced=0, patched=0, data=10, missing=0, unknown=0
 == libcohtml.Prospero.prx
-lower ec7f7cab8873d7ca947bc912ce562c2f704103b24673284bb1bfeb38119f27c4
-exact ec7f7cab8873d7ca947bc912ce562c2f704103b24673284bb1bfeb38119f27c4
+lower ed574c6845d913c9af17e9daf022ccded002ace4d7cdc38ab4e9e22d8bf84823
+exact ed574c6845d913c9af17e9daf022ccded002ace4d7cdc38ab4e9e22d8bf84823
 refs +P6FRGH4LfA=2582 +bxHqnt-lRo=3 -LFO7jhD5CE=2 0-KXaS70xy4=1 0DsDTr534gc=32 0TyVk4MSLt0=1 0WMHDb5Dt94=120 0hlfW1O4Aa4=2 1471ajPzxh0=1 1D0H2KNjshE=41 1TDo-ImqkJc=5 1cKlQv7Kvmg=1 1uJgoVq3bQU=2 27bAgiJmOh0=1 2MOy+rUfuhQ=1 2Q0z6rnBrTE=1 2T56HgbPW08=13 2Z+PpY6CaJg=2 2ozFS9GCs+A=49 2sWzhYqFH4E=272 2vDqwBlpF-o=1 3+UPM-9E6xY=1 3-zCDXatSU4=2 3310gBtLU9M=21 3EDeSsnqsYc=3 3GPpjQdAMTw=1080 3PxvyV7qPPQ=44 3QIPIh-GDjw=1 3ZotGOwzi9k=1 3sssb+7Wn9M=89 4ITMYcbipA0=2 4bp9gcNLwMI=301 5+FD4VpX+nw=1 5TjaJwkLWxE=371 5XVWOcxpuJ4=1 5Ysce+s-CWU=1 5jNubw4vlAA=1 5qXct3c1skg=278 60rcqDrkUNY=1 6BpEZuDT7YI=1 6XG4B33N09g=1 6sJWiWSRuqk=46 77z+OH5zp5I=2 7H0iTOciTLo=2 7PkSz+qnTto=1 802pFCwC9w0=2 88Vv-AzHVj8=5 8Q60JLJ6Rv4=4 8Y9ARRfgQc4=9 8u8lPzUEq+U=38 8zTFvBIAIN8=1419 9BcDykPmo1I=35 9Qe7XFSQ4Lk=4 9nf8joUTSaQ=23 9rAeANT2tyE=1080 AEJdIVZTEmo=4 AEuF3F2f8TA=3 AHxyhN96dy4=9 AV6ipCNa4Rw=13 AdlSqA4lGS8=2 Al8MZJh-4hM=4 AqBioC2vF3I=1 B7RFX6LbnZI=1 C6gWCWJKM+U=10 CGoV+Pxv01c=2 CjQROLB88a4=170 DfivPArhucg=55 Dk+iDUjUdk8=1 EH-x713A99c=13 EIyErVBW9QI=8 EMwrSFcyowE=5 EgmLo6EWgso=2 EotR8a3ASf4=1 EvS9U4rxAQk=49 FN4gaPmuFV8=2 Fm-dmyywH9Q=1 GAUuLKGhsCw=210 GE0yqFd83PA=75 GLZaJ+0pO5E=1 GMpvxPFW924=3 GZWjF-YIFFk=1 GfxAp9Xyiqs=289 H2e8t5ScQGc=1 H8AprKeZtNg=92 HF7lK46xzjY=1 HFLNP4R4Elc=21 HHXmPak83kQ=2 HMXO7jN3FjM=3 HoLVWNanBBc=1 I0vuMo7qix8=18 IKP8typ0QUk=1 JM4EBvWT9rc=2 Jk7KrKMQzDw=4 JpRyi95NwdQ=1 JrwFIMzKNr0=13 K+YIrBadUlc=5 K-jXhbt2gn4=2 KGKBeVcqJjc=5 KSs6Q1X5ABk=8 KdP-nULpuGw=1 L1SBTkC+Cvw=322 LfjFksmiu4Y=1 Lg0dYZuDrz4=18 LwG8g3niqwA=1 LxcEU+ICu8U=1 MOBxtefPZUg=4 MUjC4lbHrK4=14 MZO7FXyAPU8=1 Mcrl2crhxu0=276 MmytiDdoGBA=8 MpxhMh8QFro=24 NLwJ3q+64bY=202 NVadfnzQhHQ=3 NxqsZxGisrA=2 O3aVZ5BqPr4=17 Oa7AB0wiixE=1 OgZVIkaNmb0=8 Op8TBGY5KHg=1 Ou3iL1abvng=19505 Ovb2dSJOAuE=607 OxhIB8LB-PQ=1 Oy6IpwgtYOk=1 P30mDR3cUlA=1 P330P3dFF68=0 Q2V+iqvjgC0=6 Q3VBxCXhUHs=1667 Q8pvJimUWis=93 QI-x0SL8jhw=1 QKd0qM58Qes=2 QMFyLoqNxIg=2 Qazy8LmXTvw=1 QcteRwbsnV0=1 QrZZdJ8XsX0=1 RXXqi4CtF8w=1 Rlnw-UcmA5k=5 Rw4J-22tu1U=27 SFxTMOfuCkE=1 SHlt7EhOtqA=3 SRI6S9B+-a4=2 ShHKOkWgZRM=204 St9nbxSoezk=4 TdAc0h4iomU=3 UqDGjXA5yUM=2 V02oFv+-JzA=19 VOBg+iNwB-4=4 Vo8rvWtZw3g=5 WkkeywLJcgU=4 WrOLvHU0yQM=1 WuMbPBKN1TU=1 XHKkoveq-CI=44 XP6c8M4G+fc=39 XXOOIxrIKDM=35 XhWHn6P5R7U=1 Y7aJ1uydPMo=2 YCV5dGGBcCo=1 YQ0navp+YIc=1 YQOfxL4QfeU=1 YXe6ABbHZPs=2 YZk9sHO0yNg=1 Z+vcX3rnECg=1 Z4QosVuAsA0=1 ZE6RNL+eLbk=11 Ze2I81YNykw=338 Zf7ewes1VtY=47 a2d1iefnHTk=14 a4gLGspPEDM=4 aFYb4pr4bjI=1 aFxknk3hTog=8 aRtxlukU9WQ=11 aZK8lNei-Qw=11 aajWxENMjH0=91 aesyjrHVWy4=79 b6I1MMimJXA=45 bC37hk7rHqs=2 bRPUrNROyOI=41 bXdNk0ZHk00=8 bY-PO6JhzhQ=2 byV+FWlAnB4=0 c+4r-T-tEIc=5 cDW233RAwWo=1 cJLTwtKGXJk=8 cVSk9y8URbc=1 d08RCvZNNR8=553 dQHWEsJtoE4=1 dfPK9R6M0qM=4 dhK16CKwhQg=347 eLdDw6l0-bU=1173 ef0jk36lGzM=1 emp+0QWZ8I0=3 enG9-gUJp70=2 f7uOxY9mM1U=32009 fGPRa6T+Cu8=1 fUs4X3mpTi4=8 fZiBbVa2ZDU=1 fffwELXNVFA=52 g0mZgRTFPoQ=75 g2zY7vjUEDQ=4 gQX+4GDQjpM=3 gacfOmO8hNs=22 gntpWkgb4sQ=2 gwAf8VMkXS0=4 h9CcP3J0oVM=1 hUxvGdi64Io=1 hXRNdF7MiVg=2 hcuQgD53UxM=3 hkWBH8-WfW4=3 i8DeU1sI6I4=11 iGjsr1WAtI0=1 j4ViWNHEgww=1656 jRuJ1frROF8=1 kA-TdiOCsaY=1 kALvdgEv5ME=25 kDZvoVssCgQ=1 kiZSXIWd9vg=1 lA94ZgT+vMM=56 lEeJadNvMbo=1 lLMT9vJAck0=6 lbB+UlZqVG0=9 lpMzqv5j5HY=468 ltCfaGr2JGE=2 mDmgMOGVUqg=1 mKhVDmYciWA=5 mXlxhmLNMPg=27 mkx2fVhNMsg=1 mpcTgMzhUY8=25 mqQMh1zPPT8=2 mqULNdimTn0=1 n88vx3C5nW8=3 ob5xAW4ln-0=5 pDBDcY6uLSA=5 pDuPEf3m4fI=1 pKwslsMUmSk=4 pXvbDfchu6k=11 pZ9WXcClPO8=0 pztV4AF18iI=28 q0F6yS-rCms=2 qI8WIMEZK2k=0 qYhnoevd9bI=45 qlWiRfOJx1A=1 rDMyAf1Jhug=15 rQFVBXp-Cxg=3 s0qDfgsAgVg=2 sIlRvQqsN2Y=1 sUP1hBaouOw=11 sgrd-r1Nw60=1 sjTRb8YD7dQ=2 t6QqxD5nxaI=0 tG86XGc2VtE=5 tIhsqj0qsFE=5 tJtD8WHnb04=6 tT+ZjpBQ0Yc=4 taOj6NIm7DM=7 tcVi5SivF7Q=2 tsvEmnenz48=857 ttHNfU+qDBU=2 tyHd3P7oDrU=0 uMei1W9uyNo=2 umlGxOcNzgc=2 uodLYyUip20=44 vNe1w4diLCs=925 vPxA9OFW0os=1 viiwFMaNamA=713 w5IHyvahg-o=1 wLlFkwG9UcQ=1 wtkt-teR1so=1 wuCroIGjt2g=1 wzvqT4UqKX8=2 xE51MX+B2G4=8 xENtRue8dpI=2 xEszJVGpybs=7 xeYO4u7uyJ0=6 yRpOciDxbfE=4 ySAwp2f9rqM=48 ynh4E+BIaqY=1 ytQULN-nhL4=1 z0jsXZVz75I=2 zHchY8ft5pk=3 zlfEH8FmyUA=6 zr094EQ39Ww=0
 == libcohtml.Prospero.prx  module=libcohtml.Prospero
    build: D://b6//cohtml//src//Projects//VS//cohtml.Prospero//..//..//..//..//Build//bin_Prospero//Release//libcohtml.Prospero.prx
-   reference=172, provided=85, stubbed=2, patched=0, data=20, missing=0, unknown=0
+   reference=172, provided=85, stubbed=0, forced=2, patched=0, data=20, missing=0, unknown=0
    #4:
-      stubbed  HMXO7jN3FjM  HMXO7jN3FjM  (GOT 0x1a65700)
-      stubbed  aajWxENMjH0  aajWxENMjH0  (GOT 0x1a656b8)
+      forced   HMXO7jN3FjM  HMXO7jN3FjM  (GOT 0x1a65700)
+      forced   aajWxENMjH0  aajWxENMjH0  (GOT 0x1a656b8)
 == nakama-sdk.prx
-lower 685e45812fa7f5fb201914e96106927453be10993d36c98734c68bb42d1e96bd
-exact 685e45812fa7f5fb201914e96106927453be10993d36c98734c68bb42d1e96bd
+lower dd176de01990afd33ec0a178f02cc880e61bedaca44671dd9d1a7550cfb8f4e8
+exact dd176de01990afd33ec0a178f02cc880e61bedaca44671dd9d1a7550cfb8f4e8
 refs +P6FRGH4LfA=378 +fAmL52-yfQ=35 +wCt7fCijgk=2 -0wUiGX74GQ=1 0K1yQ6Lv-Yc=5 0hlfW1O4Aa4=2 13wBGJrxnSc=1 15TBQ3jmXvo=1 1cKlQv7Kvmg=1 1uJgoVq3bQU=1 23CPPI1tyBY=1 2vDqwBlpF-o=2 3-zCDXatSU4=1 3310gBtLU9M=12 3GPpjQdAMTw=27 3JCe3lCbQ8A=2 3PxvyV7qPPQ=0 3ZotGOwzi9k=1 3cUUypQzMiI=163 47RvLSo2HN8=1 4CI9DrkapVg=72 4ITMYcbipA0=2 4R6-OvI2cEA=2 4bp9gcNLwMI=186 5+FD4VpX+nw=1 5OqszGpy7Mg=6 5TjaJwkLWxE=164 5XVWOcxpuJ4=1 5qXct3c1skg=156 77z+OH5zp5I=2 86f0wFtxn0k=294 8Y9ARRfgQc4=35 8u8lPzUEq+U=7 8zTFvBIAIN8=98 9BcDykPmo1I=9 9Qe7XFSQ4Lk=2 9XYJwCf3lEA=1 9nf8joUTSaQ=11 9rAeANT2tyE=18 A+NVAFu4eCg=2 BlZ8niq3nHU=1 D0OdFMjp46I=1 DfivPArhucg=66 EGHjT+lDWvA=294 EIyErVBW9QI=1 EvPpDIUyQPI=1 EvS9U4rxAQk=39 FOt55ZNaVJk=2 GfxAp9Xyiqs=16 H2e8t5ScQGc=1 H8AprKeZtNg=1 HFLNP4R4Elc=3 HHXmPak83kQ=2 IZ-qjhRqvjk=1 Jk7KrKMQzDw=2 K+YIrBadUlc=1 K7RlrTkI-mw=5 KSs6Q1X5ABk=35 L1SBTkC+Cvw=439 LJDwdSNTnDg=1 LfjFksmiu4Y=1 MLWl90SFWNE=45 MOBxtefPZUg=3 MOp-AUhdfi8=5 MQFPAqQPt1s=587 MUjC4lbHrK4=1 Mcrl2crhxu0=5 MmytiDdoGBA=1 Mt6co-yzyjg=1 NLwJ3q+64bY=2 Ou3iL1abvng=2194 PsrRUg671K0=210 Q1BL70XVV0o=1 Q2V+iqvjgC0=4 Q3VBxCXhUHs=754 Q8pvJimUWis=2 QygCNNmbGss=1 RY8mQlhg7mI=37 Rlnw-UcmA5k=1 ShHKOkWgZRM=156 SwcNvp-Af6c=35 TdAc0h4iomU=65 UhVg8P8OCOQ=1 V02oFv+-JzA=1 VOBg+iNwB-4=1 WYszaHaIkWs=1 XO3N4SBvCy0=1 XP6c8M4G+fc=83 XXOOIxrIKDM=1 XwLA5cTHjt4=0 Y7aJ1uydPMo=2 YQ0navp+YIc=3 YZk9sHO0yNg=1 YiBUtz-pGkc=5 Z+vcX3rnECg=1 ZL9FV4mJXxo=35 ZdF3BhEh5sk=1 Ze2I81YNykw=18 ZyciM6GWVO8=1 a2d1iefnHTk=88 aFxknk3hTog=4 aRtxlukU9WQ=1 bGN-6zbo7ms=1 bL2UrZ-G0Hk=35 bRPUrNROyOI=8 byV+FWlAnB4=0 c8D9qIjo8EY=6 cfAXurvfl5o=37 d08RCvZNNR8=87 dgJBaeJnGpo=2 dhK16CKwhQg=6 eLdDw6l0-bU=21 f1zwJ3jAI2k=1356 f7uOxY9mM1U=3603 fJnpuVVBbKk=2008 fPHZ-n-uRWQ=7 fUs4X3mpTi4=70 fffwELXNVFA=1 fzyMKs9kim0=1 g0mZgRTFPoQ=79 gQX+4GDQjpM=2 gntpWkgb4sQ=2 gwAf8VMkXS0=1 hcuQgD53UxM=17 hdm0YfMa7TQ=7 hdpVEUDFW3s=2 j4ViWNHEgww=175 jpFjmgAC5AE=1 kA-TdiOCsaY=1 kALvdgEv5ME=6 klLbZjteYdw=1 ksn0O9Iilb0=1 lA94ZgT+vMM=12 lX+4FNUklF0=256 lYDzBVE5mZs=4688 luv6hxzFAhY=14 mJ7aghmgvfc=1 mXlxhmLNMPg=3 mmyOCxQMVYQ=1 nOIEswYD4Ig=2 nrPfOE8TQu0=1 o0DBQpFE13o=1 ob5xAW4ln-0=1 pDom5-078DA=4 pZ9WXcClPO8=0 q0F6yS-rCms=2 qKQiNX91IGo=1 qYhnoevd9bI=2 rtuk8eFQQ1U=162 ryUxD-60bKM=2 sJ41UnZr6dQ=1 sUP1hBaouOw=8 tIhsqj0qsFE=19 tVHE+C8vGXk=1 taOj6NIm7DM=1 tsvEmnenz48=2 tyHd3P7oDrU=0 vNe1w4diLCs=18 vkuuLfhnSZI=37 xE51MX+B2G4=1 xENtRue8dpI=1 xEszJVGpybs=7 z+P+xCnWLBk=897 zlfEH8FmyUA=2 zr094EQ39Ww=0
 == nakama-sdk.prx  module=nakama-sdk
    build: C:/src/nakama-cpp/build/ps5/MinSizeRel/nakama-sdk.prx
-   reference=97, provided=49, stubbed=4, patched=0, data=15, missing=0, unknown=0
+   reference=97, provided=49, stubbed=0, forced=4, patched=0, data=15, missing=0, unknown=0
    libSceHttp2:
-      stubbed  BlZ8niq3nHU  sceHttp2WebSocketCloseAsync  (GOT 0x2e3870)
-      stubbed  -0wUiGX74GQ  sceHttp2WebSocketCreateRequest  (GOT 0x2e3868)
-      stubbed  ksn0O9Iilb0  sceHttp2WebSocketSendDataMessageAsync  (GOT 0x2e3860)
-      stubbed  WYszaHaIkWs  sceHttp2WebSocketSendTextMessageAsync  (GOT 0x2e3858)
+      forced   BlZ8niq3nHU  sceHttp2WebSocketCloseAsync  (GOT 0x2e3870)
+      forced   -0wUiGX74GQ  sceHttp2WebSocketCreateRequest  (GOT 0x2e3868)
+      forced   ksn0O9Iilb0  sceHttp2WebSocketSendDataMessageAsync  (GOT 0x2e3860)
+      forced   WYszaHaIkWs  sceHttp2WebSocketSendTextMessageAsync  (GOT 0x2e3858)
 == fakelib/libSceAgc.sprx
-lower 0a16f71f7155244381cce46ccbf1f810c7a473443c7faea0300b6e589a6b97af
-exact 73d23dbae7c82573b00fa8ec509ee8dd05a4e5883fd570363a1b412b01a3bc98
+lower dcf43da8604647dc1a995cf449ca16e4f1f3b672621c91e320f1e10a2f1a1d6a
+exact 5392a0b764447e435168481617f9e13cd450725613680e3511e086e5dfa2d208
 refs +ADiO6FQvEA=1 +P6FRGH4LfA=7 +b34-CLWc0s=4 +xy9ORMbd8U=1 -2IRUCO--PM=7 -vc-xL+G8u0=20 0MtUJ3BpGhE=2 0vTn5IDMU9A=1 1G3lF1Gg1k8=2 1j3S3n-tTW4=3 1yca4VvfcNA=3 2Of0f+3mhhE=1 2PrsbRYyZi4=2 39iV5E1HoCk=1 3GPpjQdAMTw=1 3qxgM4ezETA=1 45Yurf7lZmU=1 4wSze92BhLI=6 5TjaJwkLWxE=3 5bBacGLyLOs=1 62KCwEMmzcM=1 6UgtwV+0zb4=1 6c3rCVE-fTU=4 79WM0NIP4P8=1 8zTFvBIAIN8=4 9BcDykPmo1I=8 9UK1vLZQft4=2 9rAeANT2tyE=1 AU87qNukGi4=2 BpFoboUJoZU=1 CU8m+Qs+HN4=1 D4yla3vx4tY=8 DzES9hQF4f4=1 G-MYv5erXaU=3 GGeRJk1XdWc=1 H2e8t5ScQGc=1 HMnVBVUyajk=2 HoLVWNanBBc=4 IOnSvHzqu6A=6 JTvBflhYazQ=3 KtIXf8La96k=1 L-Q3LEjIbgA=1 LEnn-4ARRJM=2 MBuItvba6z8=1 NNtFaKJbPt0=8 Ou3iL1abvng=37 Pe7m8Y4BZ68=1 Q3VBxCXhUHs=25 SFB48L57OKQ=1 UK2Tl2DWUns=1 UM8rn9hRWrY=1 UM9b9NunSrE=2 UTXzJbWhhTE=1 Um-jkyDy9rI=1 VhLnEiTuuWo=32 WNyjOWq8-Vk=2 YQ0navp+YIc=6 ZT4ODD2Ts9o=0 aCfbPzyjU90=4 ciYlptMdvhc=1 cmo1RIYva9o=1 cwbxjPSJ7WQ=2 d0vezuPZxtg=1 dKeshzt29G4=5 dkBx0YqFQ+Y=1 eLdDw6l0-bU=6 eSgYzXvTPQI=1 f7uOxY9mM1U=60 fTx66l5iWIA=3 gO98NioN5FM=1 gSRnr79F8tQ=8 gyVTZWyySpM=2 hcuQgD53UxM=17 i6bfTi13ApA=2 j4ViWNHEgww=4 k8rLr8nq-hE=2 kAPt2J4U3v8=4 lYz7vbL4W4A=1 nR6xhiFsOoc=1 nsYoNRywwNg=1 oFb2hMcoJa4=2 pO96TwzOm5E=1 prHBgnJWBb4=1 qSleeVC6lwI=1 rTXw65xmLIA=1 rVjRvHJ0X6c=2 rzsfUFKB+L8=1 tU5e3f9gSiU=1 tn3VlD0hG60=2 u8BkdHb1+Po=2 vSMAm3cxYTY=4 wDAAPuG6uN4=1 wLlFkwG9UcQ=2 wW+k21cmbwQ=4 xDPdCurOujQ=10 yuO+lNrj+Do=1 zmw2uVSEj94=4
 == fakelib\libSceAgc.sprx  module=libSceAgc
    build: W:/Build/J03718109/sys/build/integration/orbis-build_0005c/package/target/phase2/usermode/src/graphics/gen2/agc/prx/libSceAgc.prx
-   reference=82, provided=4, stubbed=9, patched=0, data=2, missing=0, unknown=0
+   reference=82, provided=4, stubbed=0, forced=9, patched=0, data=2, missing=0, unknown=0
    libSceShaderTranscode_minimal:
-      stubbed  prHBgnJWBb4  prHBgnJWBb4  (GOT 0x28c98)
-      stubbed  rzsfUFKB+L8  sceShaderTranscodeGetCode  (GOT 0x28d08)
-      stubbed  wDAAPuG6uN4  sceShaderTranscodeGetHeader  (GOT 0x28d10)
-      stubbed  79WM0NIP4P8  sceShaderTranscodeIsRequired  (GOT 0x28c40)
-      stubbed  Pe7m8Y4BZ68  sceShaderTranscodeWithAllocator  (GOT 0x28d00)
+      forced   prHBgnJWBb4  prHBgnJWBb4  (GOT 0x28c98)
+      forced   rzsfUFKB+L8  sceShaderTranscodeGetCode  (GOT 0x28d08)
+      forced   wDAAPuG6uN4  sceShaderTranscodeGetHeader  (GOT 0x28d10)
+      forced   79WM0NIP4P8  sceShaderTranscodeIsRequired  (GOT 0x28c40)
+      forced   Pe7m8Y4BZ68  sceShaderTranscodeWithAllocator  (GOT 0x28d00)
    libkernel:
-      stubbed  ciYlptMdvhc  ciYlptMdvhc  (GOT 0x28ba0)
-      stubbed  eSgYzXvTPQI  eSgYzXvTPQI  (GOT 0x28b98)
-      stubbed  qSleeVC6lwI  qSleeVC6lwI  (GOT 0x28af0)
-      stubbed  tU5e3f9gSiU  sceKernelIsTrinityMode  (GOT 0x28b70)
+      forced   ciYlptMdvhc  ciYlptMdvhc  (GOT 0x28ba0)
+      forced   eSgYzXvTPQI  eSgYzXvTPQI  (GOT 0x28b98)
+      forced   qSleeVC6lwI  qSleeVC6lwI  (GOT 0x28af0)
+      forced   tU5e3f9gSiU  sceKernelIsTrinityMode  (GOT 0x28b70)
 == fakelib/libSceAgcDriver.sprx
-lower 7a7d9b10ced9a8a028e90bb0bdb2d5e7ff13850b2ecbe4b33ae4551f546f51f0
-exact 7a7d9b10ced9a8a028e90bb0bdb2d5e7ff13850b2ecbe4b33ae4551f546f51f0
+lower 47ff1f1688164cc0c0ef5e30be7ec6b3479ceea07b885961faf02678b338a0dd
+exact 47ff1f1688164cc0c0ef5e30be7ec6b3479ceea07b885961faf02678b338a0dd
 refs -W4xI5aVI8w=7 0vTn5IDMU9A=1 2Of0f+3mhhE=2 2sWzhYqFH4E=5 3BytPOQgVKc=3 7VSZJxxcTL8=1 8zTFvBIAIN8=19 9BcDykPmo1I=3 9UK1vLZQft4=11 BPE9s9vQQXo=3 D4yla3vx4tY=2 DGMG3JshrZU=10 G-MYv5erXaU=1 H2e8t5ScQGc=1 H8AprKeZtNg=62 HoLVWNanBBc=1 LzoM-wVLJDE=2 MpxhMh8QFro=27 NFLs+dRJGNg=2 NcaWUxfMNIQ=1 OMDRKKAZ8I4=1 OcQybQejHEY=3 Ou3iL1abvng=97 PfccT7qURYE=64 Q3VBxCXhUHs=5 RW-GEfpnsqg=2 SfQIZcqvvms=2 WB66evu8bsU=3 WslcK1FQcGI=1 YQ0navp+YIc=3 ZT4ODD2Ts9o=0 aj7wRdAWFeM=1 bY-PO6JhzhQ=2 cmo1RIYva9o=4 d08RCvZNNR8=1 f7uOxY9mM1U=121 fJnpuVVBbKk=3 fffwELXNVFA=39 fgxnMeTNUtY=2 gQX+4GDQjpM=3 hcuQgD53UxM=3 iCzcQSfuX-E=2 j8xl+92A0q4=1 kc+LEEIYakc=9 kg4x8Prhfxw=1 kwGyyjohI50=2 lYDzBVE5mZs=2 n1-v6FgU7MQ=1 pO96TwzOm5E=1 rTXw65xmLIA=1 tIhsqj0qsFE=6 tZ2yplY8MBY=1 tn3VlD0hG60=11 vSMAm3cxYTY=2 wuCroIGjt2g=3 yu17wG8L5FI=1
 == fakelib\libSceAgcDriver.sprx  module=libSceAgcDriver
    build: W:/Build/J03718109/sys/build/integration/orbis-build_0005c/package/target/phase2/usermode/src/graphics/gen2/agc_driver/libSceAgcDriver.prx
-   reference=48, provided=0, stubbed=4, patched=0, data=4, missing=0, unknown=0
+   reference=48, provided=0, stubbed=0, forced=4, patched=0, data=4, missing=0, unknown=0
    libSceDbgThreadSanitizer_for_agc_driver:
-      stubbed  iCzcQSfuX-E  iCzcQSfuX-E  (GOT 0x140e8)
+      forced   iCzcQSfuX-E  iCzcQSfuX-E  (GOT 0x140e8)
    libSceLibcInternal:
-      stubbed  d08RCvZNNR8  _ZNSt8__sce_v214_Xlength_errorEPKc  (GOT 0x141e8)
+      forced   d08RCvZNNR8  _ZNSt8__sce_v214_Xlength_errorEPKc  (GOT 0x141e8)
    libkernel:
-      stubbed  aj7wRdAWFeM  aj7wRdAWFeM  (GOT 0x14218)
-      stubbed  yu17wG8L5FI  sceKernelHasTrinityMode  (GOT 0x14270)
+      forced   aj7wRdAWFeM  aj7wRdAWFeM  (GOT 0x14218)
+      forced   yu17wG8L5FI  sceKernelHasTrinityMode  (GOT 0x14270)
 == fakelib/libSceAmpr.sprx
 lower 68c6606b224678345e7f11e7ac52ef9f3153535b738dbfb9b8833021228eca79
 exact 68c6606b224678345e7f11e7ac52ef9f3153535b738dbfb9b8833021228eca79
 refs +r3rMFwItV4=4 0ers1N4C9CY=0 1G3lF1Gg1k8=1 1jfXLRVzisc=81 1tKyG7RlMJo=2 1yXS+iqB3wQ=1 2Of0f+3mhhE=2 2SKEx6bSq-4=0 2Tb92quprl0=14 2zLw9GwrtyI=0 3GPpjQdAMTw=5 3GqBPApWgPY=1 3M8jROcYzjs=0 3ZOA8Pf6Jho=0 4R6-OvI2cEA=0 4wSze92BhLI=3 52NcYU9+lEo=0 57ZK+ODEXWY=0 5b3ZqlxJ+WE=0 6UgtwV+0zb4=1 8zTFvBIAIN8=36 9BcDykPmo1I=39 9UK1vLZQft4=52 9WK-vhNXimw=3 9bfdLIyuwCY=0 9rAeANT2tyE=5 ASoW5WE-UPo=0 AUXVxWeJU-A=0 ApkYaHb8Sek=0 B4xIPqeRONI=0 BNowx2l588E=1 BQQniolj9tQ=0 BmMjYxmew1w=4 C+Khtbbx2g8=0 C0f7TJcbfac=0 D0OdFMjp46I=0 F6e0kwo4cnk=1 Ft3EtsZzAoY=1 G-NhAZUNlwc=0 G5tFhAqrCTg=0 GBUY7ywdULE=1 H2e8t5ScQGc=1 H59T7YvKI5M=1 HYzkJb41fcE=0 IWIBBdTHit4=0 JGgj7Uvrl+A=30 L-Q3LEjIbgA=0 L1SBTkC+Cvw=19 LJDwdSNTnDg=1 LwG8g3niqwA=16 MCdZ06CSUOc=1 NcaWUxfMNIQ=0 Omr9X+YmT7I=0 Ou3iL1abvng=145 Q2V+iqvjgC0=1 Q3VBxCXhUHs=26 QBi7HCK03hw=33 QvsZxomvUHs=1 QzB4O+bJQyA=0 R-tyYMpYaxY=0 R74tt43xP6k=0 TyzsoH-vx8o=3 UK2Tl2DWUns=22 VB-BtuIW8Xc=0 VHCS3rCd0PM=0 VZPXaaxp9xc=0 Vzl66WmfLvk=0 W0Hpm2X0uPE=1 WDszmSbWuDk=0 WKAXJ4XBPQ4=6 WT-5NKy42fw=0 WvEu7yl3Ivg=0 YN878uKRBbE=0 aI+OeCz8xrQ=1 ahy8NSXrSbs=3 bBfz7kMF2Ho=0 bMmid3pfyjo=0 bt3CTBKmGyI=1 cG3t15OK4Ow=0 cmo1RIYva9o=6 eE4Szl8sil8=0 eLdDw6l0-bU=2 eV9wAD2riIA=0 eYAh2vlCY-U=0 f7uOxY9mM1U=211 fgxnMeTNUtY=5 fzyMKs9kim0=0 g+PZd2hiacg=1 gEpBkcwxUjw=0 hrEIwWDKm-w=0 i3HWvW35jao=0 j2AIqSqJP0w=2 j4ViWNHEgww=12 jpFjmgAC5AE=0 kBJzF8x4SyE=0 kBwCPsYX-m4=2 kDh-NfxgMtE=17 lXT0m3P-vs4=1 mL8NDH86iQI=0 nu4a0-arQis=1 o7O4z3jwKzo=1 onNY9Byn-W8=1 pO96TwzOm5E=0 qvMUCyyaCSI=0 rm5-jOxSZzQ=0 rqwFKI4PAiM=0 sJrF-d2uL0Y=0 tNaDjIbVOwc=0 tn3VlD0hG60=57 uWyW3v98sU4=0 vSMAm3cxYTY=0 vYU8P9Td2Zo=1 w5fcCG+t31g=0
 == fakelib\libSceAmpr.sprx  module=libSceAmpr
    build: C:/dev/ps5/ampr_emu/out/Prospero_ReleaseHooks/libSceAmpr.prx
-   reference=112, provided=0, stubbed=0, patched=0, data=1, missing=0, unknown=0
+   reference=112, provided=0, stubbed=0, forced=0, patched=0, data=1, missing=0, unknown=0
 == fakelib/libScePlayGo.sprx
 lower b7c274d2afe6c63bd88a68ede83946f81e6d5a2d10b132843af5933cd48b0ee0
 exact b7c274d2afe6c63bd88a68ede83946f81e6d5a2d10b132843af5933cd48b0ee0
 refs 8zTFvBIAIN8=9 9BcDykPmo1I=6 H2e8t5ScQGc=1 KdP-nULpuGw=2 Ou3iL1abvng=2 aZK8lNei-Qw=1 f7uOxY9mM1U=2 fffwELXNVFA=1 ob5xAW4ln-0=1 pDBDcY6uLSA=1 uodLYyUip20=4 xeYO4u7uyJ0=4 zlfEH8FmyUA=3
 == fakelib\libScePlayGo.sprx  module=libScePlayGo
    build: C:/dev/ps5/playgo/./out/libScePlayGo.prx
-   reference=12, provided=0, stubbed=0, patched=0, data=1, missing=0, unknown=0
+   reference=12, provided=0, stubbed=0, forced=0, patched=0, data=1, missing=0, unknown=0
 == fakelib/libScePsml.sprx
-lower 9b7a11334c7239d65cbc4f7eb0944cf77748bf4b6a584f79d3f7ff7f533f55b1
-exact 40818f056d642eb0d5635732bd52167b4a966f6a8aaa3ce283f0ee8f737c4e16
+lower 5daa63e2e6ec078850646fbd75663e67191b5eea7b57fdab729feff096ab7781
+exact 62980aa55bcdb5b5518e9c7f877041a22af85136b947b2a5c333739e5cd1c940
 refs +P6FRGH4LfA=34 +kSrjIVxKFE=1 +u6dKSLWM2o=1 -HOOCn0JY48=1 -KRzWekV120=1 -RnpfpxIhec=1 -vc-xL+G8u0=4 -vnlTPPXPrw=1 03RZmELWWzw=1 0ZOG0jc9nRg=1 0fWWK5uG9rQ=1 0hlfW1O4Aa4=2 0o3VDdtA6nM=1 1-gUn1PI4Sw=1 1D0H2KNjshE=6 1DeUNpRIDDA=1 1cKlQv7Kvmg=1 1jfXLRVzisc=1 1q1titRBL6o=1 1rZSWUv1IRc=1 1tB0xkLNjcw=1 23CPPI1tyBY=1 23LRUSvYu1M=1 2JtWUUiYBXs=1 2X5agFjKxMc=1 2ccJz9LQI+w=1 2sWzhYqFH4E=30 3-zCDXatSU4=1 3GPpjQdAMTw=1 3KDcnM3lrcU=1 3PxvyV7qPPQ=0 3ZWa3AoyWZQ=1 3ZotGOwzi9k=1 43WJ08sSugE=1 45Yurf7lZmU=2 4ITMYcbipA0=1 4R6-OvI2cEA=1 4bp9gcNLwMI=1 5+FD4VpX+nw=1 57ZK+ODEXWY=1 57labkp+rSQ=1 5TjaJwkLWxE=1 5l3IfCFJxBs=1 5qXct3c1skg=1 6DFuRKT4C9w=1 6UgtwV+0zb4=1 6ee9Hd3EWXQ=1 6lNcCp+fxi4=1 6mFxkVqdmbQ=1 6nths4DHNrs=1 77z+OH5zp5I=1 7Wa3aeJgeVU=2 7nOoijNPvEU=2 7toV+elXqNM=1 8Kly1JrJUlw=1 8N2tmT3jmC8=1 8zTFvBIAIN8=102 9Qe7XFSQ4Lk=1 9S4noWrUI0s=1 9nf8joUTSaQ=9 9rAeANT2tyE=1 AFIh8SQkYlQ=1 AOLcoIkQDgM=1 Abendgtz+3o=1 B+aG9DUnTKA=1 BIPexNBSGog=1 BYcSvEsINWU=1 BfBDZGbti7A=1 C4l9fB17t8w=1 CbQh3DKMSno=1 CtB+A9-VxO0=1 D0OdFMjp46I=1 D9sr1xGUriE=1 DwICrVxerkY=1 EIyErVBW9QI=3 EJBA4dbmvfg=1 EvS9U4rxAQk=1 F0Y42t-3e18=1 F0ZXt5q0ZTA=1 F6e0kwo4cnk=1 F8NLhWvFemI=1 FcgdDM3MB+k=1 FneFypEDRgY=1 FuVbkyKlf+s=1 G0jrLdvEqDw=2 GBCh3zCihoU=1 GGeRJk1XdWc=1 GPbUp9jXQa8=1 GXBlM-ekzrI=2 H2e8t5ScQGc=1 H6vHS5cidSA=1 H7uZqCoNuWk=1 H8AprKeZtNg=8 HFLNP4R4Elc=1 HHXmPak83kQ=1 HoLVWNanBBc=1 ICkECTBxrMw=1 Ikfdt-rIqCE=2 IxYiarKlXxM=1 J8YCgfKAMQs=1 JGfTMBOdUJo=4 JOWmDrl+j20=1 JQc0956gCf0=1 JrtiDtKeS38=1 K+YIrBadUlc=1 K2mciNVxUCE=1 KT-hTp-Ch14=1 KjPeVduz6jU=1 L1SBTkC+Cvw=3 LFSPFmGc9Hg=2 LHFXRrlTPD8=1 LepGrgk77sM=1 Lkf86B98qPc=1 LtTouSCZjHM=1 M0ttm8h7SKA=1 M9yBzRKkjPc=1 MDLD5Ly94Xk=1 MLWl90SFWNE=2 MMlmJAL7N5w=1 MUjC4lbHrK4=2 MWiElSNE8j8=1 MlEw1feXcjg=1 MmytiDdoGBA=1 MpxhMh8QFro=13 N7M3+N-sBCw=1 NFLs+dRJGNg=4 NKIzURsgV7I=1 NL836gOLANs=3 NcaWUxfMNIQ=2 NghWEUXp1qM=1 ORWsxIbk4TE=1 Ou3iL1abvng=274 P1CugZ99Uzc=1 PjS5uASwcV8=1 PxKWV2fVAps=1 Q2V+iqvjgC0=2 Q3VBxCXhUHs=101 Q8pvJimUWis=7 QIXCsbipds0=1 QhCbS4X9Rl8=1 QhPDD513V0w=1 Qrj4c+61z4A=1 Rlnw-UcmA5k=1 Rlx+bykm0r0=1 RmaJwLtc8rY=3 SCoAN5fYlUM=1 ShHKOkWgZRM=1 T6xuVw0KUJo=1 T9fjQIINoeE=1 TGEZzUWLbrc=1 TRO721eVt4g=1 TdAc0h4iomU=1 U9ueyEhSkF4=1 UQGTw4xRlcM=1 UZbQjYAwwXM=1 V++UgBtQhn0=2 VEGu4dixjUg=1 VOMSpd9+vxU=1 VhLnEiTuuWo=4 VmW0Tdpy420=1 W0WEyog0f74=1 W5z4eZrjEas=1 WmAc2MEj6Io=1 WrdP9Zxx3lQ=1 X-Nm5KLREeg=1 XKKuA6VkSRc=1 XN+Iuu7XsM8=1 XP6c8M4G+fc=1 Y-5vneiBtzk=1 Y3ymLfZ1384=1 YNzNkJzYqEg=7 YQ0navp+YIc=21 YUeqkyT7mEQ=1 YWTKOju587o=1 YZk9sHO0yNg=1 Ygv0S+Hi+hA=1 YkwlupG-S4E=1 Yw0jKSqop+E=1 Z+vcX3rnECg=1 ZE6RNL+eLbk=2 ZLJk9r2+2Aw=1 ZT4ODD2Ts9o=0 ZvwO9euwYzc=1 a2d1iefnHTk=1 aFxknk3hTog=1 aJf+j5yntiU=3 aML18Z0J0t0=1 aP1Ki9G3++4=1 aesyjrHVWy4=6 b-oySn+G2tE=1 b5u0Jzm8TF8=1 bRPUrNROyOI=1 bbFueFP+J4k=3 bxGoVxpdSPQ=1 cFazmnXpJOE=1 cQke9UuBQOk=2 ca4KPvp0qLQ=1 cdDRpqcFGbU=1 cpCILPya5Zk=1 cxPZ4Wgvdj8=1 d-6uF9sZDIU=1 d08RCvZNNR8=1 d0vezuPZxtg=2 d4NZIlguzv0=1 d7xu4QDJw8Q=1 da1Sm8-QDoU=1 dbOlWdppb4o=2 dhK16CKwhQg=1 dkBx0YqFQ+Y=2 dolOmWH+huQ=1 e1DFTg+Sd8U=1 eAy8eGNsCuU=1 eCjKaqeeQ5s=1 eLdDw6l0-bU=3 eWaWyFegzgQ=1 eZ4+17OQz4Q=1 ebixW91gpPw=1 emP3ckeS2uo=1 ewobAQeMo5k=1 f3dg2CSgRKY=1 f7uOxY9mM1U=414 fJnpuVVBbKk=36 fPSCdQxgpSw=1 fRG-JOH5+sI=1 fYWVVDKZOCk=1 fd5Bp5tGTgo=1 fffwELXNVFA=13 fzyMKs9kim0=1 g0VTBxfJyu0=2 gO98NioN5FM=7 gQX+4GDQjpM=2 gQkqkLttcpw=1 gntpWkgb4sQ=1 gtvWv7DEKD4=2 gwAf8VMkXS0=1 h8GwqPFbu6I=1 hEK26Wdny6s=1 hFQ9pUxoLQ4=2 hL7C0IRpWZI=1 hcIxS8pmXF4=1 hcuQgD53UxM=78 hsi9drzHR2k=2 htn36gPnBk4=1 hvUfkUIQcOE=1 i1jyy49AjXU=2 idlaArvdXEs=1 j3EtxFkSIhQ=1 j4ViWNHEgww=8 j4emHHndCPY=1 jt3pl7EN17o=2 k-JpyR2dYAM=1 k3GhuSNmBLU=1 kA-TdiOCsaY=1 kALvdgEv5ME=12 kBJzF8x4SyE=1 kUlvghKs-mA=1 kn0yiYeExgA=1 l4fM9K-Lyks=1 lA94ZgT+vMM=1 lYDzBVE5mZs=37 lbB+UlZqVG0=28 ls4jfY576lw=1 mJ7aghmgvfc=1 mQfUoU5-d1g=2 mR9j7+SfM34=1 mStuvI0zOtc=1 mXn+K9E-wOA=1 mljzuGDZRQ4=1 ms1xVoZ-Vwc=1 n2fD4A+pb+g=1 n485EBnIWmk=1 n8vgpaQg6dA=1 nCUgItdN2ms=1 nNlUtdDDvZ0=1 onNY9Byn-W8=1 opR1JeJZCBU=1 ou16V5hh5sg=1 oz6zQq1JwCE=1 ozKzBP4aki4=1 p9tI+yTvx68=1 pFLArOT53+w=1 pWLG7WOpVcw=1 pYoKs3lPy88=1 pxx-GoOSdw4=1 q0F6yS-rCms=2 q4VuU-QsLOE=2 q88lQ+GP5Yk=1 qMlfB1ZhMDc=1 qj7QZpgr9Uw=1 qyM2bxYFPAk=1 qzMN2XKGA4k=1 r98I08t+LOg=1 rDMyAf1Jhug=1 rI9lNAXPMIw=1 rP5xLdOf26k=2 rQFVBXp-Cxg=28 rUuVjyR+Rd4=1 rVOmPz2RBlg=2 s+VGAMDQ0AQ=1 szG7hz2yEhA=2 t1vNu082-jM=1 t7PlZ9nt5Lc=1 tIhsqj0qsFE=4 tSBxhAPyytQ=1 tU5e3f9gSiU=1 taOj6NIm7DM=1 tmy-+rBpspY=1 tyHd3P7oDrU=0 u2T2DiA5hRI=1 uJziRsODk1c=1 uZW-mqsxkrM=2 uodLYyUip20=4 vLrBL8DQiz8=1 vRoArM9zaIk=1 vSMAm3cxYTY=2 vcmNN+AAXnY=1 vieBRwlh1Lw=1 vuSXe69VILM=2 vz+pg2zdopI=1 w1KFAHVqpaU=2 w4-d0n60hdo=1 w6Dj1VJt5qY=1 w8HVkEeXPv8=1 wRbq6ZjNop4=1 whb1RL7K4Ss=1 wr23dPKyWc0=3 wuAQt-j+p4o=2 xAeBOa0A3kk=1 xE51MX+B2G4=1 xEszJVGpybs=7 xSAR0LTcRKM=1 y5K5tPktiL8=1 yUBESvCCJ4I=1 yheJGN-ay+A=1 ypVBz4uPKcQ=1 z2duB-hHQSM=1 zARR5aCmkoY=1 zfcxg-ewMK8=1 zg6u-N6Otxs=1 ziVA3whp3p4=1
 == fakelib\libScePsml.sprx  module=libScePsml
    build: W:/Build/J03718109/sys/internal/usermode/src/psml/Prospero_Game_PRX_psml_prx/libScePsml.prx
-   reference=284, provided=22, stubbed=29, patched=0, data=5, missing=0, unknown=0
+   reference=284, provided=22, stubbed=0, forced=29, patched=0, data=5, missing=0, unknown=0
    libSceLibcInternal:
-      stubbed  gwAf8VMkXS0  _Getctype  (GOT 0xf0640)
-      stubbed  HHXmPak83kQ  _Getcvt  (GOT 0xf0638)
-      stubbed  gntpWkgb4sQ  _Tolower  (GOT 0xf0658)
-      stubbed  77z+OH5zp5I  _Toupper  (GOT 0xf0660)
-      stubbed  3PxvyV7qPPQ  _ZNKSt13__sce_cxxvers16_Error_exception4whatEv  (GOT 0xf00e8)
-      stubbed  EvS9U4rxAQk  _ZNSt13__sce_cxxvers16_Error_exceptionC2EPKc  (GOT 0xf05b8)
-      stubbed  a2d1iefnHTk  _ZNSt13__sce_cxxvers16_Error_exceptionD2Ev  (GOT 0xf05a8)
-      stubbed  4bp9gcNLwMI  _ZNSt8__sce_v211_Mtx_unlockEPP13pthread_mutex  (GOT 0xf0570)
-      stubbed  XP6c8M4G+fc  _ZNSt8__sce_v212_Mtx_destroyEPP13pthread_mutex  (GOT 0xf0588)
-      stubbed  4ITMYcbipA0  _ZNSt8__sce_v213_Syserror_mapEi  (GOT 0xf05b0)
-      stubbed  d08RCvZNNR8  _ZNSt8__sce_v214_Xlength_errorEPKc  (GOT 0xf0590)
-      stubbed  bRPUrNROyOI  _ZNSt8__sce_v214_Xout_of_rangeEPKc  (GOT 0xf0668)
-      stubbed  aFxknk3hTog  _ZNSt8__sce_v215_Facet_RegisterEPNS_11_Facet_baseE  (GOT 0xf05e0)
-      stubbed  Rlnw-UcmA5k  _ZNSt8__sce_v215_Xruntime_errorEPKc  (GOT 0xf05f0)
-      stubbed  ShHKOkWgZRM  _ZNSt8__sce_v216_Throw_Cpp_errorEi  (GOT 0xf0578)
-      stubbed  9Qe7XFSQ4Lk  _ZNSt8__sce_v24coutE  (GOT 0xf0408)
-      stubbed  MmytiDdoGBA  _ZNSt8__sce_v25ctypeIcE2idE  (GOT 0xf0430)
-      stubbed  xE51MX+B2G4  _ZNSt8__sce_v26locale16_GetgloballocaleEv  (GOT 0xf05d8)
-      stubbed  EIyErVBW9QI  _ZNSt8__sce_v26locale2id7_Id_cntE  (GOT 0xf0420)
-      stubbed  3ZotGOwzi9k  _ZNSt8__sce_v27num_putIcNS_19ostreambuf_iteratorIcNS_11char_traitsIcEEEEE2idE  (GOT 0xf0418)
-      stubbed  K+YIrBadUlc  _ZNSt8__sce_v28_Locinfo13_Locinfo_ctorEPS0_PKc  (GOT 0xf05f8)
-      stubbed  taOj6NIm7DM  _ZNSt8__sce_v28_Locinfo13_Locinfo_dtorEPS0_  (GOT 0xf0600)
-      stubbed  HFLNP4R4Elc  _ZNSt8__sce_v28ios_base6_ThrowERKNS0_7failureE  (GOT 0xf05a0)
-      stubbed  5+FD4VpX+nw  _ZNSt8__sce_v28numpunctIcE2idE  (GOT 0xf0428)
-      stubbed  TdAc0h4iomU  _ZNSt8__sce_v29_Mtx_initEPP13pthread_mutexi  (GOT 0xf0550)
-      stubbed  5qXct3c1skg  _ZNSt8__sce_v29_Mtx_lockEPP13pthread_mutex  (GOT 0xf0568)
-      stubbed  1cKlQv7Kvmg  _ZSt6_ThrowRKSt20bad_array_new_length  (GOT 0xf0580)
+      forced   gwAf8VMkXS0  _Getctype  (GOT 0xf0640)
+      forced   HHXmPak83kQ  _Getcvt  (GOT 0xf0638)
+      forced   gntpWkgb4sQ  _Tolower  (GOT 0xf0658)
+      forced   77z+OH5zp5I  _Toupper  (GOT 0xf0660)
+      forced   3PxvyV7qPPQ  _ZNKSt13__sce_cxxvers16_Error_exception4whatEv  (GOT 0xf00e8)
+      forced   EvS9U4rxAQk  _ZNSt13__sce_cxxvers16_Error_exceptionC2EPKc  (GOT 0xf05b8)
+      forced   a2d1iefnHTk  _ZNSt13__sce_cxxvers16_Error_exceptionD2Ev  (GOT 0xf05a8)
+      forced   4bp9gcNLwMI  _ZNSt8__sce_v211_Mtx_unlockEPP13pthread_mutex  (GOT 0xf0570)
+      forced   XP6c8M4G+fc  _ZNSt8__sce_v212_Mtx_destroyEPP13pthread_mutex  (GOT 0xf0588)
+      forced   4ITMYcbipA0  _ZNSt8__sce_v213_Syserror_mapEi  (GOT 0xf05b0)
+      forced   d08RCvZNNR8  _ZNSt8__sce_v214_Xlength_errorEPKc  (GOT 0xf0590)
+      forced   bRPUrNROyOI  _ZNSt8__sce_v214_Xout_of_rangeEPKc  (GOT 0xf0668)
+      forced   aFxknk3hTog  _ZNSt8__sce_v215_Facet_RegisterEPNS_11_Facet_baseE  (GOT 0xf05e0)
+      forced   Rlnw-UcmA5k  _ZNSt8__sce_v215_Xruntime_errorEPKc  (GOT 0xf05f0)
+      forced   ShHKOkWgZRM  _ZNSt8__sce_v216_Throw_Cpp_errorEi  (GOT 0xf0578)
+      forced   9Qe7XFSQ4Lk  _ZNSt8__sce_v24coutE  (GOT 0xf0408)
+      forced   MmytiDdoGBA  _ZNSt8__sce_v25ctypeIcE2idE  (GOT 0xf0430)
+      forced   xE51MX+B2G4  _ZNSt8__sce_v26locale16_GetgloballocaleEv  (GOT 0xf05d8)
+      forced   EIyErVBW9QI  _ZNSt8__sce_v26locale2id7_Id_cntE  (GOT 0xf0420)
+      forced   3ZotGOwzi9k  _ZNSt8__sce_v27num_putIcNS_19ostreambuf_iteratorIcNS_11char_traitsIcEEEEE2idE  (GOT 0xf0418)
+      forced   K+YIrBadUlc  _ZNSt8__sce_v28_Locinfo13_Locinfo_ctorEPS0_PKc  (GOT 0xf05f8)
+      forced   taOj6NIm7DM  _ZNSt8__sce_v28_Locinfo13_Locinfo_dtorEPS0_  (GOT 0xf0600)
+      forced   HFLNP4R4Elc  _ZNSt8__sce_v28ios_base6_ThrowERKNS0_7failureE  (GOT 0xf05a0)
+      forced   5+FD4VpX+nw  _ZNSt8__sce_v28numpunctIcE2idE  (GOT 0xf0428)
+      forced   TdAc0h4iomU  _ZNSt8__sce_v29_Mtx_initEPP13pthread_mutexi  (GOT 0xf0550)
+      forced   5qXct3c1skg  _ZNSt8__sce_v29_Mtx_lockEPP13pthread_mutex  (GOT 0xf0568)
+      forced   1cKlQv7Kvmg  _ZSt6_ThrowRKSt20bad_array_new_length  (GOT 0xf0580)
    libkernel:
-      stubbed  d7xu4QDJw8Q  sceKernelGetAppInfo2  (GOT 0xf0760)
-      stubbed  tU5e3f9gSiU  sceKernelIsTrinityMode  (GOT 0xf0750)
+      forced   d7xu4QDJw8Q  sceKernelGetAppInfo2  (GOT 0xf0760)
+      forced   tU5e3f9gSiU  sceKernelIsTrinityMode  (GOT 0xf0750)
 == sce_module/libc.prx
-lower f5ec61e965a9f1e2ce01c4124456fc937a3e425eda8693d7a5b9d56c27251393
-exact f5ec61e965a9f1e2ce01c4124456fc937a3e425eda8693d7a5b9d56c27251393
+lower 810cc48d3c7912d6d77334cfaadc53001f5a6c893aa982cb25d4ec140109c7ef
+exact 810cc48d3c7912d6d77334cfaadc53001f5a6c893aa982cb25d4ec140109c7ef
 refs +BzXYkqYeLE=1 +L98PIbGttk=2 -YTW+qXc3CQ=2 -o5uEDpN+oY=4 0Cq8ipKr9n0=1 0NTHN1NKONI=3 1-LFLmRFxxM=1 14bOACANTBo=4 1G3lF1Gg1k8=1 1jfXLRVzisc=1 2Of0f+3mhhE=7 2Tb92quprl0=3 2Z+PpY6CaJg=6 3PtV6p3QNX4=4 3k6kx-zOOSQ=1 3kg7rT0NQIs=1 4J2sUJmuHZQ=1 4fU5yvOkVG4=1 4qGrR6eoP9Y=2 52NcYU9+lEo=1 62KCwEMmzcM=9 6ULAa0fq4jA=2 6UgtwV+0zb4=2 6Z83sYWFlA8=2 6c3rCVE-fTU=1 6xVpy0Fdq+I=2 7H0iTOciTLo=6 8+s5BzZjxSg=6 959qrazPIrg=6 9BcDykPmo1I=72 9UK1vLZQft4=21 AUXVxWeJU-A=1 B2n8aDorSH4=2 BB+kb08Tl9A=1 BmMjYxmew1w=2 DRuBt2pvICk=1 DzES9hQF4f4=1 EHsF2i9FXPM=4 EgmLo6EWgso=8 F8bUHwAG284=5 FXPWHNk8Of0=1 Fjc4-n1+y2g=1 FxVZqBAA7ks=1 Hc4CaR6JBL0=1 IWIBBdTHit4=2 IafI2PxcPnQ=2 JGgj7Uvrl+A=2 JaRMy+QcpeU=1 NNtFaKJbPt0=1 NWtTN10cJzE=2 NhpspxdjEKU=3 OMDRKKAZ8I4=9 OQ-dzhlnM28=1 Op8TBGY5KHg=1 Ou3iL1abvng=990 Ox9i0c7L5w0=1 Oy6IpwgtYOk=1 PZQhiiLXRFs=2 PrdHuuDekhY=1 QBi7HCK03hw=4 QvsZxomvUHs=1 RpQJJVKTiFM=1 T72hz6ffq08=2 UK2Tl2DWUns=3 UTXzJbWhhTE=1 VADc3MNQ3cM=1 VAzswvTOCzI=1 WKAXJ4XBPQ4=3 WlyEA-sLDf0=1 XD3mDeybCnk=1 XgVs4jRehcY=2 aI+OeCz8xrQ=15 adh--6nIqTk=1 al3JzFI9MQ0=1 bIHoZCTomsI=1 bnZxYgAFeA0=2 c7ZnT7V1B98=2 cQke9UuBQOk=6 cfwBSQyr5Ys=1 cmo1RIYva9o=6 crb5j7mkk1c=1 dFym5b41JLU=2 djxxOmW6-aw=1 eV9wAD2riIA=13 eXbUSpEaTsA=1 ejekcaNQNq0=4 eoht7mQOCmo=1 f7KBOafysXo=1 f7uOxY9mM1U=1562 fgIsQ10xYVA=2 g+PZd2hiacg=2 geDaqgH9lTg=1 hHlZQUnlxSM=1 iGjsr1WAtI0=2 iMp8QpE+XO4=2 iPtZRWICjrM=1 j2AIqSqJP0w=1 jh+8XiK4LeE=1 kDh-NfxgMtE=3 kbw4UHHSYy0=1 lLMT9vJAck0=1 mkx2fVhNMsg=2 mqdNorrB+gI=1 n88vx3C5nW8=5 nsYoNRywwNg=8 onNY9Byn-W8=2 p5EcQeEeJAE=1 py6L8jiVAN8=2 q2y-wDIVWZA=4 qBS714-Jr3g=1 sIlRvQqsN2Y=4 smWEktiyyG0=7 tB59hFLH3SA=2 tn3VlD0hG60=24 upoVrzMHFeE=2 vNe1w4diLCs=20 x1X76arYMxU=6 yS8U2TGCe1A=2 zE-wXIZjLoM=8
 == sce_module\libc.prx  module=libc
    build: W:/Build/J03701430/sys/internal/usermode/src/libc/Prospero_Release/libc.prx
-   reference=108, provided=0, stubbed=9, patched=0, data=2, missing=0, unknown=0
+   reference=108, provided=0, stubbed=0, forced=9, patched=0, data=2, missing=0, unknown=0
    libSceLibcInternalExt:
-      stubbed  tB59hFLH3SA  _sceLibcInternalForceTlsDestructor  (GOT 0x19e4a0)
-      stubbed  qBS714-Jr3g  _sceLibcInternalThreadAtexit  (GOT 0x19e4f8)
-      stubbed  OQ-dzhlnM28  _sceLibcInternalThreadDtors  (GOT 0x19e4b0)
+      forced   tB59hFLH3SA  _sceLibcInternalForceTlsDestructor  (GOT 0x19e4a0)
+      forced   qBS714-Jr3g  _sceLibcInternalThreadAtexit  (GOT 0x19e4f8)
+      forced   OQ-dzhlnM28  _sceLibcInternalThreadDtors  (GOT 0x19e4b0)
    libkernel:
-      stubbed  Hc4CaR6JBL0  sceKernelSyncOnAddressWait  (GOT 0x19e618)
-      stubbed  XgVs4jRehcY  sceKernelSyncOnAddressWait16  (GOT 0x19e5f8)
-      stubbed  B2n8aDorSH4  sceKernelSyncOnAddressWait32  (GOT 0x19e600)
-      stubbed  PZQhiiLXRFs  sceKernelSyncOnAddressWait64  (GOT 0x19e608)
-      stubbed  dFym5b41JLU  sceKernelSyncOnAddressWait8  (GOT 0x19e5f0)
-      stubbed  q2y-wDIVWZA  sceKernelSyncOnAddressWake  (GOT 0x19e610)
+      forced   Hc4CaR6JBL0  sceKernelSyncOnAddressWait  (GOT 0x19e618)
+      forced   XgVs4jRehcY  sceKernelSyncOnAddressWait16  (GOT 0x19e5f8)
+      forced   B2n8aDorSH4  sceKernelSyncOnAddressWait32  (GOT 0x19e600)
+      forced   PZQhiiLXRFs  sceKernelSyncOnAddressWait64  (GOT 0x19e608)
+      forced   dFym5b41JLU  sceKernelSyncOnAddressWait8  (GOT 0x19e5f0)
+      forced   q2y-wDIVWZA  sceKernelSyncOnAddressWake  (GOT 0x19e610)
 == sce_sys/about/right.sprx
 lower 4aa7083b012069c2f1c896060c21cfe66e177ebe35fff6c512873546ec9cbe4a
 exact 4aa7083b012069c2f1c896060c21cfe66e177ebe35fff6c512873546ec9cbe4a
 refs Ou3iL1abvng=2 cQke9UuBQOk=2 f7uOxY9mM1U=5 mL8NDH86iQI=1
 == sce_sys\about\right.sprx  module=libSceGameRight
    build: F:/PSDEV/ppr/vsh/trunk/misc/game_right/right.prx
-   reference=3, provided=0, stubbed=0, patched=0, data=1, missing=0, unknown=0
+   reference=3, provided=0, stubbed=0, forced=0, patched=0, data=1, missing=0, unknown=0

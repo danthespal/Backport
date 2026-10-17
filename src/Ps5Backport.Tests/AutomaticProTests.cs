@@ -107,6 +107,46 @@ namespace Ps5Backport.Tests
             Assert.DoesNotContain("even if this cook later runs", option.Warning);
         }
 
+        /// <summary>A missing GetOperationMode is derived from the game's own sceKernelIsTrinityMode import (mode 2 | Pro), so a Pro on
+        /// FW 7.00–10.60 reports mode 3 here as it does through IsTrinityMode; opmode_normal stays the fallback without that import.</summary>
+        [Fact]
+        public void OperationModeFallback_CallsIsTrinityModeThroughItsGot()
+        {
+            var fix = new Knowledge(Paths.DataDir).Options["auto_pro"].Fixes["NH6xARDOVv8"];
+            Assert.Equal((Fix.KindStub, "opmode_normal", false), (fix.Kind, fix.Stub, fix.Proven));
+            Assert.Equal(["tU5e3f9gSiU"], fix.Insns.Where(i => i.CallNid.Length > 0).Select(i => i.CallNid));
+            Assert.Equal("c3", fix.Insns[^1].Hex);
+        }
+
+        /// <summary>Silksong's eboot imports both queries: its GetOperationMode GOT slot is pre-filled with the derived chain, which
+        /// calls through IsTrinityMode's own GOT slot (itself pre-filled with ret0 for FW 4).</summary>
+        [Fact]
+        [Trait("Lane", "Private")]
+        public void Cook_DerivesOperationModeFromIsTrinityMode()
+        {
+            string output = Samples.Temp("auto-pro-derived");
+            try
+            {
+                var result = Samples.Backport(Samples.Backports("PPSA12544", "default"), output, "4", Repo.Need("firmware_db"), options: ["auto_pro"]);
+                var stubs = result.Modules.Single(m => m.Path == "eboot.bin").StubbedNow;
+                Assert.Equal("derived from sceKernelIsTrinityMode", stubs.Single(s => s.Nid == "NH6xARDOVv8").Stub);
+                Assert.Equal("ret0", stubs.Single(s => s.Nid == "tU5e3f9gSiU").Stub);
+
+                var elf = new SceElf(Self.Unwrap(File.ReadAllBytes(Path.Combine(output, "eboot.bin"))));
+                var imports = elf.Imports().Where(i => i.Plt).ToDictionary(i => i.Nid);
+                var fix = new Knowledge(Paths.DataDir).Options["auto_pro"].Fixes["NH6xARDOVv8"];
+                var (executed, called, jumped) = Samples.Trace(elf, imports["NH6xARDOVv8"], fix, start: elf.ReadU64(imports["NH6xARDOVv8"].GotVaddr));
+                Assert.Equal(fix.Insns.Select(i => i.CallGot ? Insn.CallGotToken : i.Hex), executed);
+                Assert.Equal(imports["tU5e3f9gSiU"].GotVaddr, called);
+                Assert.Null(jumped);
+            }
+            finally
+            {
+                if (Directory.Exists(output))
+                    Directory.Delete(output, true);
+            }
+        }
+
         [Fact]
         public void Gui_ConsoleModesAreMutuallyExclusive()
         {

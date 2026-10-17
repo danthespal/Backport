@@ -22,6 +22,8 @@
     <PackageReference Include="Avalonia.Headless" Version="12.1.3" />
     <PackageReference Include="Avalonia.HarfBuzz" Version="12.1.3" />
     <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.2" />
+    <!-- layered graph layout for the code graph page -->
+    <PackageReference Include="AutomaticGraphLayout" Version="1.1.12" />
   </ItemGroup>
 
   <Import Project="..\..\build\RuntimeAssets.targets" />

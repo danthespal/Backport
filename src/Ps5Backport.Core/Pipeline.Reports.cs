@@ -40,6 +40,14 @@ public static partial class Pipeline
             lines.Add($"  NOTE: {laterMissing} import(s) resolve on FW {r.TargetFirmware} but are not exported by a later firmware (missing-later lines): the same cook fails on that console if they are called");
         foreach (var note in (JsonArray)DeploymentReport(r)["notes"]!)
             lines.Add("  deployment: " + note!.GetValue<string>());
+        foreach (var e in r.ConsoleEvidence)
+        {
+            lines.Add($"  console  {e.Item}  {e.Summary}");
+            foreach (string failure in e.Failures)
+                lines.Add($"  WARNING: console evidence: {e.Item} failed on {failure}");
+            if (e.Candidate)
+                lines.Add($"  NOTE: promotion candidate: {e.Item} passed on every firmware band with no failure (mark proven or make default: your decision)");
+        }
         foreach (var m in r.Modules)
         {
             lines.Add("");
@@ -81,8 +89,28 @@ public static partial class Pipeline
         OptionVerdict.ConsoleChoice => "console-choice", _ => v.ToString().ToLowerInvariant(),
     };
 
-    /// <summary>The JSON report.</summary>
-    public static JsonObject ToJson(GameResult r) => new()
+    /// <summary>The JSON report; "console_evidence" only when the run was given console results.</summary>
+    public static JsonObject ToJson(GameResult r)
+    {
+        var json = ToJsonCore(r);
+        json["console_items"] = new JsonArray(r.ConsoleItems.Select(c => (JsonNode)new JsonObject
+        {
+            ["item"] = c.Item, ["fingerprint"] = c.Fingerprint, ["experimental"] = c.Experimental,
+        }).ToArray());
+        if (r.ConsoleEvidence.Count > 0)
+            json["console_evidence"] = new JsonArray(r.ConsoleEvidence.Select(e => (JsonNode)new JsonObject
+            {
+                ["item"] = e.Item, ["fingerprint"] = e.Fingerprint, ["summary"] = e.Summary,
+                ["bands"] = new JsonObject(ConsoleResults.Bands.Select((band, i) => new KeyValuePair<string, JsonNode?>(band, new JsonObject
+                {
+                    ["pass"] = e.Bands[i].Pass, ["fail"] = e.Bands[i].Fail, ["unknown"] = e.Bands[i].Unknown, ["old"] = e.Bands[i].Old,
+                }))),
+                ["failures"] = new JsonArray(e.Failures.Select(f => (JsonNode)f).ToArray()), ["candidate"] = e.Candidate,
+            }).ToArray());
+        return json;
+    }
+
+    static JsonObject ToJsonCore(GameResult r) => new()
     {
         ["source"] = r.Source, ["output"] = r.Output, ["target_firmware"] = r.TargetFirmware,
         ["title_id"] = r.TitleId, ["content_version"] = r.ContentVersion,

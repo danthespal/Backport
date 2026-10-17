@@ -30,12 +30,17 @@ public static class Cli
           bps info PATCH...  |  bps apply PATCH INPUT OUTPUT [--sign]
           fakelib add FILE... --firmware FW [--source TEXT] [--variant NAME] [--store DIR]
           fakelib list|verify [--firmware FW] [--store DIR]  |  fakelib check --firmware FW [--store DIR] [--reference DIR]
+          fakelib restore-imports FILE OUT --nid NID...   forced stub -> import with a GOT pre-fill (SELF in: signed out)
+          results add --tester HANDLE [--build COOK] [--log KLOG] [--outcome plays|boots|hang|crash|load_error] [--firmware FW]
+                      [--title ID] [--test ITEM[=pass|fail|unknown]]... [--error TEXT] [--date YYYY-MM-DD] [--source TEXT] [--note TEXT] [--dry-run]
+          results list [--title ID] [--item ITEM]  |  results matrix     console results per firmware band (data/console_results.json)
+                   ITEM = rule:<NID> | option:<key> | fakelib:<set>[/<variant>]; all take [--data DIR] [--store DIR]
         """;
 
     static readonly HashSet<string> Flags =
     [
         "--all", "--unknown", "--define-symbol", "--patch-param", "--no-fakelib-store", "--stub-unknown",
-        "--no-known-fixes", "--candidate-fixes", "--extend-text", "--no-extend-text", "--sign", "--provider-audit", "--json",
+        "--no-known-fixes", "--candidate-fixes", "--extend-text", "--no-extend-text", "--sign", "--provider-audit", "--json", "--dry-run",
     ];
 
     /// <summary>Positionals plus options (`--name value`, `--name=value`, repeatable; flags take no value).</summary>
@@ -127,6 +132,7 @@ public static class Cli
                 case "bps" when p.Count > 0: return BpsCommand(a, p, output);
                 case "fakelib" when p.Count > 0: return FakelibCommand(a, p, output);
                 case "data" when p.Count == 1: return DataCommand(a, p[0], output);
+                case "results" when p.Count == 1: return ResultsCommand(a, p[0], output);
                 default:
                     error.Write(Usage);
                     return 2;
@@ -233,8 +239,8 @@ public static class Cli
             ? a.All("--provider").Select(path => (Module: Path.GetFullPath(path), Elf: SceElf.Load(path))).ToList()
             : [];
         string[] show = a.Has("--all")
-            ? [Imports.Missing, Imports.Unknown, Imports.Stubbed, Imports.Patched, Imports.Provided, Imports.Data]
-            : [Imports.Missing, Imports.Unknown, Imports.Stubbed, Imports.Patched];
+            ? [Imports.Missing, Imports.Unknown, Imports.Stubbed, Imports.Forced, Imports.Patched, Imports.Provided, Imports.Data]
+            : [Imports.Missing, Imports.Unknown, Imports.Stubbed, Imports.Forced, Imports.Patched];
         foreach (string path in files)
         {
             var elf = SceElf.Load(path);
@@ -286,6 +292,7 @@ public static class Cli
             BootNoticeMessage = a.Get("--boot-notice"),
             BootNoticeDelaySeconds = BootNoticeDelay(a.Get("--boot-notice-delay", "8")),
             Names = Names(a),
+            ConsoleResults = ConsoleResults.Load(ConsoleResults.DefaultDataDir),
         };
         var result = Pipeline.Backport(p[0], p[1], options, Knowledge.Default, diagnostics: diagnostics);
         o.WriteLine(Pipeline.FormatReport(result));
@@ -367,6 +374,101 @@ public static class Cli
         ? Path.Combine(Path.GetDirectoryName(solution)!, "data", name)
         : throw new DirectoryNotFoundException($"data {command} must run inside the repository (Ps5Backport.slnx not found above the app folder)");
 
+    // --- results: console results per firmware band ------------------------------------------------------------
+
+    /// <summary>Fakelib fingerprints come from the repository store when run inside the repository.</summary>
+    static string ResultsStore(Args a) => a.Get("--store") ?? (Paths.FindUp("Ps5Backport.slnx") is { } solution
+        ? Path.Combine(Path.GetDirectoryName(solution)!, "fakelibs") : DefaultStore);
+
+
+    static int ResultsCommand(Args a, string action, TextWriter o)
+    {
+        string data = a.Get("--data", ConsoleResults.DefaultDataDir);
+        var results = ConsoleResults.Load(data);
+        var k = File.Exists(Path.Combine(data, "fixes.json")) ? new Knowledge(data) : Knowledge.Default;
+        string store = ResultsStore(a);
+        switch (action)
+        {
+            case "add": return ResultsAdd(a, results, k, store, o);
+            case "list": ResultsList(a, results, k, store, o); return 0;
+            case "matrix": ResultsMatrix(results, k, store, o); return 0;
+            default: throw new ArgumentException("results: add | list | matrix");
+        }
+    }
+
+    static int ResultsAdd(Args a, ConsoleResults results, Knowledge k, string store, TextWriter o)
+    {
+        string handle = a.Get("--tester") ?? throw new ArgumentException($"results add needs --tester (a handle from {ConsoleResults.TestersFile})");
+        if (!results.Testers.ContainsKey(handle))
+            throw new ArgumentException($"unknown tester '{handle}' (known: {string.Join(", ", results.Testers.Keys)}); add it to {Path.Combine(results.DataDir, ConsoleResults.TestersFile)}");
+        var entry = results.Draft(handle, a.Get("--build"), a.Get("--log"), k, store, a.Get("--outcome"), a.Get("--error"), a.Get("--firmware"),
+            a.Get("--title"), a.Get("--date"), a.All("--test"), a.Get("--source", ""), a.Get("--note", "")).Result;
+        if (entry.Title.Length == 0)
+            throw new ArgumentException("results add needs --title (or --build with a cook report that has one)");
+        if (entry.Outcome.Length == 0)
+            throw new ArgumentException($"results add needs --outcome ({string.Join(", ", ConsoleResults.Outcomes)}): no log, or the log shows no fatal event");
+        results.Results.Add(entry);
+        o.WriteLine($"{entry.Date}  {entry.Tester}  FW {entry.Firmware} ({ConsoleResults.Band(entry.Firmware)})  {entry.Title}  {entry.Build}  {entry.Outcome}{(entry.Error.Length > 0 ? "  " + entry.Error : "")}");
+        foreach (var t in entry.Tests)
+            o.WriteLine($"    {t.Verdict,-8} {t.Item}  {t.Fingerprint}");
+        if (a.Has("--dry-run"))
+        {
+            o.WriteLine("dry run: nothing written");
+            return 0;
+        }
+        results.Save();
+        o.WriteLine($"recorded in {Path.Combine(results.DataDir, ConsoleResults.ResultsFile)} ({results.Results.Count} results)");
+        return 0;
+    }
+
+    static string PinState(ResultTest t, Knowledge k, string store) =>
+        t.Fingerprint.Length == 0 ? "unpinned" : t.Fingerprint == ConsoleResults.Fingerprint(t.Item, k, store) ? "current" : "old form";
+
+    static void ResultsList(Args a, ConsoleResults results, Knowledge k, string store, TextWriter o)
+    {
+        string? title = a.Get("--title"), item = a.Get("--item");
+        foreach (var r in results.Results.Where(r => (title is null || r.Title == title) && (item is null || r.Tests.Any(t => t.Item == item))))
+        {
+            o.WriteLine($"{r.Date}  {r.Tester}  FW {r.Firmware} ({ConsoleResults.Band(r.Firmware)})  {r.Title}  {r.Build}  {r.Outcome}{(r.Error.Length > 0 ? "  " + r.Error : "")}");
+            foreach (var t in r.Tests.Where(t => item is null || t.Item == item))
+                o.WriteLine($"    {t.Verdict,-8} {t.Item}  ({PinState(t, k, store)})");
+            if (r.Note.Length > 0)
+                o.WriteLine($"    note: {r.Note}");
+        }
+    }
+
+    /// <summary>Every experimental item (derived rules, options, fakelib variants), every store set and every item with results,
+    /// by firmware band; then promotion candidates, failures and what each tester's band still lacks.</summary>
+    static void ResultsMatrix(ConsoleResults results, Knowledge k, string store, TextWriter o)
+    {
+        var matrix = results.Matrix(k, store);
+        string Label(MatrixRow r) => r.Item.StartsWith("rule:", StringComparison.Ordinal) && r.Label.Length > 0 ? $"{r.Item} {r.Label}" : r.Item;
+        static string Cell(BandEvidence e) => !e.Any ? "-" : string.Join(" ", new[] { (e.Pass, "p"), (e.Fail, "f"), (e.Unknown, "u"), (e.Old, "o") }
+            .Where(x => x.Item1 > 0).Select(x => $"{x.Item1}{x.Item2}"));
+        int width = Math.Min(70, matrix.Max(r => Label(r).Length));
+        o.WriteLine($"{"item".PadRight(width)}  " + string.Join("  ", ConsoleResults.Bands.Select(b => b.PadRight(10))));
+        foreach (var row in matrix)
+        {
+            string label = Label(row);
+            o.WriteLine($"{(label.Length > width ? label[..(width - 3)] + "..." : label.PadRight(width))}  " + string.Join("  ", row.Bands.Select(e => Cell(e).PadRight(10))));
+        }
+        o.WriteLine("p pass, f fail, u unknown, o old form or unpinned (history only), - no run");
+
+        o.WriteLine();
+        var candidates = matrix.Where(r => r.Candidate).Select(r => r.Item).ToList();
+        o.WriteLine(candidates.Count == 0 ? "promotion candidates: none (an experimental item needs a pass on every band and no failure)"
+                                          : "promotion candidates (your decision): " + string.Join(", ", candidates));
+        foreach (var row in matrix.Where(r => r.Failed))
+            o.WriteLine($"failed: {row.Item} on " + string.Join(", ", ConsoleResults.Bands.Where((_, i) => row.Bands[i].Fail > 0)));
+
+        o.WriteLine();
+        int experimental = matrix.Count(r => r.Experimental);
+        o.WriteLine($"experimental items never run in their current form: {experimental - matrix.Count(r => r.Experimental && r.Started)} of {experimental}");
+        o.WriteLine("to send next (tested in their current form elsewhere, not yet on the tester's band):");
+        foreach (var (tester, band, items) in results.SendNext(matrix))
+            o.WriteLine($"  {tester.Handle} ({tester.Model}, FW {tester.Firmware}, {band}): " + (items.Count > 0 ? string.Join(", ", items) : "nothing"));
+    }
+
     static int DataCommand(Args a, string what, TextWriter o)
     {
         switch (what)
@@ -441,10 +543,12 @@ public static class Cli
             }
             case "check":
                 return FakelibCheck(a, store, fw, o, k);
+            case "restore-imports":
+                return FakelibRestoreImports(a, p, o);
             case "list" or "verify":
                 break;
             default:
-                throw new ArgumentException("fakelib: add | list | verify | check");
+                throw new ArgumentException("fakelib: add | list | verify | check | restore-imports");
         }
         var map = FakelibStore.List(store);
         if (fw is not null)
@@ -486,6 +590,30 @@ public static class Cli
     static string PyOpt(System.Text.Json.Nodes.JsonNode? e, string key) => e?[key]?.GetValue<string>() ?? "None";
 
     /// <summary>Imports of the stored fakelib set that the target firmware may not export.</summary>
+    /// <summary>Undo forced stubs (local definitions, PLT 'jmp stub') so the loader can bind the native functions; a SELF input
+    /// is unwrapped and the result fake-signed (FINDINGS 6v).</summary>
+    static int FakelibRestoreImports(Args a, List<string> p, TextWriter o)
+    {
+        var nids = a.All("--nid").ToList();
+        if (p.Count != 3 || nids.Count == 0)
+            throw new ArgumentException("fakelib restore-imports needs FILE OUT and at least one --nid");
+        byte[] input = File.ReadAllBytes(p[1]);
+        bool self = Self.IsSelf(Self.Kind(input));
+        var elf = new SceElf(self ? Self.Unwrap(input) : input);
+        var names = Names(a);
+        foreach (string nid in nids)
+        {
+            var r = Patching.RestoreImport(elf, nid);
+            o.WriteLine(r is null
+                ? $"   {nid}  {names.Name(nid)}: already an import that jumps through its GOT slot"
+                : $"   {nid}  {names.Name(nid)}: {(r.WasDefined ? "local definition" : "PLT jmp")} -> import, " +
+                  $"GOT 0x{r.GotVaddr:x} pre-filled with 0x{r.Stub:x}{(r.PltRestored ? $", PLT 0x{r.Plt:x} restored" : "")}");
+        }
+        Self.WriteAtomic(p[2], self ? Self.Sign(elf.Data) : elf.Data);
+        o.WriteLine($"wrote {p[2]}" + (self ? " (fake-signed)" : ""));
+        return 0;
+    }
+
     static int FakelibCheck(Args a, string store, string? fw, TextWriter o, Knowledge k)
     {
         if (fw is null)

@@ -3,9 +3,9 @@ reference: firmware_db 4.00 (exact for FW 4)
 
 == eboot.elf  module=application_gt7
    build: C:/pdi/src/gt7/maintenance/build-ppr.d5d9be91b292e905250b2129cdbab98c/application/gt7/Product/application_gt7.elf
-   reference=927, provided=99, stubbed=0, patched=2, data=60, missing=81, unknown=0
+   reference=927, provided=99, stubbed=0, forced=0, patched=2, data=60, missing=81, unknown=0
    libSceAgc:
-      missing  dbOlWdppb4o  dbOlWdppb4o  (GOT 0x55e11c8)
+      missing  dbOlWdppb4o  sceAgcCreateInterpolantMapping_10000  (GOT 0x55e11c8)
       missing  -KRzWekV120  sceAgcDcbSetIndexSize_0600  (GOT 0x55e1110)
       missing  BfBDZGbti7A  sceAgcGetIsTrinityMode  (GOT 0x55e1040)
       missing  fPSCdQxgpSw  sceAgcWriteDataPatchSetAddressOrOffset  (GOT 0x55e1198)

@@ -125,13 +125,15 @@ public sealed class ImportRow
                                                  : $"{LeftByCount} console-tested backports shipped it unpatched";
     public bool HasIntroduced => Introduced.Length > 0;
     public bool HasFix => Fix is not null;
+    /// <summary>The Code graph page shows eboot.bin only.</summary>
+    public bool IsEboot => string.Equals(Module, GameScan.MainExecutable, StringComparison.OrdinalIgnoreCase);
     public string FixSummary => Fix is null ? "" :
         $"{Fix.Kind} · {(Fix.Proven ? "console-tested" : "not console-tested")}";
     public string FixNote => Fix?.Note ?? "";
     public string Tone => Status switch
     {
         Imports.Stubbed or Imports.Reference or Imports.Provided => "ok",
-        Imports.Patched => "patched",
+        Imports.Patched or Imports.Forced => "patched",
         Imports.Missing or Imports.Unknown => "warn",
         _ => "muted",
     };
@@ -140,13 +142,14 @@ public sealed class ImportRow
     public string StatusDisplay => Status switch
     {
         Imports.Reference => "On firmware", Imports.Provided => "Game library", Imports.Stubbed => "Stubbed",
-        Imports.Patched => "Patched", Imports.Data => "Data · unchecked", Imports.Missing => "Missing", Imports.Unknown => "Unknown", _ => Status,
+        Imports.Forced => "Forced stub", Imports.Patched => "Patched", Imports.Data => "Data · unchecked", Imports.Missing => "Missing", Imports.Unknown => "Unknown", _ => Status,
     };
     public string StatusDescription => Status switch
     {
         Imports.Reference => "Exported by the reference firmware.",
         Imports.Provided => "Provided by a library shipped with the game or backport.",
         Imports.Stubbed => "Neutralized with a local stub; this alone does not establish compatibility.",
+        Imports.Forced => "Bound to a stub inside the module: the console's own function never runs, even on firmware that exports it.",
         Imports.Patched => "Redirected or adapted by a patch.",
         Imports.Data => "Data import: function export lists do not verify it.",
         Imports.Missing => "Not exported by the exact target firmware reference; needs a fix.",

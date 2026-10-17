@@ -5,18 +5,18 @@
     "ps5_sdk": "0x04000031",
     "ps4_sdk": "0x09040001",
     "build_path": "W:/Build/J03718109/sys/build/integration/orbis-build_0005c/package/target/phase2/usermode/src/graphics/gen2/agc/prx/libSceAgc.prx",
-    "sha256": "73611ebe0777da0b2a6087eb169d4b997bf14a4f6e7aacdc1e5cbe973ce9d1d6",
+    "sha256": "7f6d6794ce4d7f549de2e5a6bfbed6fff4e0cc12fb07c94fbec5fe62247e5f18",
     "size": 322432,
     "source": "test source"
   },
   "libSceAgcDriver.sprx": {
-    "container": "PS5-style SELF",
+    "container": "PS4-style fake SELF (make_fself.py)",
     "module": "libSceAgcDriver",
     "ps5_sdk": "0x04000031",
     "ps4_sdk": "0x09040001",
     "build_path": "W:/Build/J03718109/sys/build/integration/orbis-build_0005c/package/target/phase2/usermode/src/graphics/gen2/agc_driver/libSceAgcDriver.prx",
-    "sha256": "d83edb3a0b57c4a2476d902e16da051db82ef36b81b791d6e8d2d998f083e27b",
-    "size": 122383,
+    "sha256": "50d7abac85dfa03fdca898867c4af166fa68c41a4ed9a72453e0ed5e1eaf9adc",
+    "size": 120592,
     "source": "test source"
   },
   "libSceAmpr.sprx": {
@@ -41,13 +41,13 @@
     "source": "test source"
   },
   "libScePsml.sprx": {
-    "container": "PS5-style SELF",
+    "container": "PS4-style fake SELF (make_fself.py)",
     "module": "libScePsml",
     "ps5_sdk": "0x04000031",
     "ps4_sdk": "0x09040001",
     "build_path": "W:/Build/J03718109/sys/internal/usermode/src/psml/Prospero_Game_PRX_psml_prx/libScePsml.prx",
-    "sha256": "6632020e026d7cec0af89604de96e64f42cc4764af0a28de7ed20fa78f56a36d",
-    "size": 1524286,
+    "sha256": "99dc6d73d34fb87e8556614871dfd6170f2dc7c421773c4bd0cfa105d8d2601c",
+    "size": 1510608,
     "source": "test source"
   }
 }

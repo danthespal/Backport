@@ -34,6 +34,8 @@ public sealed class AppSettings
     public string? FirmwareDbDir { get; set; }
     public string? FakelibStoreDir { get; set; }
     public string? AerolibPath { get; set; }
+    /// <summary>Folder of console_results.json and testers.json (null = the repository's data/, else the bundled one).</summary>
+    public string? ConsoleResultsDir { get; set; }
 
     /// <summary>%APPDATA%/PS5BackportStudio/settings.json (or the platform's equivalent).</summary>
     public static string DefaultPath => Path.Combine(

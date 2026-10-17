@@ -21,6 +21,9 @@ namespace Ps5Backport.Tests
             Convert.FromHexString("FF255A0000006800000000").CopyTo(module, 0x420);
             module[0x380] = Patching.Ret;
             module.AsSpan(0x381, 0x1f).Fill(Patching.Int3);
+            // int3 padding between the snippets, as compiled code has: call sites are read from decoded code, where zero bytes
+            // would decode as add [rax], al and swallow the next snippet's first instruction
+            module.AsSpan(0x3a0, 0x40).Fill(Patching.Int3);
             Call(0x3a0, "BE04000000");      // mov esi, 4
             Call(0x3b0, "31F6");            // xor esi, esi
             Call(0x3c0, "8B7510");          // mov esi, [rbp+0x10]
@@ -56,7 +59,7 @@ namespace Ps5Backport.Tests
             Assert.Equal((Pad, 1, 3L), (k.Options["pad_vibration_compat"].Probe.Nid, k.Options["pad_vibration_compat"].Probe.Argument, k.Options["pad_vibration_compat"].Probe.Above));
             Assert.Equal((OptionProbe.KindDetector, OptionProbe.Needed), (k.Options["unity_sku_offline"].Probe.Kind, k.Options["unity_sku_offline"].Probe.Recognized));
             Assert.Equal((OptionProbe.KindDetector, OptionProbe.Applicable), (k.Options["ubisoft_offline_popups"].Probe.Kind, k.Options["ubisoft_offline_popups"].Probe.Recognized));
-            foreach (string console in new[] { "auto_pro", "force_pro", "playgo_0_6", "playgo_0_6_log", "psml_kpn9", "boot_notice" })
+            foreach (string console in new[] { "auto_pro", "force_pro", "playgo_0_6", "playgo_0_6_log", "psml_kpn9", "boot_notice", "agc_mode2" })
                 Assert.Equal(OptionProbe.KindConsole, k.Options[console].Probe.Kind);
             foreach (string plain in new[] { "save_prepare_compat", "audio_speaker_compat", "audio_port_compat", "audio_bed_71", "gpu_scratch", "np_error_dialogs" })
                 Assert.Equal("", k.Options[plain].Probe.Kind);
@@ -107,7 +110,7 @@ namespace Ps5Backport.Tests
                 Assert.Contains("esi = 4/5 (above 3) at 2 of 4 call site(s), e.g. eboot.bin 0x3a5", byKey["pad_vibration_compat"].Evidence);
                 Assert.Equal(OptionVerdict.NotApplicable, byKey["auto_pro"].Verdict);              // console choice, but nothing imported
                 Assert.Equal(OptionVerdict.NotApplicable, byKey["force_pro"].Verdict);
-                Assert.Equal(OptionVerdict.ConsoleChoice, byKey["boot_notice"].Verdict);
+                Assert.Equal(OptionVerdict.NotApplicable, byKey["boot_notice"].Verdict);           // no SDK _start entry to hook
                 Assert.Equal(OptionVerdict.ConsoleChoice, byKey["playgo_0_6"].Verdict);
                 Assert.Equal(OptionVerdict.NotApplicable, byKey["psml_kpn9"].Verdict);
                 Assert.Equal(OptionVerdict.NotApplicable, byKey["unity_sku_offline"].Verdict);
@@ -121,7 +124,7 @@ namespace Ps5Backport.Tests
                 Assert.Equal(probe, analysis.Recommendations);
                 string text = Pipeline.FormatReport(analysis, knowledge);
                 Assert.Contains("probe needed         pad_vibration_compat  scePadSetVibrationMode is called with esi = 4/5", text);
-                Assert.Contains("probe console-choice boot_notice", text);
+                Assert.Contains("probe not-applicable boot_notice  no module has the SDK _start entry or the bundled libc initializer the notice hooks", text);
                 var json = (JsonArray)Pipeline.ToJson(analysis)["recommendations"]!;
                 Assert.Equal(knowledge.Options.Count, json.Count);
                 Assert.Equal("needed", json.Single(n => n!["key"]!.GetValue<string>() == "pad_vibration_compat")!["verdict"]!.GetValue<string>());

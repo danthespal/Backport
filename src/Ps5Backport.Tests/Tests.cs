@@ -179,6 +179,25 @@ namespace Ps5Backport.Tests
         }
 
         [Fact]
+        public void SettingsPage_TransactionFoldersStayOutOfThePicker()
+        {
+            // a leftover stage/backup folder or the BPS scratch folder (.ps5bp-…) is not a firmware set
+            string store = Path.Combine(Path.GetTempPath(), "ps5backport-store-" + Guid.NewGuid().ToString("N"));
+            Directory.CreateDirectory(Path.Combine(store, "6.50"));
+            Directory.CreateDirectory(Path.Combine(store, Core.Publication.Prefix + "bps-scratch"));
+            Directory.CreateDirectory(Path.Combine(store, Core.Publication.Prefix + "0123-abcd.stage"));
+            try
+            {
+                var vm = new MainViewModel(new AppSettings { FakelibStoreDir = store }) { Page = AppPage.Settings };
+                Assert.Contains("6.50", vm.Firmwares);
+                Assert.DoesNotContain(vm.Firmwares, f => f.StartsWith(Core.Publication.Prefix, StringComparison.Ordinal));
+                var row = Assert.Single(vm.PathSettings, p => p.Kind == PathKind.FakelibStore);
+                Assert.Equal("sets 6.50", row.Status);
+            }
+            finally { Directory.Delete(store, true); }
+        }
+
+        [Fact]
         public void SettingsPage_MissingFolders_Warn()
         {
             string missing = Path.Combine(Path.GetTempPath(), "ps5backport-missing-" + Guid.NewGuid().ToString("N"));
@@ -631,7 +650,8 @@ namespace Ps5Backport.Tests
                 Assert.False(vm.IsAnalysisStale);
                 var autoPro = vm.PatchOptions.Single(o => o.Key == "auto_pro");
                 Assert.Equal(("not applicable", true, 0.55), (autoPro.VerdictLabel, autoPro.IsNotApplicable, autoPro.RowOpacity));
-                Assert.Equal("console choice", vm.PatchOptions.Single(o => o.Key == "boot_notice").VerdictLabel);
+                Assert.Equal("console choice", vm.PatchOptions.Single(o => o.Key == "playgo_0_6").VerdictLabel);
+                Assert.Equal("not applicable", vm.PatchOptions.Single(o => o.Key == "boot_notice").VerdictLabel);   // no SDK _start entry
                 Assert.Contains("probe: 1 needed", vm.PatchOptionsSummary);
                 Assert.Contains(vm.Log.Visible, e => e.Message.StartsWith("Probe: pre-selected Pad vibration mode compatibility"));
                 Assert.Contains("probe needed", vm.ReportText);
@@ -1737,6 +1757,7 @@ namespace Ps5Backport.Tests
         [InlineData("Il2CppUserAssemblies.prx", "%s/Modules/Il2CppUserAssemblies.prx", false, false)]
         [InlineData("Il2cppUserAssemblies.prx", "no runtime module path", false, false)]
         [InlineData("Il2cppUserAssemblies.prx", "%s/Modules/Il2cppUserAssemblies.prx", false, false)]
+        [InlineData("Il2cppUserAssemblies.prx", "%s/Modules/Il2CppUserAssemblies.prx\0Il2cppUserAssemblies.prx", false, true)]   // Unity eboot: + DT_NEEDED
         public void Cook_UsesRequestedCaseOnlyWhenTheGameReferencesIt(string filename, string requested, bool dryRun, bool corrected)
         {
             string game = Directory.CreateDirectory(Path.Combine(_root, "game")).FullName;
@@ -1768,6 +1789,29 @@ namespace Ps5Backport.Tests
             }
         }
 
+        /// <summary>
+        /// V Rising (PPSA16263): Unity opens "%s/Modules/Il2CppUserAssemblies.prx" (ENOENT with the dump's lowercase "c"),
+        /// the eboot's DT_NEEDED bare name "Il2cppUserAssemblies.prx" opens nothing, and the dump holds a second tree
+        /// under v3/. Each copy takes the load path's spelling; a bare name never decides it.
+        /// </summary>
+        [Fact]
+        public void LoadPathRenamesEveryFolderCopy_AndBareNamesDoNotBlockIt()
+        {
+            var warnings = new List<string>();
+            byte[] eboot = Encoding.ASCII.GetBytes("%s/Modules/Il2CppUserAssemblies.prx\0Il2cppUserAssemblies.prx\0");
+            var result = FilePathCase.Resolve(["Media/Modules/Il2cppUserAssemblies.prx", "v3/Media/Modules/Il2cppUserAssemblies.prx"],
+                [eboot], warnings, TestContext.Current.CancellationToken);
+            Assert.Equal(Expected, result["Media/Modules/Il2cppUserAssemblies.prx"]);
+            Assert.Equal("v3/" + Expected, result["v3/Media/Modules/Il2cppUserAssemblies.prx"]);
+            Assert.DoesNotContain(warnings, w => w.StartsWith("ambiguous", StringComparison.Ordinal) || w.StartsWith("conflicting", StringComparison.Ordinal));
+
+            // Names that differ only by case remain ambiguous.
+            warnings.Clear();
+            Assert.Empty(FilePathCase.Resolve(["Media/Modules/Il2cppUserAssemblies.prx", "media/Modules/Il2cppUserAssemblies.prx"],
+                [eboot], warnings, TestContext.Current.CancellationToken));
+            Assert.Contains(warnings, w => w.StartsWith("ambiguous file path casing:", StringComparison.Ordinal));
+        }
+
         [Theory]
         [InlineData("Plugins/audio.prx", "/app0/Plugins/Audio.prx", "Plugins/Audio.prx")]
         [InlineData("Engine/modules/render.sprx", "%s/Modules/Render.sprx", "Engine/Modules/Render.sprx")]
@@ -1784,7 +1828,6 @@ namespace Ps5Backport.Tests
 
         [Theory]
         [InlineData("/app0/Assets/Config.dat\0/app0/Assets/config.dat\0")]
-        [InlineData("%s/Config.dat\0")]
         [InlineData("/app0/../Assets/Config.dat\0")]
         [InlineData("/other/Assets/Config.dat\0")]
         [InlineData("Config.dat\0")]
@@ -2001,10 +2044,11 @@ namespace Ps5Backport.Tests
                 Firmware = firmware, ReferenceDir = reference, ExtraFakelib = extraFakelib, FakelibStore = store, Options = options ?? [],
             }, K, cancel: TestContext.Current.CancellationToken);
 
-        /// <summary>Follows a fix's cave chain from the PLT entry: jmp rel32 hops, then the instructions, until jmp [rip+GOT] or ret.</summary>
-        public static (List<string> Executed, ulong? Called, ulong? Jumped) Trace(SceElf elf, Import imp, Fix fix)
+        /// <summary>Follows a fix's cave chain from the PLT entry (or <paramref name="start"/>, e.g. a derived stub's GOT pre-fill):
+        /// jmp rel32 hops, then the instructions, until jmp [rip+GOT] or ret.</summary>
+        public static (List<string> Executed, ulong? Called, ulong? Jumped) Trace(SceElf elf, Import imp, Fix fix, ulong? start = null)
         {
-            ulong va = elf.ReadU64(imp.GotVaddr) - 6;
+            ulong va = start ?? elf.ReadU64(imp.GotVaddr) - 6;
             var executed = new List<string>();
             ulong? called = null;
             for (int n = 0; n < 64; n++)
@@ -2195,9 +2239,10 @@ namespace Ps5Backport.Tests
             var provided = Imports.LoadProviderExports(Directory.EnumerateFiles(folder).Where(f => Path.GetFileName(f) != "libSceAgc.elf"));
             var by = Imports.Classify(SceElf.Load(Path.Combine(folder, "libSceAgc.elf")), reference, provided)
                             .GroupBy(s => s.Status).ToDictionary(g => g.Key, g => g.Select(s => s.Nid).ToHashSet());
-            Assert.Equal(9, by[Imports.Stubbed].Count);          // 8 GOT stubs + qSleeVC6lwI (symbol-only local definition)
-            Assert.Contains("tU5e3f9gSiU", by[Imports.Stubbed]);   // sceKernelIsTrinityMode
-            Assert.Contains("qSleeVC6lwI", by[Imports.Stubbed]);
+            Assert.Equal(9, by[Imports.Forced].Count);           // every stub is a local definition (8 with a GOT pre-fill + qSleeVC6lwI)
+            Assert.Contains("tU5e3f9gSiU", by[Imports.Forced]);    // sceKernelIsTrinityMode: never native (FINDINGS 6v)
+            Assert.Contains("qSleeVC6lwI", by[Imports.Forced]);
+            Assert.False(by.ContainsKey(Imports.Stubbed));
             Assert.Equal(["GGeRJk1XdWc", "dkBx0YqFQ+Y"], by[Imports.Unknown].Order(StringComparer.Ordinal));   // left lazy-bound in GT7
         }
 
@@ -2265,7 +2310,8 @@ namespace Ps5Backport.Tests
             ["nakama-sdk.elf"] = ["WYszaHaIkWs", "ksn0O9Iilb0", "-0wUiGX74GQ", "BlZ8niq3nHU"],
         };
 
-        /// <summary>CONTROL writes stub code into the PLT entry itself; every documented stub must be seen.</summary>
+        /// <summary>CONTROL writes stub code into the PLT entry itself (forced: the native function never runs); every documented
+        /// stub must be seen. Only the eboot's GetOperationMode and GetGameTrialsFlag are GOT pre-fills (stubbed).</summary>
         [Fact]
         public void Classifier_FindsEveryReadmeStub()
         {
@@ -2273,7 +2319,10 @@ namespace Ps5Backport.Tests
             foreach (var (rel, expected) in ReadmeStubs)
             {
                 var statuses = Imports.Classify(SceElf.Load(Samples.Work(["CONTROL_elf", .. rel.Split('/')])), reference);
-                Assert.Equal(expected.Order(StringComparer.Ordinal), statuses.Where(s => s.Status == Imports.Stubbed).Select(s => s.Nid).Distinct().Order(StringComparer.Ordinal));
+                Assert.Equal(expected.Order(StringComparer.Ordinal), statuses.Where(s => s.Status is Imports.Stubbed or Imports.Forced)
+                                                                            .Select(s => s.Nid).Distinct().Order(StringComparer.Ordinal));
+                string[] prefilled = rel == "eboot.elf" ? ["NH6xARDOVv8", "y7JD1gfwyfA"] : [];
+                Assert.Equal(prefilled, statuses.Where(s => s.Status == Imports.Stubbed).Select(s => s.Nid).Distinct().Order(StringComparer.Ordinal));
             }
         }
 
@@ -2462,10 +2511,16 @@ namespace Ps5Backport.Tests
             {
                 var result = Samples.Backport(Path.Combine(ac, "default"), output, "4.50", Repo.Need("firmware_db"),
                                               store: Path.Combine(Repo.Root, "fakelibs"), options: ["force_pro", "gpu_scratch", "save_prepare_compat"]);
-                // gpu_scratch reproduces AC's own files: ShaderData.bin of 4xx+, the hooked AgcDriver of 10xx+
+                // gpu_scratch reproduces AC's own files: ShaderData.bin of 4xx+, the hooked AgcDriver of 10xx+ except that the store
+                // restored its sceKernelHasTrinityMode import (FINDINGS 6v): PLT 0xb890, its GOT pre-fill 0x14270, the symbol entry
                 Assert.Equal(File.ReadAllBytes(Path.Combine(ac, "4xx+", "ShaderData.bin")), File.ReadAllBytes(Path.Combine(output, "ShaderData.bin")));
-                Assert.Equal(File.ReadAllBytes(Path.Combine(ac, "10xx+", "fakelib", "libSceAgcDriver.sprx")),
-                             File.ReadAllBytes(Path.Combine(output, "fakelib", "libSceAgcDriver.sprx")));
+                byte[] acDriver = Self.Unwrap(File.ReadAllBytes(Path.Combine(ac, "10xx+", "fakelib", "libSceAgcDriver.sprx")));
+                byte[] ourDriver = Self.Unwrap(File.ReadAllBytes(Path.Combine(output, "fakelib", "libSceAgcDriver.sprx")));
+                Assert.Equal(acDriver.Length, ourDriver.Length);
+                (int Start, int Length)[] restored = [(0xf890, 6), (0x18270, 8), (0x2961e, 10)];
+                var changed = Enumerable.Range(0, acDriver.Length).Where(i => acDriver[i] != ourDriver[i]).ToList();
+                Assert.All(changed, i => Assert.Contains(restored, r => i >= r.Start && i < r.Start + r.Length));
+                Assert.All(restored, r => Assert.Contains(changed, i => i >= r.Start && i < r.Start + r.Length));
                 var mods = result.Modules.ToDictionary(m => m.Path);
                 Assert.Equal(["force_pro", "gpu_scratch", "save_prepare_compat"], result.Options);
                 var data = Assert.Single(result.DataFiles);
@@ -3868,9 +3923,10 @@ namespace Ps5Backport.Tests
         public void DerivedFixes_AreFlagged()
         {
             var k = K;
-            Assert.Equal(["sceHmd2ReprojectionSetAllowPositionalReprojection", "sceHttp2SetRequestNoContentLength",
-                          "sceKernelSyncOnAddressWait", "sceKernelSyncOnAddressWait32", "sceKernelSyncOnAddressWait64",
-                          "scePsmlMfsrInit", "sceUserServiceGetGamePresets", "sceVideoOutGetOutputStatusWithVrr"],
+            Assert.Equal(["sceAudioOut2Set3DLatency", "sceCoredumpWriteUserString", "sceHmd2ReprojectionSetAllowPositionalReprojection",
+                          "sceHttp2SetRequestNoContentLength", "sceKernelSyncOnAddressWait", "sceKernelSyncOnAddressWait32",
+                          "sceKernelSyncOnAddressWait64", "scePsmlMfsrInit", "sceSaveDataConvert", "sceSaveDataDirNameSearch2",
+                          "sceUserServiceGetGamePresets", "sceVideoOutGetOutputStatusWithVrr"],
                          k.FixList.Where(f => !f.Proven).Select(f => f.Name).Order(StringComparer.Ordinal));
             Assert.True(k.Fixes["NH6xARDOVv8"].Proven);   // GetOperationMode stub: proven by both games
             Assert.True(k.Fixes["ZP4e7rlzOUk"].Proven);   // SaveDataMount3 adapter: PPSA32935 FW 4 cook saves and reloads on 13.60
@@ -4934,10 +4990,11 @@ namespace Ps5Backport.Tests
             Assert.Equal(0, FixApplier.ApplyPattern(after, pattern, TestContext.Current.CancellationToken));
         }
 
+        /// <summary>Nothing stays unresolved; below 8.00 sceCoredumpWriteUserString is a known-fix stub (FINDINGS 6v).</summary>
         [Theory]
         [InlineData("4.03", "32KQRUK13kI")]
         [InlineData("10.01", "")]
-        public void StudioAnalysis_LeavesOnlyTheUnprovenCoredumpImport(string firmware, string remainingNid)
+        public void StudioAnalysis_StubsTheCoredumpImportBelow800(string firmware, string stubbedNid)
         {
             string output = Path.Combine(Repo.Root, "work", "ppsa34008-test-" + Guid.NewGuid().ToString("N"));
             var result = Pipeline.Backport(Sample("default", ""), output, new BackportOptions
@@ -4947,7 +5004,9 @@ namespace Ps5Backport.Tests
             }, new Knowledge(Repo.Need("data")), cancel: TestContext.Current.CancellationToken);
             Assert.Equal(OperationState.Completed, result.State);
             Assert.All(result.Modules, m => Assert.Empty(m.Error));
-            Assert.Equal(remainingNid.Length == 0 ? [] : new[] { remainingNid }, result.Modules.SelectMany(m => m.Unknown).Select(u => u.Nid).ToArray());
+            Assert.Empty(result.Modules.SelectMany(m => m.Unknown));
+            Assert.Equal(stubbedNid.Length == 0 ? [] : new[] { stubbedNid },
+                         result.Modules.SelectMany(m => m.StubbedNow).Where(s => s.Nid == "32KQRUK13kI").Select(s => s.Nid).ToArray());
             Assert.False(result.Published);
             Assert.False(Directory.Exists(output));
         }
@@ -5022,6 +5081,33 @@ namespace Ps5Backport.Tests
             var error = Assert.Throws<InvalidDataException>(() => new Knowledge(DataDir));
             Assert.Contains("fixes.json", error.Message);
             Assert.Contains("test-nid", error.Message);
+        }
+
+        /// <summary>A stub's insns are a derived GOT pre-fill: they must call another import (call_got:NID), use no state and end with
+        /// ret; call_got:NID is refused outside stubs.</summary>
+        [Theory]
+        [InlineData("stub", "c3")]                          // calls no other import
+        [InlineData("stub", "call_got", "c3")]              // its own GOT slot: the pre-fill would call itself
+        [InlineData("stub", "call_got:test-nid", "c3")]     // the same import
+        [InlineData("stub", "call_got:otherNid123", "90")]  // no final ret
+        [InlineData("adapter", "call_got:otherNid123", "c3")]
+        public void InvalidDerivedStub_FailsAtLoad(string kind, params string[] insns)
+        {
+            Edit("fixes", root =>
+            {
+                root["fixes"]!["test-nid"]!["kind"] = kind;
+                root["fixes"]!["test-nid"]!["insns"] = new JsonArray(insns.Select(i => (JsonNode)JsonValue.Create(i)).ToArray());
+            });
+            Assert.Contains("test-nid", Assert.Throws<InvalidDataException>(() => new Knowledge(DataDir)).Message);
+        }
+
+        [Fact]
+        public void DerivedStub_Loads()
+        {
+            Edit("fixes", root => root["fixes"]!["test-nid"]!["insns"] = new JsonArray("call_got:otherNid123  ; call", "c3  ; ret"));
+            var fix = new Knowledge(DataDir).Fixes["test-nid"];
+            Assert.Equal(["call_got:otherNid123", "c3"], fix.Insns.Select(i => i.Hex));
+            Assert.Equal("otherNid123", fix.Insns[0].CallNid);
         }
 
         [Theory]
@@ -6431,6 +6517,93 @@ namespace Ps5Backport.Tests
             finally { if (Directory.Exists(root)) Directory.Delete(root, true); }
         }
 
+        /// <summary>POSIX open/write/close and a nanosleep-style delay are accepted when the sceKernel names are not imported.</summary>
+        [Fact]
+        public void PosixFunctions_AndNanosleep_AreCalled()
+        {
+            var elf = Fixture(PosixOpen, PosixWrite, PosixClose, Nanosleep);   // PLT 0x420, 0x430, 0x440, 0x450
+            Assert.Equal(1, BootNotice.Apply(elf, "Hi", 8, TestContext.Current.CancellationToken));
+            int cave = 0x500 + 5 + BinaryPrimitives.ReadInt32LittleEndian(elf.Data.AsSpan(0x501));
+            int end = IndexOf(elf.Data, cave, [0x48, 0x81, 0xC4]);   // add rsp: the register restore
+            Assert.Equal(new ulong[] { 0x450, 0x420, 0x430, 0x440 }, CallTargets(elf.Data, cave, end));   // sleep, open, write, close
+            Assert.True(Contains(elf.Data, cave, [0x48, 0xC7, 0x84, 0x24, 0x60, 0x0C, 0, 0, 8, 0, 0, 0]));   // tv_sec = 8
+            Assert.True(Contains(elf.Data, cave, [0x48, 0x8D, 0xBC, 0x24, 0x60, 0x0C, 0, 0, 0x31, 0xF6]));   // nanosleep(&ts, NULL)
+        }
+
+        /// <summary>
+        /// An eboot that cannot carry the notice (PPSA18154, PPSA36082) gets it in the bundled libc's initializer instead;
+        /// an eboot that can keeps it, and libc is left alone, so the notice is never shown twice.
+        /// </summary>
+        [Fact]
+        public void LibcInitializer_CarriesTheNotice_OnlyWhenTheEbootCannot()
+        {
+            var (host, evidence) = BootNotice.Assess([("eboot.bin", Fixture(Usleep)), ("sce_module/libc.prx", Libc())]);
+            Assert.Equal("sce_module/libc.prx", host);
+            Assert.Equal("depends on the tester's intent; eboot.bin imports " + NoIo + ", so the notice runs in sce_module/libc.prx's initializer", evidence);
+            Assert.Equal(("eboot.bin", "depends on the console or the tester's intent, not on the game"),
+                         BootNotice.Assess([("sce_module/libc.prx", Libc()), ("eboot.bin", Fixture())]));
+
+            var libc = Libc();
+            Assert.Equal(1, BootNotice.Apply(libc, "Hi", 8, TestContext.Current.CancellationToken));
+            Assert.Equal(0xE9, libc.Data[0x500]);                                    // DT_INIT redirected
+            int cave = 0x500 + 5 + BinaryPrimitives.ReadInt32LittleEndian(libc.Data.AsSpan(0x501));
+            Assert.Equal(new byte[] { 0x55, 0x48, 0x89, 0xE5, 0x41, 0x57 }, libc.Data.AsSpan(cave, 6).ToArray());
+            int end = IndexOf(libc.Data, cave, [0x48, 0x81, 0xC4]);
+            Assert.Equal(new ulong[] { 0x450, 0x420, 0x430, 0x440 }, CallTargets(libc.Data, cave, end));   // _nanosleep, _open, _write, _close
+            int jmp = IndexOf(libc.Data, end, [0x5F, 0xE9]) + 1;                      // pop rdi; jmp rel32
+            Assert.Equal(0x506, jmp + 5 + BinaryPrimitives.ReadInt32LittleEndian(libc.Data.AsSpan(jmp + 1)));   // resumes at DT_INIT + 6
+
+            // libc is identified by module name and initializer prologue, not by its path.
+            Assert.Null(BootNotice.Assess([("sce_module/libc.prx", Fixture(Usleep))]).Host);
+        }
+
+        [Fact]
+        public void NoModuleCanCarryTheNotice_LeavesItUnchanged_AndIsReported()
+        {
+            var elf = Fixture(Usleep);
+            byte[] before = elf.Data.ToArray();
+            Assert.Equal(0, BootNotice.Apply(elf, "Hi", 8, TestContext.Current.CancellationToken));
+            Assert.Equal(before, elf.Data);
+
+            const string reason = "eboot.bin imports " + NoIo;
+            var probe = Pipeline.ProbeModules([("eboot.bin", Fixture(Usleep))], Path.GetTempPath(), Knowledge.Default, TestContext.Current.CancellationToken)
+                                .Single(r => r.Key == BootNotice.Option);
+            Assert.Equal(OptionVerdict.NotApplicable, probe.Verdict);
+            Assert.Equal(reason, probe.Evidence);
+
+            string root = Path.Combine(Path.GetTempPath(), "ps5backport-notice-" + Guid.NewGuid().ToString("N"));
+            try
+            {
+                string game = Directory.CreateDirectory(Path.Combine(root, "game")).FullName;
+                string db = Directory.CreateDirectory(Path.Combine(root, "db")).FullName;
+                File.WriteAllBytes(Path.Combine(game, "eboot.bin"), Fixture(Usleep).Data);
+                FirmwareDb.Save(new FirmwareExports("4", "synthetic", false, new()), Path.Combine(db, "4.00.json"));
+                var result = Pipeline.Backport(game, Path.Combine(root, "out"), new BackportOptions
+                {
+                    Firmware = "4", ReferenceDir = db, KnownFixes = true, DryRun = true, Options = [BootNotice.Option],
+                }, Knowledge.Default, cancel: TestContext.Current.CancellationToken);
+                Assert.Contains($"option {BootNotice.Name}: not applied, {reason}", result.ParamWarnings);
+            }
+            finally { if (Directory.Exists(root)) Directory.Delete(root, true); }
+        }
+
+        const string NoIo = "no open (sceKernelOpen, _open or open), no write (sceKernelWrite, _write or write), no close (sceKernelClose, _close or close)";
+
+        static int IndexOf(byte[] data, int start, byte[] needle)
+        {
+            for (int i = start; i + needle.Length <= data.Length; i++)
+                if (data.AsSpan(i, needle.Length).SequenceEqual(needle)) return i;
+            return -1;
+        }
+
+        static int Count(byte[] data, byte[] needle)
+        {
+            int n = 0;
+            for (int i = 0; i + needle.Length <= data.Length; i++)
+                if (data.AsSpan(i, needle.Length).SequenceEqual(needle)) n++;
+            return n;
+        }
+
         static ulong[] CallTargets(byte[] data, int start, int end)
         {
             var targets = new List<ulong>();
@@ -6447,11 +6620,29 @@ namespace Ps5Backport.Tests
             return false;
         }
 
-        static SceElf Fixture()
+        const string Open = "1G3lF1Gg1k8", Write = "4wSze92BhLI", Close = "UK2Tl2DWUns", Usleep = "1jfXLRVzisc";
+        const string PosixOpen = "6c3rCVE-fTU", PosixWrite = "FxVZqBAA7ks", PosixClose = "NNtFaKJbPt0", Nanosleep = "NhpspxdjEKU";
+
+        static SceElf Fixture() => Fixture(Open, Write, Close, Usleep);
+
+        static SceElf Fixture(params string[] nids) => new(FixtureBytes(nids));
+
+        /// <summary>A bundled libc: module name "libc", no _start, and the libc initializer prologue at DT_INIT 0x500; imports _open/_write/_close/_nanosleep.</summary>
+        static SceElf Libc()
         {
-            // A minimal SCE ELF whose single executable segment holds a real SDK _start prologue and
-            // imports sceKernelOpen/Write/Close/Usleep through PLT entries, plus an int3 run for the cave.
-            string[] nids = ["1G3lF1Gg1k8", "4wSze92BhLI", "UK2Tl2DWUns", "1jfXLRVzisc"];
+            byte[] d = FixtureBytes(PosixOpen, PosixWrite, PosixClose, Nanosleep);
+            new byte[] { 0x55, 0x48, 0x89, 0xE5, 0x41, 0x57, 0x41, 0x56, 0x41, 0x55, 0x41, 0x54, 0x53, 0x50 }.CopyTo(d, 0x500);
+            SyntheticBinary.W64(d, 0x18, 0);                  // e_entry 0, as in a .prx
+            SyntheticBinary.W64(d, 0x150, 12); SyntheticBinary.W64(d, 0x158, 0x500);                      // DT_INIT
+            SyntheticBinary.W64(d, 0x160, SceElf.DtSceModuleName); SyntheticBinary.W64(d, 0x168, 0x60);  // "libc"
+            "libc "u8.CopyTo(d.AsSpan(0x260));
+            return new SceElf(d);
+        }
+
+        static byte[] FixtureBytes(params string[] nids)
+        {
+            // A minimal SCE ELF whose single executable segment holds a real SDK _start prologue and imports
+            // the given libkernel NIDs (at most 4) through PLT entries 0x420 + 16 * i, plus an int3 run for the cave.
             var payload = new byte[0x1200];
             byte[] prologue = [0x55, 0x48, 0x89, 0xE5, 0x41, 0x57, 0x41, 0x56, 0x53, 0x50, 0x44, 0x8B, 0x37, 0x48, 0x89, 0xF3];
             prologue.CopyTo(payload, 0);
@@ -6461,11 +6652,11 @@ namespace Ps5Backport.Tests
             byte[] d = SyntheticBinary.Elf(payload, imports: true);
             SyntheticBinary.W64(d, 0x18, 0x500);              // e_entry -> the _start prologue
 
-            // Four PLT (JMPREL) imports: expand the symbol table to 5 entries and the relocation table to 4.
-            SyntheticBinary.W64(d, 0x128, 120);               // DtSceSymtabSz = 5 syms
+            // PLT (JMPREL) imports: one symbol and one relocation per NID (plus the null symbol).
+            SyntheticBinary.W64(d, 0x128, (ulong)(nids.Length + 1) * 24);   // DtSceSymtabSz
             SyntheticBinary.W64(d, 0x130, SceElf.DtJmpRel);   // DtRela -> DtJmpRel
             SyntheticBinary.W64(d, 0x140, SceElf.DtPltRelSz); // DtRelaSz -> DtPltRelSz
-            SyntheticBinary.W64(d, 0x148, 96);                // DtPltRelSz = 4 relocs
+            SyntheticBinary.W64(d, 0x148, (ulong)nids.Length * 24);        // DtPltRelSz
             for (int i = 0; i < nids.Length; i++)
             {
                 Encoding.ASCII.GetBytes(nids[i] + "#A#A\0").CopyTo(d, 0x201 + i * 16);
@@ -6484,7 +6675,7 @@ namespace Ps5Backport.Tests
             d[0x380] = Patching.Ret;                          // PLT0 stub (lazy-bind target)
             d.AsSpan(0x381, 32).Fill(Patching.Int3);
 
-            return new SceElf(d);
+            return d;
         }
     }
 }

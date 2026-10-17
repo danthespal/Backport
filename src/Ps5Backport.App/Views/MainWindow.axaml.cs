@@ -4,6 +4,7 @@ using Avalonia.Data;
 using Avalonia.Media;
 using Avalonia.Input;
 using Avalonia.Input.Platform;
+using Avalonia.Interactivity;
 using Avalonia.Platform.Storage;
 using Ps5Backport.App.ViewModels;
 using Ps5Backport.Core;
@@ -47,6 +48,20 @@ public partial class MainWindow : Window
                 && e.DataTransfer.TryGetFiles()?.FirstOrDefault()?.TryGetLocalPath() is { } path)
                 vm.DropGame(path);
         });
+
+        // the rail over the code graph page: the left edge or ≡ reveals it, leaving it or a click elsewhere hides it, Esc too
+        RailEdge.PointerEntered += (_, _) => { if (DataContext is MainViewModel { RailDocked: false } vm) vm.RailRevealed = true; };
+        Rail.PointerExited += (_, _) => { if (DataContext is MainViewModel { RailDocked: false } vm) vm.RailRevealed = false; };
+        AddHandler(PointerPressedEvent, (_, _) =>
+        {
+            if (DataContext is MainViewModel { RailDocked: false, RailRevealed: true } vm && !Rail.IsPointerOver)
+                vm.RailRevealed = false;
+        }, RoutingStrategies.Tunnel);
+        AddHandler(KeyDownEvent, (_, e) =>
+        {
+            if (e.Key == Key.Escape && DataContext is MainViewModel { RailRevealed: true } vm)
+                vm.RailRevealed = false;
+        }, RoutingStrategies.Tunnel);
 
         // Windows 11 Mica (Acrylic on Windows 10); the theme's solid background where neither is available
         TransparencyLevelHint = [WindowTransparencyLevel.Mica, WindowTransparencyLevel.AcrylicBlur, WindowTransparencyLevel.None];
@@ -143,6 +158,15 @@ public partial class MainWindow : Window
         };
         vm.PickFile = async (title, typeName, pattern) => (await PickFiles(title, typeName, [pattern], false)).FirstOrDefault();
         vm.Store.PickFiles = PickFiles;
+        vm.PickSaveFile = async (title, name, extension) =>
+        {
+            var file = await StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
+            {
+                Title = title, SuggestedFileName = name, DefaultExtension = extension, ShowOverwritePrompt = true,
+                FileTypeChoices = [new FilePickerFileType(extension.ToUpperInvariant()) { Patterns = [$"*.{extension}"] }],
+            });
+            return file?.TryGetLocalPath();
+        };
         vm.SetClipboard = async text =>
         {
             if (Clipboard is { } clipboard)

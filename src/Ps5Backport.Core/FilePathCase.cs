@@ -38,16 +38,18 @@ internal static class FilePathCase
                         var index = formatted ? suffixes : full;
                         if (index.TryGetValue(relative, out var matches))
                         {
-                            if (matches.Length != 1)
+                            // Only files whose names differ just by case are ambiguous. A "%s/" suffix found in several
+                            // folders (e.g. V Rising's Media/ and v3/Media/) asks for the same spelling in each of them.
+                            if (matches.Distinct(StringComparer.OrdinalIgnoreCase).Count() != matches.Length)
                                 warnings.Add($"ambiguous file path casing: {text}; source filenames preserved");
                             else
-                            {
-                                string source = matches[0];
-                                string expected = formatted ? source[..(source.Length - relative.Length)] + relative : relative;
-                                if (!requested.TryGetValue(source, out var spellings))
-                                    requested[source] = spellings = new(StringComparer.Ordinal);
-                                spellings.Add(expected);
-                            }
+                                foreach (string source in matches)
+                                {
+                                    string expected = formatted ? source[..(source.Length - relative.Length)] + relative : relative;
+                                    if (!requested.TryGetValue(source, out var spellings))
+                                        requested[source] = spellings = new(StringComparer.Ordinal);
+                                    spellings.Add(expected);
+                                }
                         }
                     }
                 }

@@ -7,4 +7,9 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
 
+  <ItemGroup>
+    <!-- x86-64 decoder for the code graph tool -->
+    <PackageReference Include="Iced" Version="1.21.0" />
+  </ItemGroup>
+
 </Project>

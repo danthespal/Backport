@@ -76,6 +76,8 @@ public static partial class Pipeline
                 case OptionProbe.KindConsole:
                     if (nids.Count > 0 && imported.Count == 0)
                         result.Add(new(option.Key, OptionVerdict.NotApplicable, importsText));
+                    else if (option.Key == BootNotice.Option && BootNotice.Assess(modules) is var (host, evidence))
+                        result.Add(new(option.Key, host is not null ? OptionVerdict.ConsoleChoice : OptionVerdict.NotApplicable, evidence));
                     else if (option.Key.StartsWith("psml", StringComparison.Ordinal))
                         result.Add(new(option.Key, psml ? OptionVerdict.ConsoleChoice : OptionVerdict.NotApplicable,
                             psml ? "the game uses libScePsml (PS5 Pro only)" : "the game does not use libScePsml"));
@@ -103,7 +105,7 @@ public static partial class Pipeline
                     if (above.Count > 0)
                         result.Add(new(option.Key, OptionVerdict.Needed,
                             $"{option.Fixes[option.Probe.Nid].Name} is called with {register} = {string.Join("/", above.Select(s => s.Constant!.Value).Distinct().Order())} " +
-                            $"(above {option.Probe.Above}) at {above.Count} of {sites.Count} call site(s), e.g. {above[0].Module} 0x{above[0].Site:x}; byte-pattern evidence"));
+                            $"(above {option.Probe.Above}) at {above.Count} of {sites.Count} call site(s), e.g. {above[0].Module} 0x{above[0].Site:x}; decoded call-site evidence"));
                     else if (unknown > 0)
                         result.Add(new(option.Key, OptionVerdict.Applicable,
                             $"{option.Fixes[option.Probe.Nid].Name} is imported; {register} is not a readable constant at {unknown} of {sites.Count} call site(s)"));

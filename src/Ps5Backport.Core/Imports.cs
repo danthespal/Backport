@@ -12,8 +12,10 @@ public sealed record Reference(HashSet<string> Nids, string Label, bool Exact);
 /// Classify a module's imports against what the target firmware provides.
 ///   reference  exported by the reference firmware (lower bound: present on the target)
 ///   provided   exported by a module shipped with the game (fakelib/, sce_module/, game prx)
-///   stubbed    neutralised: GOT slot points at local code, stub code written into the PLT entry,
-///              or the symbol rewritten into a local definition
+///   stubbed    GOT slot pre-filled with local code; the loader binds the native function over it
+///              wherever the firmware exports it
+///   forced     the native function never runs: the symbol was rewritten into a local definition,
+///              or stub code was written into the PLT entry itself
 ///   patched    PLT entry jumps to a cave or local function (adapter, redirect, argument fix)
 ///   data       data import; reference lists contain functions only, so unchecked
 ///   missing    not exported by the target firmware (exact firmware_db): needs a fix
@@ -21,7 +23,7 @@ public sealed record Reference(HashSet<string> Nids, string Label, bool Exact);
 /// </summary>
 public static partial class Imports
 {
-    public const string Reference = "reference", Provided = "provided", Stubbed = "stubbed", Patched = "patched";
+    public const string Reference = "reference", Provided = "provided", Stubbed = "stubbed", Forced = "forced", Patched = "patched";
     public const string Data = "data", Missing = "missing", Unknown = "unknown";
 
     /// <summary>Statuses a fix may target.</summary>
@@ -29,7 +31,7 @@ public static partial class Imports
     public static bool IsUnresolved(string status) => status is Unknown or Missing;
 
     /// <summary>Report column order.</summary>
-    public static readonly string[] AllStatuses = [Reference, Provided, Stubbed, Patched, Data, Missing, Unknown];
+    public static readonly string[] AllStatuses = [Reference, Provided, Stubbed, Forced, Patched, Data, Missing, Unknown];
 
     const byte PushImm32 = 0x68;   // an untouched lazy-bind PLT stub starts with 'push <index>'
     const byte JmpRel32 = 0xE9;    // a redirected PLT entry starts with 'jmp rel32'
@@ -91,7 +93,7 @@ public static partial class Imports
             var imp = unique[nid];
             string status;
             if (imp.DefinedLocally)
-                status = Stubbed;
+                status = Forced;     // bound to the module's own definition on every firmware (FINDINGS 6v)
             else if (imp.SymType == SceElf.SttObject)
                 status = Data;
             else if (imp.Plt && elf.Data[elf.Off(elf.ReadU64(imp.GotVaddr))] != PushImm32)
@@ -99,7 +101,7 @@ public static partial class Imports
             else if (imp.Plt && elf.Data[elf.Off(elf.ReadU64(imp.GotVaddr) - 6)] == JmpRel32)
                 status = Patched;    // PLT entry jumps to a cave or local function
             else if (imp.Plt && !IsJmpViaGot(elf, elf.ReadU64(imp.GotVaddr) - 6))
-                status = Stubbed;    // stub code written into the PLT entry itself (CONTROL Resonant)
+                status = Forced;     // stub code written into the PLT entry itself (CONTROL Resonant)
             else if (reference.Contains(nid))
                 status = Reference;
             else if (provided?.Contains(nid) == true)
@@ -179,7 +181,7 @@ public static partial class Imports
     public static string Report(string name, SceElf elf, IReadOnlyList<ImportStatus> statuses, NameDb names,
                                 IReadOnlyCollection<string>? show = null)
     {
-        show ??= [Missing, Unknown, Stubbed, Patched];
+        show ??= [Missing, Unknown, Stubbed, Forced, Patched];
         var sb = new StringBuilder();
         sb.Append($"== {name}  module={Py(elf.ModuleName)}\n   build: {Py(elf.BuildPath)}\n   ");
         sb.Append(string.Join(", ", AllStatuses.Select(k => $"{k}={statuses.Count(s => s.Status == k)}")));

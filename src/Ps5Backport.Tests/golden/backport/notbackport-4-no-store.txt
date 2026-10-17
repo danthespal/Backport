@@ -1,5 +1,5 @@
-backport_report.json 7c55e342d0055fdae2e75940b736218eab876193e3ff03fb1673dc3775aabd9b
-backport_report.txt 2bde757f3b9ccc59b86bf1d72460ba3164e240ba6c99a07e4fb75376890bd3fe
+backport_report.json 0487652fc47108f1c3ef88912170fd6d387c3bce78541d836871c45279712d80
+backport_report.txt fcc2f1d441cc31c57433b4cf521ba473dfa44ac6fb10a65e4da6dd15aadfe7b4
 eboot.bin 1d4d35fcbea636dec8d606d34846c8096e0ae2fb1bf3bc0f8071ba06de44f8e3
 libSieRdNNabla.prx 9f4cbe247a07ed88fec921e360d8a90e178e605f820fc3ffaef4d7945843b62e
 logiWheel.prx 1b410e2d1731f25a3fe006ffed7d6ff2d7ce15a755a1bdd0874c5c59f913e3e3
@@ -23,6 +23,7 @@ Backport of <game>
   probe console-choice auto_pro  imports 2 of its 4 function(s): sceAgcGetIsTrinityMode, sceKernelGetOperationMode
   probe console-choice force_pro  imports 2 of its 3 function(s): sceAgcGetIsTrinityMode, sceKernelGetOperationMode
   probe applicable     gpu_scratch  its byte pattern(s) match 202 time(s)
+  probe console-choice agc_mode2  depends on the console or the tester's intent, not on the game
   probe console-choice playgo_0_6  depends on the console or the tester's intent, not on the game
   probe console-choice playgo_0_6_log  depends on the console or the tester's intent, not on the game
   probe console-choice psml_kpn9  the game uses libScePsml (PS5 Pro only)
@@ -78,7 +79,7 @@ eboot.bin  [PS5-style SELF]  written
   missing  BfBDZGbti7A  sceAgcGetIsTrinityMode  [libSceAgc]  refs=1   introduced: FW 9.00 / firmware_db 9.00
   missing  -KRzWekV120  sceAgcDcbSetIndexSize_0600  [libSceAgc]  refs=1   introduced: FW 6.00 / firmware_db 6.00
   missing  fPSCdQxgpSw  sceAgcWriteDataPatchSetAddressOrOffset  [libSceAgc]  refs=1   introduced: FW 8.00 / firmware_db 8.00
-  missing  dbOlWdppb4o  dbOlWdppb4o  [libSceAgc]  refs=2   introduced: FW 10.01 / firmware_db 10.01
+  missing  dbOlWdppb4o  sceAgcCreateInterpolantMapping_10000  [libSceAgc]  refs=2   introduced: FW 10.01 / firmware_db 10.01
 
 libSieRdNNabla.prx  [PS5-style SELF]  written
   SDK 0x10000040/0x12090001 -> 0x04000031/0x09040001

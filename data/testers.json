@@ -1,0 +1,28 @@
+{
+  "testers": {
+    "arsenic": {
+      "model": "base",
+      "firmware": "13.60",
+      "loader": "ShadowMountPlus",
+      "note": "Studio author's console (standard PS5)"
+    },
+    "tester-450": {
+      "model": "base",
+      "firmware": "4.50",
+      "loader": "",
+      "note": "Physical FW 4.50 base console (FINDINGS 6s, 6u); the two 4.50 reports may come from different people, split if so"
+    },
+    "tester-860": {
+      "model": "fat",
+      "firmware": "8.60",
+      "loader": "ShadowMountPlus 1.7-beta5fix1",
+      "note": "Sends klog captures (PS5-FAT-8.60-*.log) and .prosperodmp dumps"
+    },
+    "valac": {
+      "model": "base",
+      "firmware": "5.50",
+      "loader": "",
+      "note": "FINDINGS 6j (firmware from open item 13)"
+    }
+  }
+}

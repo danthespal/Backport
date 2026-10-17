@@ -31,7 +31,10 @@ internal static class UbisoftOfflinePopups
     }
 
     /// <summary>(definitions offset, first severity, second severity) of the recognised layout, or null.</summary>
-    static (long At, byte First, byte Second)? Locate(SceElf elf, CancellationToken cancel)
+    /// <summary>Bytes of the recognised warning definitions (from <see cref="Locate"/>'s offset).</summary>
+    internal static int DefinitionsLength => Definitions.Split(' ').Length;
+
+    internal static (long At, byte First, byte Second)? Locate(SceElf elf, CancellationToken cancel)
     {
         var definitions = Find(elf, Definitions, cancel);
         if (definitions.Count != 1) return null;

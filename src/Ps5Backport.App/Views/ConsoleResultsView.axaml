@@ -1,0 +1,289 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Ps5Backport.App.ViewModels"
+             xmlns:app="using:Ps5Backport.App"
+             x:Class="Ps5Backport.App.Views.ConsoleResultsView"
+             x:DataType="vm:ConsoleResultsViewModel">
+
+  <!-- layout A of work/mockups/console-results.html: command bar, filters | items × bands | inspector, tester strip -->
+  <Panel>
+    <DockPanel>
+      <Border DockPanel.Dock="Top" Classes="panel" BorderThickness="0,0,0,1" Padding="16,8">
+        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+          <WrapPanel ItemSpacing="8" LineSpacing="6" VerticalAlignment="Center">
+            <TextBlock Classes="section" Text="Console results" VerticalAlignment="Center" />
+            <Border Classes="tag"><TextBlock Text="{Binding TestersText}" /></Border>
+            <Border Classes="tag"><TextBlock Text="{Binding RunsText}" /></Border>
+            <Border Classes="tag"><TextBlock Text="{Binding CandidatesText}" Foreground="{DynamicResource MagentaBrush}" /></Border>
+            <Border Classes="tag"><TextBlock Text="{Binding FailuresText}" Foreground="{DynamicResource StatusError}" /></Border>
+            <Border Classes="tag"><TextBlock Text="{Binding NeverRunText}" Foreground="{DynamicResource StatusWarn}" /></Border>
+          </WrapPanel>
+          <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+            <Button Content="Reload" Command="{Binding ReloadCommand}" ToolTip.Tip="{Binding DataText}" />
+            <Button Classes="accent" Content="+ Add result" Command="{Binding StartAddCommand}" />
+          </StackPanel>
+        </Grid>
+      </Border>
+
+      <!-- testers: what each console should run next -->
+      <Border DockPanel.Dock="Bottom" Classes="panel" BorderThickness="0,1,0,0" Padding="12,8">
+        <ItemsControl ItemsSource="{Binding TesterCards}">
+          <ItemsControl.ItemsPanel>
+            <ItemsPanelTemplate><UniformGrid Rows="1" /></ItemsPanelTemplate>
+          </ItemsControl.ItemsPanel>
+          <ItemsControl.ItemTemplate>
+            <DataTemplate x:DataType="vm:TesterCard">
+              <Border Classes="card" Margin="0,0,8,0" Padding="10,6">
+                <StackPanel Spacing="2">
+                  <Grid ColumnDefinitions="*,Auto">
+                    <TextBlock FontWeight="SemiBold" Text="{Binding Handle}" />
+                    <TextBlock Grid.Column="1" Classes="caption" Text="{Binding Console}" />
+                  </Grid>
+                  <TextBlock Classes="caption" Text="{Binding SendNext}" TextWrapping="Wrap" ToolTip.Tip="{Binding SendNext}" MaxLines="2" TextTrimming="CharacterEllipsis" />
+                </StackPanel>
+              </Border>
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
+      </Border>
+
+      <Grid ColumnDefinitions="200,*,330">
+        <!-- filters -->
+        <Border Classes="panel" BorderThickness="0,0,1,0">
+          <ScrollViewer>
+            <StackPanel Margin="12" Spacing="4">
+              <TextBox Text="{Binding Search}" PlaceholderText="Search items, names, titles" />
+              <TextBlock Classes="caption" Text="SHOW" Margin="0,10,0,0" />
+              <CheckBox IsChecked="{Binding ExperimentalOnly}" Content="Experimental only" ToolTip.Tip="Derived rules, options and fakelib variants: what still needs console evidence" />
+              <CheckBox IsChecked="{Binding WithRunsOnly}" Content="Items with runs only" />
+              <TextBlock Classes="caption" Text="KIND" Margin="0,10,0,0" />
+              <CheckBox IsChecked="{Binding ShowRules}" Content="Rules" />
+              <CheckBox IsChecked="{Binding ShowOptions}" Content="Options" />
+              <CheckBox IsChecked="{Binding ShowFakelibs}" Content="Fakelib sets and variants" />
+              <TextBlock Classes="caption" Text="STATE" Margin="0,10,0,0" />
+              <ComboBox SelectedIndex="{Binding StateFilter}" HorizontalAlignment="Stretch">
+                <ComboBoxItem Content="All" />
+                <ComboBoxItem Content="Promotion candidates" />
+                <ComboBoxItem Content="Failed somewhere" />
+                <ComboBoxItem Content="Gaps on a band" />
+              </ComboBox>
+              <TextBlock Classes="caption" Text="LEGEND" Margin="0,14,0,0" />
+              <StackPanel Spacing="4">
+                <StackPanel Orientation="Horizontal" Spacing="6"><ContentControl Content="{x:Static vm:ConsoleResultsLegend.Pass}" /><TextBlock Classes="caption" Text="pass" /></StackPanel>
+                <StackPanel Orientation="Horizontal" Spacing="6"><ContentControl Content="{x:Static vm:ConsoleResultsLegend.Fail}" /><TextBlock Classes="caption" Text="fail" /></StackPanel>
+                <StackPanel Orientation="Horizontal" Spacing="6"><ContentControl Content="{x:Static vm:ConsoleResultsLegend.Unknown}" /><TextBlock Classes="caption" Text="unknown" /></StackPanel>
+                <StackPanel Orientation="Horizontal" Spacing="6"><ContentControl Content="{x:Static vm:ConsoleResultsLegend.Old}" /><TextBlock Classes="caption" Text="old form or unpinned (history)" TextWrapping="Wrap" /></StackPanel>
+              </StackPanel>
+              <TextBlock Classes="caption" Text="{Binding DataText}" TextWrapping="Wrap" Margin="0,14,0,0" />
+            </StackPanel>
+          </ScrollViewer>
+        </Border>
+
+        <!-- items × bands -->
+        <DockPanel Grid.Column="1" Margin="12,10,12,8">
+          <TextBlock DockPanel.Dock="Top" Text="{Binding Problem}" Foreground="{DynamicResource StatusError}" TextWrapping="Wrap" IsVisible="{Binding HasProblem}" Margin="0,0,0,8" />
+          <TableView ItemsSource="{Binding Rows}" SelectedItem="{Binding SelectedRow}">
+            <TableView.Columns>
+              <TableViewColumn Header="Item" Width="*" x:DataType="vm:ResultItemRow">
+                <TableViewColumn.CellTemplate>
+                  <DataTemplate x:DataType="vm:ResultItemRow">
+                    <StackPanel Margin="0,3">
+                      <TextBlock Text="{Binding Item}" />
+                      <TextBlock Classes="caption mono" Text="{Binding Label}" TextTrimming="CharacterEllipsis" />
+                    </StackPanel>
+                  </DataTemplate>
+                </TableViewColumn.CellTemplate>
+              </TableViewColumn>
+              <TableViewColumn Header="4.xx" Width="70" x:DataType="vm:ResultItemRow">
+                <TableViewColumn.CellTemplate><DataTemplate x:DataType="vm:ResultItemRow"><ContentControl Content="{Binding Band0}" /></DataTemplate></TableViewColumn.CellTemplate>
+              </TableViewColumn>
+              <TableViewColumn Header="5-7" Width="70" x:DataType="vm:ResultItemRow">
+                <TableViewColumn.CellTemplate><DataTemplate x:DataType="vm:ResultItemRow"><ContentControl Content="{Binding Band1}" /></DataTemplate></TableViewColumn.CellTemplate>
+              </TableViewColumn>
+              <TableViewColumn Header="8-9" Width="70" x:DataType="vm:ResultItemRow">
+                <TableViewColumn.CellTemplate><DataTemplate x:DataType="vm:ResultItemRow"><ContentControl Content="{Binding Band2}" /></DataTemplate></TableViewColumn.CellTemplate>
+              </TableViewColumn>
+              <TableViewColumn Header="10+" Width="70" x:DataType="vm:ResultItemRow">
+                <TableViewColumn.CellTemplate><DataTemplate x:DataType="vm:ResultItemRow"><ContentControl Content="{Binding Band3}" /></DataTemplate></TableViewColumn.CellTemplate>
+              </TableViewColumn>
+              <TableViewColumn Header="" Width="96" x:DataType="vm:ResultItemRow">
+                <TableViewColumn.CellTemplate>
+                  <DataTemplate x:DataType="vm:ResultItemRow">
+                    <TextBlock Text="{Binding State}" Foreground="{Binding StateTone, Converter={x:Static app:ToneBrushConverter.Instance}}" />
+                  </DataTemplate>
+                </TableViewColumn.CellTemplate>
+              </TableViewColumn>
+            </TableView.Columns>
+          </TableView>
+        </DockPanel>
+
+        <!-- inspector -->
+        <Border Grid.Column="2" Classes="panel" BorderThickness="1,0,0,0">
+          <ScrollViewer>
+            <StackPanel Margin="14,12" Spacing="6">
+              <TextBlock Classes="muted" Text="Select an item to see its runs." IsVisible="{Binding !HasSelection}" TextWrapping="Wrap" />
+              <StackPanel Spacing="6" IsVisible="{Binding HasSelection}">
+                <SelectableTextBlock FontWeight="SemiBold" Text="{Binding SelectedTitle}" />
+                <TextBlock Text="{Binding SelectedLabel}" TextWrapping="Wrap" />
+                <TextBlock Classes="caption mono" Text="{Binding SelectedPin}" TextWrapping="Wrap" />
+                <Border Classes="banner" IsVisible="{Binding IsCandidate}">
+                  <StackPanel Spacing="6">
+                    <TextBlock FontWeight="SemiBold" Text="Promotion candidate" Foreground="{DynamicResource MagentaBrush}" />
+                    <TextBlock Classes="caption" Text="Passed on all four firmware bands with no failure. Promotion stays your decision." TextWrapping="Wrap" />
+                    <Button Classes="accent" Content="Promote…" Command="{Binding OpenPromoteCommand}" HorizontalAlignment="Left" />
+                  </StackPanel>
+                </Border>
+                <Border Classes="banner failure" IsVisible="{Binding HasFailure}">
+                  <TextBlock Text="{Binding FailureText}" TextWrapping="Wrap" Foreground="{DynamicResource StatusError}" />
+                </Border>
+                <TextBlock Classes="caption" Text="RUNS (NEWEST FIRST)" Margin="0,8,0,0" />
+                <TextBlock Classes="muted" Text="No console run tested this item yet." IsVisible="{Binding HasNoRuns}" TextWrapping="Wrap" />
+                <ItemsControl ItemsSource="{Binding SelectedRuns}">
+                  <ItemsControl.ItemTemplate>
+                    <DataTemplate x:DataType="vm:RunView">
+                      <Border Classes="card" Margin="0,0,0,6" Padding="10,6"
+                              BorderBrush="{Binding VerdictTone, Converter={x:Static app:ToneBrushConverter.Instance}}">
+                        <StackPanel Spacing="2">
+                          <Grid ColumnDefinitions="Auto,*" ColumnSpacing="8">
+                            <TextBlock FontWeight="SemiBold" Text="{Binding Band}" />
+                            <TextBlock Grid.Column="1" Classes="caption" Text="{Binding Header}" TextWrapping="Wrap" />
+                          </Grid>
+                          <StackPanel Orientation="Horizontal" Spacing="8">
+                            <TextBlock Text="{Binding Verdict}" Foreground="{Binding VerdictTone, Converter={x:Static app:ToneBrushConverter.Instance}}" />
+                            <TextBlock Classes="caption" Text="{Binding Pin}" />
+                          </StackPanel>
+                          <TextBlock Classes="caption" Text="{Binding Detail}" TextWrapping="Wrap" />
+                        </StackPanel>
+                      </Border>
+                    </DataTemplate>
+                  </ItemsControl.ItemTemplate>
+                </ItemsControl>
+                <TextBlock Classes="caption" Text="PROMOTION" Margin="0,8,0,0" />
+                <TextBlock Classes="caption" Text="{Binding PromotionText}" TextWrapping="Wrap" />
+              </StackPanel>
+            </StackPanel>
+          </ScrollViewer>
+        </Border>
+      </Grid>
+    </DockPanel>
+
+    <!-- Add result: same prefill as `ps5backport results add` -->
+    <Border IsVisible="{Binding IsAdding}" Background="{DynamicResource CanvasBrush}">
+      <DockPanel>
+        <Border DockPanel.Dock="Top" Classes="panel" BorderThickness="0,0,0,1" Padding="16,8">
+          <Grid ColumnDefinitions="*,Auto">
+            <StackPanel Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
+              <TextBlock Classes="section" Text="Add console result" />
+              <TextBlock Classes="caption" Text="same engine as ps5backport results add" VerticalAlignment="Center" />
+            </StackPanel>
+            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="6">
+              <Button Content="Cancel" Command="{Binding CancelAddCommand}" />
+              <Button Classes="accent" Content="Save result" Command="{Binding SaveResultCommand}" ToolTip.Tip="{Binding DataText}" />
+            </StackPanel>
+          </Grid>
+        </Border>
+        <TextBlock DockPanel.Dock="Bottom" Margin="16,0,16,10" Text="{Binding AddProblem}" Foreground="{DynamicResource StatusError}" TextWrapping="Wrap" />
+        <Grid ColumnDefinitions="*,*" ColumnSpacing="14" Margin="16,12">
+          <ScrollViewer>
+            <StackPanel Spacing="12">
+              <Border Classes="card">
+                <Grid ColumnDefinitions="110,*" RowDefinitions="Auto,Auto,Auto,Auto" RowSpacing="8" ColumnSpacing="8">
+                  <TextBlock Grid.ColumnSpan="2" Classes="section" Text="1 · Who and which build" />
+                  <TextBlock Grid.Row="1" Text="Tester" VerticalAlignment="Center" />
+                  <StackPanel Grid.Row="1" Grid.Column="1" Spacing="6">
+                    <ComboBox ItemsSource="{Binding TesterHandles}" SelectedItem="{Binding AddTester}" HorizontalAlignment="Stretch" />
+                    <Button Content="New tester…" HorizontalAlignment="Left" Padding="10,2">
+                      <Button.Flyout>
+                        <Flyout Placement="BottomEdgeAlignedLeft">
+                      <Grid ColumnDefinitions="*,*" RowDefinitions="Auto,Auto,Auto" ColumnSpacing="6" RowSpacing="6" Width="360">
+                        <TextBox Text="{Binding NewHandle}" PlaceholderText="handle (e.g. tester-503)" />
+                        <ComboBox Grid.Column="1" ItemsSource="{x:Static vm:ConsoleResultsViewModel.Models}" SelectedItem="{Binding NewModel}" HorizontalAlignment="Stretch" />
+                        <TextBox Grid.Row="1" Text="{Binding NewFirmware}" PlaceholderText="firmware (e.g. 5.02)" />
+                        <TextBox Grid.Row="1" Grid.Column="1" Text="{Binding NewLoader}" PlaceholderText="loader (optional)" />
+                        <Button Grid.Row="2" Grid.Column="1" Content="Add tester" Command="{Binding AddNewTesterCommand}" HorizontalAlignment="Right" />
+                      </Grid>
+                        </Flyout>
+                      </Button.Flyout>
+                    </Button>
+                  </StackPanel>
+                  <TextBlock Grid.Row="2" Text="Cook folder" VerticalAlignment="Top" Margin="0,6,0,0" />
+                  <StackPanel Grid.Row="2" Grid.Column="1" Spacing="4">
+                    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="6">
+                      <TextBlock Classes="mono muted" Text="{Binding AddBuild}" TextTrimming="PathSegmentEllipsis" VerticalAlignment="Center" />
+                      <Button Grid.Column="1" Content="Choose" Command="{Binding ChooseBuildCommand}" />
+                    </Grid>
+                    <TextBlock Classes="caption" Text="{Binding AddBuildInfo}" TextWrapping="Wrap" />
+                  </StackPanel>
+                  <TextBlock Grid.Row="3" Text="Kernel log" VerticalAlignment="Top" Margin="0,6,0,0" />
+                  <StackPanel Grid.Row="3" Grid.Column="1" Spacing="4">
+                    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="6">
+                      <TextBlock Classes="mono muted" Text="{Binding AddLog}" TextTrimming="PathSegmentEllipsis" VerticalAlignment="Center" />
+                      <Button Grid.Column="1" Content="Choose" Command="{Binding ChooseLogCommand}" />
+                    </Grid>
+                    <TextBlock Classes="caption" Text="{Binding AddLogInfo}" TextWrapping="Wrap" />
+                  </StackPanel>
+                </Grid>
+              </Border>
+              <Border Classes="card">
+                <Grid ColumnDefinitions="110,*" RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto" RowSpacing="8" ColumnSpacing="8">
+                  <TextBlock Grid.ColumnSpan="2" Classes="section" Text="2 · What happened" />
+                  <TextBlock Grid.Row="1" Text="Title id" VerticalAlignment="Center" />
+                  <TextBox Grid.Row="1" Grid.Column="1" Text="{Binding AddTitle}" PlaceholderText="from the cook folder, or e.g. PPSA26344" />
+                  <TextBlock Grid.Row="2" Text="Outcome" VerticalAlignment="Center" />
+                  <ComboBox Grid.Row="2" Grid.Column="1" ItemsSource="{x:Static vm:ConsoleResultsViewModel.Outcomes}" SelectedItem="{Binding AddOutcome}" MinWidth="160" />
+                  <TextBlock Grid.Row="3" Text="Error" VerticalAlignment="Center" />
+                  <TextBox Grid.Row="3" Grid.Column="1" Text="{Binding AddError}" PlaceholderText="filled from the log when it shows a fatal event" />
+                  <TextBlock Grid.Row="4" Text="Date" VerticalAlignment="Center" />
+                  <TextBox Grid.Row="4" Grid.Column="1" Text="{Binding AddDate}" Width="130" HorizontalAlignment="Left" />
+                  <TextBlock Grid.Row="5" Text="Note" VerticalAlignment="Center" />
+                  <TextBox Grid.Row="5" Grid.Column="1" Text="{Binding AddNote}" PlaceholderText="what the tester did and saw" />
+                </Grid>
+              </Border>
+            </StackPanel>
+          </ScrollViewer>
+          <Border Grid.Column="1" Classes="card">
+            <DockPanel>
+              <StackPanel DockPanel.Dock="Top" Spacing="2" Margin="0,0,0,8">
+                <TextBlock Classes="section" Text="3 · Verdict per tested item" />
+                <TextBlock Classes="caption" Text="Pre-filled from the outcome (pass when it plays or boots, else unknown); change any. Each verdict keeps the fingerprint the cook recorded, so later rule edits turn it into history instead of proof." TextWrapping="Wrap" />
+              </StackPanel>
+              <ScrollViewer>
+                <ItemsControl ItemsSource="{Binding AddTests}">
+                  <ItemsControl.ItemTemplate>
+                    <DataTemplate x:DataType="vm:VerdictRow">
+                      <Grid ColumnDefinitions="*,Auto,120" ColumnSpacing="8" Margin="0,2">
+                        <StackPanel VerticalAlignment="Center">
+                          <TextBlock Classes="mono" Text="{Binding Item}" TextTrimming="CharacterEllipsis" />
+                          <TextBlock Classes="caption" Text="{Binding Label}" TextTrimming="CharacterEllipsis" />
+                        </StackPanel>
+                        <TextBlock Grid.Column="1" Classes="caption mono" Text="{Binding Fingerprint}" VerticalAlignment="Center" />
+                        <ComboBox Grid.Column="2" ItemsSource="{x:Static vm:VerdictRow.Choices}" SelectedItem="{Binding Verdict}" HorizontalAlignment="Stretch" />
+                      </Grid>
+                    </DataTemplate>
+                  </ItemsControl.ItemTemplate>
+                </ItemsControl>
+              </ScrollViewer>
+            </DockPanel>
+          </Border>
+        </Grid>
+      </DockPanel>
+    </Border>
+
+    <!-- Promote: shows the exact data/fixes.json change and applies it only on confirmation -->
+    <Border IsVisible="{Binding IsPromoteOpen}" Background="#99000000">
+      <Border Classes="card" Width="560" HorizontalAlignment="Center" VerticalAlignment="Center" BorderBrush="{DynamicResource MagentaBrush}" Padding="18,14">
+        <StackPanel Spacing="10">
+          <TextBlock Classes="section" Text="{Binding PromoteTitle}" />
+          <TextBlock Classes="caption" Text="CHANGE" />
+          <SelectableTextBlock Classes="mono" Text="{Binding PromoteChange}" TextWrapping="Wrap" />
+          <TextBlock Classes="caption" Text="STAYS YOUR STEP" IsVisible="{Binding PromoteManual, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+          <TextBlock Text="{Binding PromoteManual}" TextWrapping="Wrap" />
+          <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Right">
+            <Button Content="Cancel" Command="{Binding ClosePromoteCommand}" />
+            <Button Classes="accent" Content="Apply to data/fixes.json" Command="{Binding ApplyPromoteCommand}" IsEnabled="{Binding CanApplyPromote}" />
+          </StackPanel>
+        </StackPanel>
+      </Border>
+    </Border>
+  </Panel>
+</UserControl>

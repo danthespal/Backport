@@ -6,6 +6,9 @@ public static partial class Pipeline
         DirectoryTransaction? publication, string writeDir, string fingerprint, int moduleCount,
         IProgress<BackportProgress>? progress, CancellationToken cancel, Knowledge knowledge)
     {
+        result.ConsoleItems.AddRange(ConsoleResults.Items(result, knowledge, o.FakelibStore));
+        if (o.ConsoleResults is { } console)
+            result.ConsoleEvidence.AddRange(console.ForCook(result.ConsoleItems));
         if (!o.DryRun)
         {
             WriteReports(result, writeDir, knowledge);

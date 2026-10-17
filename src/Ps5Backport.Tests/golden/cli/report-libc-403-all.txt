@@ -3,7 +3,7 @@ reference: firmware_db 4.03 (exact for FW 4.03)
 
 == libc.elf  module=libc
    build: W:/Build/J03848509/sys/internal/usermode/src/libc/Prospero_Release/libc.prx
-   reference=110, provided=0, stubbed=0, patched=0, data=2, missing=10, unknown=0
+   reference=110, provided=0, stubbed=0, forced=0, patched=0, data=2, missing=10, unknown=0
    libSceLibcInternalExt:
       missing  tB59hFLH3SA  _sceLibcInternalForceTlsDestructor  (GOT 0x18e268)
       missing  qBS714-Jr3g  _sceLibcInternalThreadAtexit  (GOT 0x18e330)

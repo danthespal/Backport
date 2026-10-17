@@ -9,7 +9,7 @@ namespace Ps5Backport.App.ViewModels;
 public enum PathKind { FirmwareDb, FakelibStore, Aerolib }
 
 /// <summary>The pages of the navigation rail.</summary>
-public enum AppPage { Backport, Store, FirmwareDb, Tools, Settings }
+public enum AppPage { Backport, Store, FirmwareDb, Tools, CodeGraph, Results, Settings }
 
 /// <summary>One knowledge-folder row of the Settings page.</summary>
 public sealed class PathSetting
@@ -60,7 +60,8 @@ public partial class MainViewModel
         });
         string? store = StoreDir;
         var sets = store is not null && Directory.Exists(store)
-            ? Directory.EnumerateDirectories(store).Select(System.IO.Path.GetFileName).Order(StringComparer.Ordinal).ToList() : [];
+            ? Directory.EnumerateDirectories(store).Select(System.IO.Path.GetFileName).OfType<string>()
+                .Where(k => !k.StartsWith(Publication.Prefix, StringComparison.OrdinalIgnoreCase)).Order(StringComparer.Ordinal).ToList() : [];
         PathSettings.Add(new PathSetting
         {
             Kind = PathKind.FakelibStore, Title = "Fakelib store", Icon = "", Path = store ?? "not found",

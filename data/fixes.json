@@ -1,5 +1,5 @@
 {
-  "_about": "Known fixes at the game <-> system-library boundary, keyed by the imported NID. Per library function, never per game. Read by Ps5Backport.Core. Fields: kind (stub | swap | adapter | redirect | plt_stub = stub body in a cave and the PLT entry jumps to it, the GOT slot is left alone: forces a value even where the target firmware has the function | none = only in an option: removes the default fix for that NID), name, area, sources (keys of \"sources\" or free text), stub (a name in stubs.json, or \"ret:<value>\"), new_nid (swap/adapter target), new_library (optional target import library; reuse its existing library/module suffix), export_nid (redirect target, exported by the same module), insns (adapter code, one \"hex  ; asm\" per instruction, branch-free; \"call_got\" = call the real function through its GOT slot), when (missing = only when the import is missing on the target [default] | always = argument fixes), below (optional firmware: apply only when the target is lower, e.g. 5.00), post_call (adapter runs after the real function), proven (default true; false = derived, not console-tested), note, rationale. \"options\": opt-in groups (never applied by default; selected per backport). Each has name, description, warning, sources, group (where the app lists it; top-level \"option_groups\" orders the groups, unlisted groups follow) and its own fixes (a selected option's fixes replace the default fix for the same NID), optionally fakelib_variant (files in the fakelib set's <variant>/ subfolder replace the same-named fakelibs) and patterns (byte replacements: find/replace hex; in modules only 4-aligned hits inside non-executable segments, in the listed data files every hit). \"patterns\": byte replacements applied with the known fixes (name, area, sources, find/replace hex, code = search executable segments at any offset instead of 4-aligned data, note, rationale); the find bytes carry enough context to match one function only.",
+  "_about": "Known fixes at the game <-> system-library boundary, keyed by the imported NID. Per library function, never per game. Read by Ps5Backport.Core. Fields: kind (stub | swap | adapter | redirect | plt_stub = stub body in a cave and the PLT entry jumps to it, the GOT slot is left alone: forces a value even where the target firmware has the function | guarded = the GOT slot is pre-filled with stub (used where the console lacks the export) and the PLT entry jumps to a guard around the native call; guard on_error: a negative result becomes the stub's value (stub must be ret0 or ret:<value>) | none = only in an option: removes the default fix for that NID), name, area, sources (keys of \"sources\" or free text), stub (a name in stubs.json, or \"ret:<value>\"), new_nid (swap/adapter target), new_library (optional target import library; reuse its existing library/module suffix), export_nid (redirect target, exported by the same module), insns (adapter code, one \"hex  ; asm\" per instruction, branch-free; \"call_got\" = call the real function through its GOT slot), when (missing = only when the import is missing on the target [default] | always = argument fixes), guard (guarded only: on_error), below (optional firmware: apply only when the target is lower, e.g. 5.00), post_call (adapter runs after the real function), proven (default true; false = derived, not console-tested), note, rationale. \"options\": opt-in groups (never applied by default; selected per backport). Each has name, description, warning, sources, group (where the app lists it; top-level \"option_groups\" orders the groups, unlisted groups follow) and its own fixes (a selected option's fixes replace the default fix for the same NID), optionally fakelib_variant (files in the fakelib set's <variant>/ subfolder replace the same-named fakelibs) and patterns (byte replacements: find/replace hex; in modules only 4-aligned hits inside non-executable segments, in the listed data files every hit). \"patterns\": byte replacements applied with the known fixes (name, area, sources, find/replace hex, code = search executable segments at any offset instead of 4-aligned data, note, rationale); the find bytes carry enough context to match one function only.",
   "sources": {
     "GT7": "GT7 1.71 FW4",
     "CONTROL": "CONTROL Resonant 1.300 FW4.03",
@@ -16,7 +16,8 @@
     "HKSS": "Hollow Knight: Silksong PPSA12544 FW4.xx (test status unknown)",
     "HCOTM": "Horizon Call of the Mountain PPSA05666 FW4.xx/5.xx (test status unknown)",
     "KCD2": "Kingdom Come: Deliverance II PPSA21704 FW4.xx (test status unknown)",
-    "YOTEI4": "Ghost of Yotei 02.002.000 FW4 cook (console-tested on FW 13.60)"
+    "YOTEI4": "Ghost of Yotei 02.002.000 FW4 cook (console-tested on FW 13.60)",
+    "D97": "Decker97's PS5 Backport GUI 0.2.0-beta rule data (its own FW 4.50 console reports; FINDINGS 6v)"
   },
   "umtx_op": "04AjkP0jO9U",
   "fixes": {
@@ -84,6 +85,18 @@
       "stub": "ret:0xff",
       "note": "CPU affinity mask of the process (FW 12.40+): the firmware returns 0xff for a native title (0x1fff otherwise)",
       "rationale": "FW 12.70 libkernel computes the mask once from the app info: 0xff or 0x1fff, never 0 for a game. Callers pass it to thread-affinity calls; one game checks popcnt(mask) >= 5, so ret0 breaks it. A FW 4.03 backport (console-tested) returns 0xff; an earlier backport's ret0 only worked because its caller just forwards the value."
+    },
+    "32KQRUK13kI": {
+      "kind": "stub",
+      "name": "sceCoredumpWriteUserString",
+      "area": "libkernel",
+      "sources": [
+        "D97"
+      ],
+      "stub": "ret0",
+      "proven": false,
+      "note": "crash-report annotation (FW 8.00 and later): returns 0 without annotating",
+      "rationale": "libkernel exports it from FW 8.00 (firmware_db). It only adds a user string to a coredump, so nothing the game needs depends on it. Beast of Reincarnation calls it in startup code (eboot 0x168a6, when its build string is set) and ignores the result (the next instruction reloads rdi), so below 8.00 the unresolved import would crash there. Imported by 5 games on disk (PPSA18543, 22408, 29343, 34008, 34015); the console-tested BEAST and FC27 backports left it unpatched (left_unpatched.json), so their boot path did not reach it. Decker97 seeds the same ret0."
     },
     "XgVs4jRehcY": {
       "kind": "stub",
@@ -189,7 +202,8 @@
       "note": "no WQHD output detection: return 0 (FW 6.00 and later have it)"
     },
     "TViD1EZXkNI": {
-      "kind": "plt_stub",
+      "kind": "guarded",
+      "guard": "on_error",
       "name": "sceAudioOut2Set3DLatency",
       "area": "audio / ACM",
       "sources": [
@@ -201,8 +215,9 @@
       "stub": "ret0",
       "when": "always",
       "below": "10.01",
-      "note": "3D-audio latency request skipped, reports success",
-      "rationale": "Absent before FW 6.00. FW 6.00-9.60 export it but accept latency 0-1 only (0x80268001 otherwise); latency 2 (user 0xff only) arrives in 10.01. Ghost of Yotei calls Set3DLatency(0xff, 2) during NCA setup: on FW 8.60 the refusal fails snd_SynthInit and the game crashes. A GOT stub is overwritten by the loader wherever the export exists, so the PLT entry is stubbed (FINDINGS 6b). Console-tested: Yotei FW 4.00 cook boots and plays on FW 8.60 (2026-10-13)."
+      "proven": false,
+      "note": "native 3D-audio latency request where the console accepts it; refused or absent: reports success",
+      "rationale": "Absent before FW 6.00. FW 6.00-9.60 export it but accept latency 0-1 only (0x80268001 otherwise); latency 2 (user 0xff only) arrives in 10.01. Ghost of Yotei calls Set3DLatency(0xff, 2) during NCA setup: on FW 8.60 the refusal fails snd_SynthInit and the game crashes. A GOT stub alone is overwritten by the loader wherever the export exists (FINDINGS 6b). Guarded since 2026-10-16 (FINDINGS 6t): the GOT pre-fill (ret0) runs below 6.00, and elsewhere the native call runs and a negative result becomes 0. The 8.60 refusal is pure argument validation plus an optional log (8.60 libSceAudioOut 0x28450), so on 6.00-9.60 this equals the former PLT stub, and 10.01+ consoles keep the native request. The former plt_stub ret0 is console-tested (Yotei FW 4.00 cook boots and plays on FW 8.60, 2026-10-13); the guarded form is not yet."
     },
     "GTfJ64qFCPw": {
       "kind": "stub",
@@ -249,6 +264,31 @@
       "below": "5.00",
       "note": "SaveDataMount3.systemBlocks (+0x18) -1 -> 0",
       "rationale": "Argument fix, default since 2026-10-14 (formerly the opt-in option save_mount_compat). libSceSaveData.native picks the create-mount validator by the process's compiled SDK, not by the console firmware: for SDK < 5.00 systemBlocks must be 0 on every firmware read, 1.00-13.60 (FINDINGS 6d, 6g), while SDK 5.00-11.xx accept 0 or -1 and SDK >= 12 refuse 0. A cook stamped below 5.00 therefore needs -1 -> 0 on every console, and a target >= 5.00 keeps the game's -1: below 5.00 is exact. Seven source backports patched this at the call site in their own code; doing it at the import boundary covers every game. Proven (2026-10-14, user decision): PPSA32935 Dynasty Warriors 3's FW 4 cook with this adapter saves and reloads on FW 13.60 (FINDINGS 1.1); Yotei's FW 4 cook mounts saves on 8.60 with systemBlocks=0 (FINDINGS 6a, 6c). Side effect (FINDINGS 6d): with systemBlocks 0, native sceSaveDataCancel fails on 6.00+ consoles ('Cancel operation is not supported when systemBlocks is 0'); the ret0 Cancel stub covers only consoles below 6.00. rax = [rdi+0x18]; r11 = rax+1; if r11 == 0 (value was -1): rax = 0; [rdi+0x18] = rax."
+    },
+    "PHnuI4LhuRk": {
+      "kind": "swap",
+      "name": "sceSaveDataDirNameSearch2",
+      "area": "save data, entitlements, HTTP2",
+      "sources": [
+        "D97"
+      ],
+      "new_nid": "dyIhnXq-0SM",
+      "proven": false,
+      "note": "-> sceSaveDataDirNameSearch (the same client code, older IPC request id)",
+      "rationale": "libSceSaveData_native exports DirNameSearch2 from FW 5.02; DirNameSearch is exported from 1.00 under the same library (FW 4.00/4.50 'dyIhnXq-0SM#I#A', library libSceSaveData_native), so the rename keeps the import's library. Both entries are the same client function: in 5.02 (0x265f0 / 0x27580, both 0x1da bytes) and 13.60 (0x28b10 / 0x29a90, both 0x1c7 bytes) the instruction streams match except the IPC request id passed to the service, 6 vs 0x78 (twice, plus the request field), and FW 4.00's DirNameSearch (0x257d0) is the same stream with id 6: the same (cond*, result*) arguments, the same 0x40-byte condition copy and the same result fields and errors. So the game gets the native directory search on every firmware; only the service-side handling of request 0x78 is unknown. Imported by Ninja Gaiden 4 PPSA25258 (2 call sites; its Studio FW 4 cook left it missing) and Pathologic 3 PPSA30449 (Il2cppUserAssemblies.prx). Decker97 reports this exact remap working on FW 4.50 (BLUE REFLECTION, Metal Gear Solid Peace Walker) and a GOT forward to DirNameSearch working for Demon Slayer 2 (FINDINGS 6v)."
+    },
+    "2mfSRGdshtk": {
+      "kind": "stub",
+      "name": "sceSaveDataConvert",
+      "area": "save data, entitlements, HTTP2",
+      "sources": [
+        "D97",
+        "AnyPS5 SaveData emulation"
+      ],
+      "stub": "ret:0x809f0008",
+      "proven": false,
+      "note": "PS4 save conversion (FW 8.00 and later): returns SCE_SAVE_DATA_ERROR_NOT_FOUND (no PS4 save to convert)",
+      "rationale": "libSceSaveData_native exports it from FW 8.00. 0x809f0008 is SAVE_DATA_ERROR_NOT_FOUND (AnyPS5 SaveData.hpp; 0x809f0000 PARAMETER and 0x809f0001 NOT_INITIALIZED appear in the native DirNameSearch), and AnyPS5's own Convert returns it when there is no PS4 save directory, so it is the native answer for a user without PS4 data, not a fake success. Marvel's Wolverine (PPSA03671, eboot 0x3f90b2b) compares the result with exactly 0x809f0008 (and 0x809f001e) and continues on its normal path; it polls sceSaveDataGetConvertProgress only after a non-negative result (0x3f90cdd js), so the progress import needs no stub. Imported by 6 games on disk (PPSA03671, 18543, 22408, 30449, 33965, 35399). Decker97 seeds the same value (FINDINGS 6v)."
     },
     "y7JD1gfwyfA": {
       "kind": "stub",
@@ -688,8 +728,8 @@
       "probe": {"kind": "console"},
       "name": "Boot notification (Debug toast)",
       "group": "Diagnostics",
-      "description": "Redirects the eboot entry point into a cave that writes a user message to /dev/notification0 through the game's own imported libkernel functions (sceKernelOpen/sceKernelWrite/sceKernelClose, plus sceKernelUsleep for the delay), so the console renders it as a 'Debug:' toast after the configured delay, then jumps back to the real entry. The calls go through the game's PLT stubs, keeping the syscalls inside libkernel's text (a native_game process is killed for a direct syscall). The message text is baked into the eboot as immediate-encoded bytes (X-only text cannot hold string constants).",
-      "warning": "Opt-in. Not console-tested: /dev/notification0 reachability from a game sandbox and toast rendering are unverified. Delays the whole eboot start by the delay (default 8 s); 0 disables the delay. Requires Known fixes.",
+      "description": "Redirects the eboot entry point into a cave that writes a user message to /dev/notification0 through the game's own imported libkernel functions (sceKernelOpen/sceKernelWrite/sceKernelClose, plus sceKernelUsleep for the delay; POSIX open/write/close and nanosleep variants are accepted too). An eboot that does not import them gets nothing: the notice is placed in the initializer of the game's bundled sce_module/libc.prx instead, using libc's own _open/_write/_close/_nanosleep, so exactly one module carries it. The console renders it as a 'Debug:' toast after the configured delay, then the cave jumps back to the hooked function. The calls go through the module's PLT stubs, keeping the syscalls inside libkernel's text (a native_game process is killed for a direct syscall). The message text is baked into the module as immediate-encoded bytes (X-only text cannot hold string constants).",
+      "warning": "Opt-in. Console-confirmed when the eboot hosts it (user, every eboot-hosted cook); the bundled-libc route for eboots without open/write/close imports is not console-tested yet. Delays the whole eboot start by the delay (default 8 s); 0 disables the delay. Requires Known fixes.",
       "sources": ["FINDINGS.md §6f: ShadowMountPlus sceKernelSendNotificationRequest mechanism"],
       "fixes": {}
     },
@@ -1046,17 +1086,38 @@
       "name": "Automatic Pro mode",
       "group": "PS5 Pro",
       "description": "Keeps native console-mode queries when available, so the game can choose its base PS5 or PS5 Pro path at runtime. Missing queries fall back to base-console values. Keeps the default Psml initialization guard below firmware 9.00. Requires Known fixes enabled.",
-      "warning": "Experimental; test on both console types. The four queries are GOT pre-fills: a console whose firmware exports a query binds the native function over the pre-fill (console-confirmed on FW 8.60, FINDINGS 6b), so sceKernelIsTrinityMode and sceKernelHasTrinityMode are native from FW 7.00, sceAgcGetIsTrinityMode from 9.00 and sceKernelGetOperationMode from 11.00; a Pro on those firmwares is detected. The fixed base-console answer applies only on consoles between the target and that firmware. Not a runtime resolver: the stub bodies never check the console. Replacement libraries must report the actual console correctly. Cannot be combined with Force PS5 Pro mode.",
+      "warning": "Experimental; test on both console types. The four queries are GOT pre-fills: a console whose firmware exports a query binds the native function over the pre-fill (console-confirmed on FW 8.60, FINDINGS 6b), so sceKernelIsTrinityMode and sceKernelHasTrinityMode are native from FW 7.00, sceAgcGetIsTrinityMode from 9.00 and sceKernelGetOperationMode from 11.00; a Pro on those firmwares is detected. With a store libSceAgc loaded, the game's sceAgcGetIsTrinityMode is that library's export, which asks libkernel's sceKernelIsTrinityMode, so it is native from 7.00. Below 11.00 the GetOperationMode fallback asks the game's own sceKernelIsTrinityMode import when it has one (mode 3 on a console in Pro mode from 7.00); otherwise, and for the other queries, the fixed base-console answer applies only on consoles between the target and the first exporting firmware. Not a runtime resolver beyond that: the other stub bodies never check the console. Since 2026-10-17 the store's Agc, AgcDriver and Psml ask libkernel too (FINDINGS 6v); before, they answered \"not Pro\" on every console. Other replacement libraries must report the actual console correctly. Cannot be combined with Force PS5 Pro mode.",
       "sources": ["Native hardware queries with base-console fallback; console testing pending"],
       "fixes": {
         "NH6xARDOVv8": {
           "kind": "stub",
           "name": "sceKernelGetOperationMode",
           "area": "PS5 Pro",
-          "sources": ["GT7"],
+          "sources": ["GT7", "D97"],
           "stub": "opmode_normal",
+          "insns": [
+            "4154  ; push r12",
+            "4155  ; push r13",
+            "50  ; push rax   keeps rsp 16-aligned for the call",
+            "4989fc  ; mov r12, rdi   int* mode",
+            "4989f5  ; mov r13, rsi   int* lowEnergy",
+            "call_got:tU5e3f9gSiU  ; call sceKernelIsTrinityMode through its own GOT slot (native from 7.00, else its ret0 pre-fill)",
+            "85c0  ; test eax, eax",
+            "0f95c0  ; setne al",
+            "0fb6c0  ; movzx eax, al",
+            "83c802  ; or eax, 2   2 = normal, 3 = Pro",
+            "41890424  ; mov dword ptr [r12], eax",
+            "41c7450000000000  ; mov dword ptr [r13], 0",
+            "31c0  ; xor eax, eax",
+            "59  ; pop rcx",
+            "415d  ; pop r13",
+            "415c  ; pop r12",
+            "c3  ; ret"
+          ],
           "when": "missing",
-          "note": "Only missing queries return normal mode; native queries are unchanged."
+          "proven": false,
+          "note": "Missing query: *mode = 2 | sceKernelIsTrinityMode() (3 on a console in Pro mode), *lowEnergy = 0; opmode_normal when the module doesn't import IsTrinityMode. Native from 11.00.",
+          "rationale": "sceKernelGetOperationMode is exported from FW 11.00, sceKernelIsTrinityMode from 7.00, and PS5 Pro consoles ran 10.xx firmware. With the plain opmode_normal pre-fill, a Pro on FW 7.00-10.60 got mode 2 here while the native IsTrinityMode reported Pro, so a game deciding by operation mode took the base path. Native 11.00 GetOperationMode (libkernel 0x21a20) reads the process's app info (byte +0x48) through the table (2, 0, 1, 3) at 0x5e240: a per-process mode, like IsTrinityMode (Pro SoC check and the per-process sysctl kern.gjevmtrb, 0x218a0), not the SoC-only HasTrinityMode. So the fallback asks the game's own IsTrinityMode import. Below 7.00 that import's ret0 pre-fill answers, so the result stays 2, as before. Decker97 derives the same value (mode = 2 | Pro, lowEnergy = 0) for its forced Pro packages (FINDINGS 6v)."
         },
         "tU5e3f9gSiU": {
           "kind": "stub",
@@ -1164,6 +1225,18 @@
           ]
         }
       ]
+    },
+    "agc_mode2": {
+      "probe": {"kind": "console"},
+      "name": "AGC barrier mode for FW 4.xx consoles (experimental)",
+      "group": "Libraries",
+      "description": "Uses the fakelib set's libSceAgc variant that runs Sony's AcquireMem workaround mode 2 for every cook: when a cache-flush packet asks for a ranged GL1 invalidation together with GLV_INV, the range is dropped (whole GL1 invalidated) and the packet keeps its size. The default store AGC runs mode 0 (the packet as the game asked); FW 4.00-4.51 consoles' own AGC splits that combination into two packets.",
+      "warning": "Experimental, not console-tested. For games that crash with GPU_FAULT_BAD_COMMAND_ASYNC on FW 4.xx consoles only (Ghost of Yotei's ranged compute barrier, FINDINGS 6u). Needs a fakelib set with an agc_mode2 variant (fakelibs/4, fakelibs/4.03).",
+      "sources": [
+        "FW 4.50 libSceAgc"
+      ],
+      "fixes": {},
+      "fakelib_variant": "agc_mode2"
     },
     "playgo_0_6": {
       "probe": {"kind": "console"},

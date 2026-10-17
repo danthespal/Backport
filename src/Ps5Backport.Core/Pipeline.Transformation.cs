@@ -67,11 +67,11 @@ public static partial class Pipeline
 
     sealed record PatchContext(BackportOptions Options, Knowledge Knowledge, IReadOnlyDictionary<string, Fix> Fixes,
         List<FixPattern> Patterns, Reference Reference, IReadOnlyDictionary<string, int> Providers,
-        List<FirmwareExports> NewerDbs, uint TargetPs5, uint TargetPs4, CancellationToken Cancel);
+        List<FirmwareExports> NewerDbs, uint TargetPs5, uint TargetPs4, string? BootNoticeHost, CancellationToken Cancel);
 
     static void PatchModule(ModuleResult mod, SceElf elf, string file, string output, PatchContext context)
     {
-        var (o, k, fixes, patterns, reference, allProvided, newerDbs, targetPs5, targetPs4, cancel) = context;
+        var (o, k, fixes, patterns, reference, allProvided, newerDbs, targetPs5, targetPs4, noticeHost, cancel) = context;
         cancel.ThrowIfCancellationRequested();
         bool changed = false;
         var (ps5, ps4) = Sdk.Read(elf);
@@ -117,7 +117,30 @@ public static partial class Pipeline
             toStub.AddRange(unknown.Where(n => (unknownPlt.Contains(n) || o.DefineSymbol)
                                                && !(fixes.TryGetValue(n, out var f) && f.Kind != Fix.KindStub && known.Contains(n))));
         toStub = toStub.Distinct(StringComparer.Ordinal)
-                       .Where(n => !statuses.Any(s => s.Nid == n && s.Status == Imports.Stubbed)).ToList();
+                       .Where(n => !statuses.Any(s => s.Nid == n && s.Status is Imports.Stubbed or Imports.Forced)).ToList();
+        // derived stubs (a stub rule with insns calling other imports): a placed chain is the GOT pre-fill instead of the plain stub
+        foreach (string n in toStub.ToList())
+        {
+            if (!fixes.TryGetValue(n, out var f) || f.Insns.Count == 0 || elf.Imports().Any(i => i.Nid == n && !i.Plt)
+                || FixApplier.DerivedStub(elf, f) is not { } chain)
+                continue;
+            cancel.ThrowIfCancellationRequested();
+            string calls = string.Join(", ", f.Insns.Where(i => i.CallNid.Length > 0)
+                .Select(i => fixes.TryGetValue(i.CallNid, out var called) ? called.Name : Name(o.Names, i.CallNid)).Distinct());
+            var nativeFrom = FirmwareDb.Introduced(n, newerDbs, k);
+            foreach (var imp in elf.Imports().Where(i => i.Nid == n))
+            {
+                elf.WriteU64(imp.GotVaddr, chain);
+                mod.StubbedNow.Add(new StubbedEntry
+                {
+                    Nid = n, Name = Name(o.Names, n), Stub = $"derived from {calls}", Got = $"0x{imp.GotVaddr:x}", At = $"0x{chain:x}",
+                    KnownFix = true, Origin = f.Proven ? "known fix, proven" : "known fix, derived",
+                    Introduced = nativeFrom is { } x ? $"{x.Firmware} / {x.Source}" : "",
+                });
+            }
+            toStub.Remove(n);
+            changed = true;
+        }
         if (toStub.Count > 0)
         {
             var rules = FixApplier.StubRules(fixes);
@@ -153,7 +176,7 @@ public static partial class Pipeline
                 changed = true;
             }
         }
-        if (o.KnownFixes && o.Options.Contains(BootNotice.Option, StringComparer.Ordinal))
+        if (mod.Path == noticeHost)
         {
             int count = BootNotice.Apply(elf, o.BootNoticeMessage ?? "", o.BootNoticeDelaySeconds, cancel);
             if (count > 0)
@@ -210,7 +233,11 @@ public static partial class Pipeline
         mod.TextExtended = elf.TextExtended;
         mod.Statuses = statuses;
         if (o.DryRun)
+        {
+            if (string.Equals(mod.Path, o.KeepModule, StringComparison.OrdinalIgnoreCase))
+                mod.PatchedData = elf.Data;
             return;
+        }
         string dest = System.IO.Path.Combine(output, mod.Path.Replace('/', System.IO.Path.DirectorySeparatorChar));
         if (changed)
         {

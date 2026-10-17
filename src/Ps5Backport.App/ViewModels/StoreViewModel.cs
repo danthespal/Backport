@@ -174,8 +174,12 @@ public sealed partial class StoreViewModel(MainViewModel main) : ObservableObjec
         Busy = true;
         try
         {
-            var reference = Imports.LoadReference(db, fw);
-            var results = await Task.Run(() => FakelibStore.Check(set.Folder, reference));
+            // the reference loads every firmware list (~16 MB of JSON): off the UI thread, like the check itself
+            var (reference, results) = await Task.Run(() =>
+            {
+                var loaded = Imports.LoadReference(db, fw);
+                return (loaded, FakelibStore.Check(set.Folder, loaded));
+            });
             if (SelectedSet?.Folder != set.Folder || CheckFirmware != fw || main.FirmwareDbDir != db)
                 return;
             int unresolved = 0;

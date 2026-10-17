@@ -1,0 +1,83 @@
+{
+  "results": [
+    {
+      "date": "2026-10-12",
+      "tester": "arsenic",
+      "firmware": "13.60",
+      "title": "PPSA32935",
+      "target": "4.00",
+      "outcome": "plays",
+      "tests": [
+        {"item": "fakelib:4", "verdict": "pass", "fingerprint": ""},
+        {"item": "rule:ZP4e7rlzOUk", "verdict": "pass", "fingerprint": ""},
+        {"item": "option:auto_pro", "verdict": "pass", "fingerprint": ""},
+        {"item": "option:save_prepare_compat", "verdict": "pass", "fingerprint": ""}
+      ],
+      "source": "FINDINGS 1.1, 1.3",
+      "note": "Dynasty Warriors 3 FW 4 Studio cook with the patched set-4 AGC (mode 0): boots, saves and reloads. Recorded from notes, so unpinned."
+    },
+    {
+      "date": "2026-10-13",
+      "tester": "tester-860",
+      "firmware": "8.60",
+      "title": "PPSA26344",
+      "build": "PPSA26344_backport_4.00_3dlatency",
+      "target": "4.00",
+      "eboot_sha256": "59f7c18d",
+      "outcome": "plays",
+      "tests": [
+        {"item": "rule:TViD1EZXkNI", "verdict": "pass", "fingerprint": ""},
+        {"item": "option:audio_port_compat", "verdict": "pass", "fingerprint": ""},
+        {"item": "option:auto_pro", "verdict": "pass", "fingerprint": ""},
+        {"item": "option:save_prepare_compat", "verdict": "pass", "fingerprint": ""},
+        {"item": "fakelib:4", "verdict": "pass", "fingerprint": ""}
+      ],
+      "source": "FINDINGS 6b",
+      "note": "Set3DLatency was a plt_stub then (now guarded). Recorded from notes, so unpinned."
+    },
+    {
+      "date": "2026-10-13",
+      "tester": "valac",
+      "firmware": "5.50",
+      "title": "PPSA26344",
+      "build": "PPSA26344_backport_4.00",
+      "target": "4.00",
+      "outcome": "plays",
+      "error": "TV audio broken after a headset test (open)",
+      "tests": [
+        {"item": "option:audio_port_compat", "verdict": "unknown", "fingerprint": ""}
+      ],
+      "source": "FINDINGS 6j",
+      "note": "23:35 cook. Recorded from notes, so unpinned."
+    },
+    {
+      "date": "2026-10-16",
+      "tester": "tester-450",
+      "firmware": "4.50",
+      "title": "PPSA18154",
+      "build": "PPSA18154_backport_4.00",
+      "target": "4.00",
+      "outcome": "boots",
+      "error": "title menu renders with horizontal bands (corruption)",
+      "tests": [
+        {"item": "fakelib:4", "verdict": "unknown", "fingerprint": ""}
+      ],
+      "source": "FINDINGS 6s",
+      "note": "First physical FW 4.xx run of the set-4 (FW 12.70) graphics libraries. Recorded from notes, so unpinned."
+    },
+    {
+      "date": "2026-10-16",
+      "tester": "tester-450",
+      "firmware": "4.50",
+      "title": "PPSA26344",
+      "target": "4.00",
+      "outcome": "crash",
+      "error": "0xa0d0c006 GPU_FAULT_BAD_COMMAND_ASYNC (CE-108111-2)",
+      "tests": [
+        {"item": "fakelib:4", "verdict": "unknown", "fingerprint": ""}
+      ],
+      "source": "FINDINGS 6u",
+      "note": "Exact build not kept; suspected cause: set-4 AGC mode 0 with Yotei's ranged compute barrier. Next: PPSA26344_backport_4.00_agcmode2. Recorded from notes, so unpinned."
+    }
+  ]
+}

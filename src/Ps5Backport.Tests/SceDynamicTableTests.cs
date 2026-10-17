@@ -54,7 +54,7 @@ public sealed class SceDynamicTableTests
         foreach (var elf in new[] { standard, sce })
         {
             Assert.Single(Patching.StubImports(elf, ["AAAAAAAAAAA"], Knowledge.Default, defineSymbol: true));
-            Assert.Equal(Imports.Stubbed, Assert.Single(Imports.Classify(elf, new HashSet<string>(), exact: true)).Status);
+            Assert.Equal(Imports.Forced, Assert.Single(Imports.Classify(elf, new HashSet<string>(), exact: true)).Status);   // define_symbol
         }
         Assert.Equal(standard.Data.AsSpan(0x200).ToArray(), sce.Data.AsSpan(0x200).ToArray());
     }
@@ -169,7 +169,7 @@ public sealed class SceDynamicTableTests
                 Assert.True(result.Published);
                 var module = Assert.Single(result.Modules);
                 Assert.Empty(module.Error); Assert.True(module.Written); Assert.Single(module.StubbedNow);
-                Assert.Equal(Imports.Stubbed, Assert.Single(module.Statuses).Status);
+                Assert.Equal(Imports.Forced, Assert.Single(module.Statuses).Status);   // define_symbol binds the stub on every firmware
                 payloads.Add(Self.Unwrap(File.ReadAllBytes(Path.Combine(output, "a.sprx"))).AsSpan(0x200, 0x500).ToArray());
             }
             Assert.Equal(payloads[0], payloads[1]);

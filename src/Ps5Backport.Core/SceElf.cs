@@ -42,7 +42,7 @@ public sealed class SceElf
     public const uint PtSceVersion = 0x6FFFFF01;
     public const uint PtSceDynlibData = 0x61000000;
     public const uint PfX = 1, PfW = 2;
-    public const uint PtGnuRelro = 0x6474E552;
+    public const uint PtGnuRelro = 0x6474E552, PtGnuEhFrame = 0x6474E550;
     public const ulong DtStrtab = 5, DtSymtab = 6, DtRela = 7, DtRelaSz = 8, DtStrSz = 10, DtJmpRel = 23, DtPltRelSz = 2;
     public const ulong DtSceModuleInfoPath = 0x61000041, DtSceModuleName = 0x61000043;
     public const ulong DtSceExportLib = 0x61000047, DtSceImportLib = 0x61000049, DtSceSymtabSz = 0x6100003F;

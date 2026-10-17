@@ -85,5 +85,6 @@ public partial class MainViewModel
         OnPropertyChanged(nameof(CompletionText));
         OpenPublishedOutputCommand.NotifyCanExecuteChanged();
         BuildPublishedAmprIndexCommand.NotifyCanExecuteChanged();
+        CodeGraph.MainChanged();
     }
 }

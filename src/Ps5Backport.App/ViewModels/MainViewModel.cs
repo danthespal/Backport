@@ -47,6 +47,8 @@ public partial class MainViewModel : ObservableObject, IDisposable
         Store = new StoreViewModel(this);
         Database = new FirmwareDbViewModel(this);
         Tools = new ToolsViewModel(this);
+        CodeGraph = new CodeGraphViewModel(this);
+        Results = new ConsoleResultsViewModel(this);
         foreach (int major in Firmware.SdkPairs.Keys.Order())
             Firmwares.Add(major.ToString());
         AddStoreFirmwares();
@@ -87,17 +89,42 @@ public partial class MainViewModel : ObservableObject, IDisposable
     public StoreViewModel Store { get; }
     public FirmwareDbViewModel Database { get; }
     public ToolsViewModel Tools { get; }
+    public CodeGraphViewModel CodeGraph { get; }
+    public ConsoleResultsViewModel Results { get; }
+    /// <summary>Console evidence of the displayed run's applied items (GameResult.ConsoleEvidence), with its failures and
+    /// promotion candidates.</summary>
+    public ObservableCollection<ResultItemRow> ConsoleEvidence { get; } = [];
+    public ObservableCollection<string> ConsoleEvidenceNotes { get; } = [];
+    public bool HasConsoleEvidence => ConsoleEvidence.Count > 0;
+
+    [RelayCommand]
+    void OpenConsoleResults() => Page = AppPage.Results;
 
     /// <summary>Loading of the current page, when it loads in the background (the firmware database).</summary>
     public Task PageLoad { get; private set; } = Task.CompletedTask;
 
     /// <summary>The page shown next to the navigation rail.</summary>
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(HasGameBackground))]
+    [NotifyPropertyChangedFor(nameof(HasGameBackground), nameof(RailDocked), nameof(RailVisible), nameof(ContentMargin))]
     public partial AppPage Page { get; set; }
+
+    /// <summary>The navigation rail sits beside the page on every page but the code graph, which wants the width: there it
+    /// hides and slides over the page on demand (the ≡ button, the left edge, Ctrl+B) until a page is picked or it is left.</summary>
+    public bool RailDocked => Page != AppPage.CodeGraph;
+    /// <summary>The rail is shown over the code graph page.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(RailVisible))]
+    public partial bool RailRevealed { get; set; }
+    public bool RailVisible => RailDocked || RailRevealed;
+    /// <summary>Room for the docked rail.</summary>
+    public Avalonia.Thickness ContentMargin => RailDocked ? new Avalonia.Thickness(64, 0, 0, 0) : default;
+
+    [RelayCommand]
+    void ToggleRail() => RailRevealed = !RailDocked && !RailRevealed;
 
     partial void OnPageChanged(AppPage value)
     {
+        RailRevealed = false;
         if (value == AppPage.Settings)
             OpenSettings();
         else if (value == AppPage.Store)
@@ -106,6 +133,8 @@ public partial class MainViewModel : ObservableObject, IDisposable
             PageLoad = Database.Refresh();
         else if (value == AppPage.Tools)
             PageLoad = Tools.Open();
+        else if (value == AppPage.Results)
+            Results.Refresh();
     }
 
     /// <summary>Folders and files the app uses: the Settings override, else the ones found next to the app.</summary>
@@ -148,12 +177,16 @@ public partial class MainViewModel : ObservableObject, IDisposable
     public Func<string, Task<string?>>? PickFolder { get; set; }
     /// <summary>Set by the window: puts text on the clipboard.</summary>
     public Func<string, Task>? SetClipboard { get; set; }
+    /// <summary>Set by the window: a save dialog (title, suggested file name, extension); the chosen path or null.</summary>
+    public Func<string, string, string, Task<string?>>? PickSaveFile { get; set; }
 
     // --- game ------------------------------------------------------------------------
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(HasGame), nameof(GameTitle), nameof(GameLine), nameof(GameSdkText), nameof(GapPercent))]
     [NotifyCanExecuteChangedFor(nameof(AnalyzeCommand), nameof(CookCommand), nameof(BuildAmprIndexCommand))]
     public partial GameInfo? Game { get; set; }
+
+    partial void OnGameChanged(GameInfo? value) => CodeGraph.MainChanged();
 
     [ObservableProperty] public partial Bitmap? Cover { get; set; }
 
@@ -222,6 +255,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
     {
         if (StoreDir is { } store && Directory.Exists(store))
             foreach (string folder in Directory.EnumerateDirectories(store).Select(System.IO.Path.GetFileName).OfType<string>()
+                                               .Where(k => !k.StartsWith(Publication.Prefix, StringComparison.OrdinalIgnoreCase))   // transaction/scratch folders
                                                .Order(StringComparer.Ordinal).Where(k => !Firmwares.Contains(k)))
                 Firmwares.Add(folder);
     }
@@ -340,6 +374,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
     [ObservableProperty] public partial ModuleRow? SelectedModule { get; set; }
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(HasSelectedImport))]
+    [NotifyCanExecuteChangedFor(nameof(ShowInCodeGraphCommand))]
     public partial ImportRow? SelectedImport { get; set; }
     public bool HasSelectedImport => SelectedImport is not null;
 
@@ -520,6 +555,36 @@ public partial class MainViewModel : ObservableObject, IDisposable
     [RelayCommand]
     void ClearModuleFilter() => SelectedModule = null;
 
+    bool CanShowInCodeGraph() => SelectedImport is { IsEboot: true } && Game is not null;
+
+    /// <summary>Imports tab: opens the Code graph page on the functions of this game's eboot that call the selected import.</summary>
+    [RelayCommand(CanExecute = nameof(CanShowInCodeGraph))]
+    Task ShowInCodeGraph()
+    {
+        if (SelectedImport is not { IsEboot: true } row)
+            return Task.CompletedTask;
+        Page = AppPage.CodeGraph;
+        return CodeGraph.ShowCallers(row.Nid);
+    }
+
+    /// <summary>Code graph: shows the eboot's import <paramref name="nid"/> in the Imports tab (filters cleared, found by name).</summary>
+    internal void ShowImport(string nid)
+    {
+        if (_allImports.FirstOrDefault(r => r.Nid == nid && r.IsEboot) is not { } row)
+        {
+            Log.Warning($"{Names.Name(nid)} is not among {GameScan.MainExecutable}'s imports in the Backport page's analysis");
+            return;
+        }
+        ImportFilter = "All";
+        SelectedModule = null;
+        ImportSearch = row.Name;
+        SelectedImport = row;
+        Page = AppPage.Backport;
+        SelectedTab = ImportsTab;
+    }
+
+    const int ImportsTab = 2;
+
     /// <summary>Log entry clicked: show its module in the Modules tab.</summary>
     public void JumpTo(LogEntry? entry)
     {
@@ -573,18 +638,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
                 if (_closing) throw new OperationCanceledException();
                 ApplyProbe(recommendations, preselectNeeded: true);
             }
-            var options = new BackportOptions
-            {
-                Firmware = SelectedFirmware,
-                ReferenceDir = FirmwareDbDir ?? Paths.FindUp(System.IO.Path.Combine(".original", "reference", "PS5-3.20_Libs")) ?? "firmware_db",
-                FakelibStore = StoreDir,
-                KnownFixes = KnownFixes, CandidateFixes = CandidateFixes, StubUnknown = StubUnknown,
-                DefineSymbol = DefineSymbol, ExtendText = ExtendText, PatchParam = PatchParam,
-                AmprDebugLogging = AmprDebugLogging,
-                Options = PatchOptions.Where(o => o.IsEnabled).Select(o => o.Key).ToList(),
-                BootNoticeMessage = BootNoticeMessage,
-                Names = Names, DryRun = dryRun,
-            };
+            var options = RunOptions(dryRun);
             var knowledge = Knowledge;
             string output = OutputFolder; // a dry run writes nothing there
             using var operation = new BackportOperation(game.Root, output, options, knowledge, dryRun ? null : _analysis, _diagnostics);
@@ -720,6 +774,15 @@ public partial class MainViewModel : ObservableObject, IDisposable
         if (derived.Count > 0)
             Log.Warning($"{derived.Count} fix(es) not yet console-tested: {string.Join(", ", derived)}");
         OnPropertyChanged(nameof(HasWarnings));
+        foreach (var e in r.ConsoleEvidence)
+        {
+            ConsoleEvidence.Add(new ResultItemRow(e, ConsoleResults.Label(e.Item, k)));
+            foreach (string failure in e.Failures)
+                ConsoleEvidenceNotes.Add($"⚠ {e.Item} failed on {failure}");
+            if (e.Candidate)
+                ConsoleEvidenceNotes.Add($"★ {e.Item} passed on every firmware band with no failure: promotion candidate (your decision, on the Console results page)");
+        }
+        OnPropertyChanged(nameof(HasConsoleEvidence));
         ReportText = Pipeline.FormatReport(r, k);
         ApplyImportFilter();
         NotifyResultPresentation();
@@ -732,6 +795,9 @@ public partial class MainViewModel : ObservableObject, IDisposable
         Imports.Clear();
         Warnings.Clear();
         OnPropertyChanged(nameof(HasWarnings));
+        ConsoleEvidence.Clear();
+        ConsoleEvidenceNotes.Clear();
+        OnPropertyChanged(nameof(HasConsoleEvidence));
         _allImports = [];
         ReportText = "";
         ModuleCount = FixedCount = UnresolvedCount = DerivedCount = 0;
@@ -769,6 +835,23 @@ public partial class MainViewModel : ObservableObject, IDisposable
     Knowledge Knowledge => _knowledge ??= new Knowledge();
     internal Knowledge KnowledgeData => Knowledge;
     internal string FunctionName(string nid) => Names.Name(nid);
+    internal NameDb NameData => Names;
+
+    /// <summary>The run options of the Backport page (target firmware, store, fixes, enabled options); the code graph's cook
+    /// preview uses the same.</summary>
+    internal BackportOptions RunOptions(bool dryRun) => new()
+    {
+        Firmware = SelectedFirmware,
+        ReferenceDir = FirmwareDbDir ?? Paths.FindUp(System.IO.Path.Combine(".original", "reference", "PS5-3.20_Libs")) ?? "firmware_db",
+        FakelibStore = StoreDir,
+        KnownFixes = KnownFixes, CandidateFixes = CandidateFixes, StubUnknown = StubUnknown,
+        DefineSymbol = DefineSymbol, ExtendText = ExtendText, PatchParam = PatchParam,
+        AmprDebugLogging = AmprDebugLogging,
+        Options = PatchOptions.Where(o => o.IsEnabled).Select(o => o.Key).ToList(),
+        BootNoticeMessage = BootNoticeMessage,
+        Names = Names, DryRun = dryRun,
+        ConsoleResults = Results.ForCook(),
+    };
 
     NameDb Names => _names ??= AerolibPath is { } aerolib && File.Exists(aerolib)
         ? new NameDb(aerolib) : new NameDb();

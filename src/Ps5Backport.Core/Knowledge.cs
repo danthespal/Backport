@@ -4,13 +4,14 @@ using System.Text.Json;
 namespace Ps5Backport.Core;
 
 /// <summary>One adapter instruction: hex bytes, or "call the real function through its GOT slot".
+/// <see cref="CallNid"/>: "call_got:NID" calls another import of the module through that import's GOT slot instead.
 /// <see cref="StateAt"/> &gt;= 0: the 4 bytes there are a rip-relative displacement to the fix's runtime state
 /// block + <see cref="StateOffset"/>, written in fixes.json as "8905{state+0x4}".</summary>
-public sealed record Insn(byte[] Bytes, bool CallGot, string Asm, int StateAt = -1, int StateOffset = 0)
+public sealed record Insn(byte[] Bytes, bool CallGot, string Asm, int StateAt = -1, int StateOffset = 0, string CallNid = "")
 {
     public const string CallGotToken = "call_got";
     public int Length => CallGot ? 6 : Bytes.Length;
-    public string Hex => CallGot ? CallGotToken
+    public string Hex => CallGot ? (CallNid.Length > 0 ? $"{CallGotToken}:{CallNid}" : CallGotToken)
         : StateAt < 0 ? Convert.ToHexStringLower(Bytes)
         : Convert.ToHexStringLower(Bytes.AsSpan(0, StateAt)) + $"{{state+0x{StateOffset:x}}}" + Convert.ToHexStringLower(Bytes.AsSpan(StateAt + 4));
 
@@ -22,6 +23,8 @@ public sealed record Insn(byte[] Bytes, bool CallGot, string Asm, int StateAt = 
         string asm = semi < 0 ? "" : entry[(semi + 1)..].Trim();
         if (hex == CallGotToken)
             return new Insn([], true, asm);
+        if (hex.StartsWith(CallGotToken + ":", StringComparison.Ordinal))
+            return new Insn([], true, asm, CallNid: hex[(CallGotToken.Length + 1)..]);
         var m = System.Text.RegularExpressions.Regex.Match(hex, @"^([0-9a-fA-F]*)\{state\+0x([0-9a-fA-F]+)\}([0-9a-fA-F]*)$");
         if (!m.Success)
             return new Insn(Convert.FromHexString(hex), false, asm);
@@ -34,16 +37,19 @@ public sealed record Insn(byte[] Bytes, bool CallGot, string Asm, int StateAt = 
 /// <summary>A known fix for one imported library function (data/fixes.json).
 /// <see cref="Contiguous"/>: the adapter is placed in one piece (its instructions may branch inside it).
 /// <see cref="State"/>: name of a zero-initialised runtime block of <see cref="StateSize"/> bytes, shared by
-/// every fix of a module that names it.</summary>
+/// every fix of a module that names it.
+/// <see cref="Guard"/>: how a <see cref="KindGuarded"/> fix chooses between the native function and <see cref="Stub"/>.</summary>
 public sealed record Fix(
     string Nid, string Kind, string Name, string Area, IReadOnlyList<string> Sources,
     string Stub, string NewNid, IReadOnlyList<Insn> Insns, string ExportNid,
     string When, bool PostCall, bool Proven, string Note, string Rationale, string Below = "", string NewLibrary = "",
-    bool Contiguous = false, string State = "", int StateSize = 0)
+    bool Contiguous = false, string State = "", int StateSize = 0, string Guard = "")
 {
     public const string KindStub = "stub", KindSwap = "swap", KindAdapter = "adapter", KindRedirect = "redirect",
-                        KindPltStub = "plt_stub", KindNone = "none";
+                        KindPltStub = "plt_stub", KindGuarded = "guarded", KindNone = "none";
     public const string WhenMissing = "missing", WhenAlways = "always";
+    /// <summary>Guard: call the native function; a negative result becomes the stub's value.</summary>
+    public const string GuardOnError = "on_error";
 
     /// <summary>False when the fix is limited to targets below <see cref="Below"/> and <paramref name="firmware"/> isn't.</summary>
     public bool Due(string firmware) => Below.Length == 0 || Firmware.Parse(firmware).CompareTo(Firmware.Parse(Below)) < 0;
@@ -169,7 +175,8 @@ public sealed class Knowledge
                     f.TryGetProperty("insns", out var insns) ? insns.EnumerateArray().Select(i => Insn.Parse(StringValue(i))).ToList() : [],
                     Str(f, "export_nid"), Str(f, "when", Fix.WhenMissing), Bool(f, "post_call", false), Bool(f, "proven", true),
                     Str(f, "note"), Str(f, "rationale"), Str(f, "below"), Str(f, "new_library"),
-                    Bool(f, "contiguous", false), Str(f, "state"), f.TryGetProperty("state_size", out var size) ? size.GetInt32() : 0);
+                    Bool(f, "contiguous", false), Str(f, "state"), f.TryGetProperty("state_size", out var size) ? size.GetInt32() : 0,
+                    Str(f, "guard"));
             }
             var list = root.GetProperty("fixes").EnumerateObject().Select(ReadFix).ToList();
             FixList = list;
@@ -260,6 +267,8 @@ public sealed class Knowledge
         var known = SonyBuilds.Keys.Select(k => long.Parse(k[1..], CultureInfo.InvariantCulture)).ToList();
         long? lower = known.Where(k => k < n).Select(k => (long?)k).Max(), higher = known.Where(k => k > n).Select(k => (long?)k).Min();
         string Fw(long k) => SonyBuilds.First(p => long.Parse(p.Key.AsSpan(1), CultureInfo.InvariantCulture) == k).Value;
+        if (lower is null && higher is null)     // only the same number, spelled with other leading zeros ("J3828141" vs "J03828141")
+            return $"{id} = FW {Fw(n)}";
         return lower is null ? $"{id} = older than FW {Fw(higher!.Value)}"
              : higher is null ? $"{id} = newer than FW {Fw(lower.Value)}"
              : $"{id} = between FW {Fw(lower.Value)} and {Fw(higher.Value)}";
@@ -309,6 +318,25 @@ public sealed class Knowledge
             return v == 0 ? Stubs["ret0"].Bytes : [0xB8, (byte)v, (byte)(v >> 8), (byte)(v >> 16), (byte)(v >> 24), 0xC3];
         }
         return Stubs.TryGetValue(stub, out var body) ? body.Bytes : throw new KeyNotFoundException($"unknown stub '{stub}'");
+    }
+
+    /// <summary>The value a stub returns in eax when it only returns a value (ret0 or `mov eax, imm32; ret`), else null.</summary>
+    public uint? StubReturnValue(string stub)
+    {
+        byte[] code = StubBytes(stub);
+        if (code.AsSpan().SequenceEqual(Stubs["ret0"].Bytes))
+            return 0;
+        return code is [0xB8, _, _, _, _, 0xC3] ? System.Buffers.Binary.BinaryPrimitives.ReadUInt32LittleEndian(code.AsSpan(1)) : null;
+    }
+
+    /// <summary>The stub whose body is exactly <paramref name="code"/>: a stubs.json name, or "ret:0x…" for `mov eax, imm32; ret`.</summary>
+    public string? StubName(ReadOnlySpan<byte> code)
+    {
+        foreach (var body in Stubs.Values)
+            if (code.SequenceEqual(body.Bytes))
+                return body.Name;
+        return code.Length == 6 && code[0] == 0xB8 && code[5] == 0xC3
+            ? $"ret:0x{System.Buffers.Binary.BinaryPrimitives.ReadUInt32LittleEndian(code[1..]):x}" : null;
     }
 
     /// <summary>(state, note) for a homebrew module build, or null when not known.</summary>
@@ -378,12 +406,22 @@ public sealed class Knowledge
             try { _ = Firmware.Parse(fix.Below); }
             catch (FormatException e) { throw new ArgumentException($"fix '{fix.Nid}': invalid below firmware '{fix.Below}'", e); }
         }
+        if (fix.Guard.Length > 0 && fix.Kind != Fix.KindGuarded)
+            throw new ArgumentException($"fix '{fix.Nid}': guard is only valid for kind '{Fix.KindGuarded}'");
+        if (fix.Kind != Fix.KindStub && fix.Insns.Any(i => i.CallNid.Length > 0))
+            throw new ArgumentException($"fix '{fix.Nid}': call_got:NID is only valid in a stub's derived instructions");
         switch (fix.Kind)
         {
             case Fix.KindStub or Fix.KindPltStub:
                 try { _ = StubBytes(fix.Stub); }
                 catch (Exception e) when (e is KeyNotFoundException or FormatException or OverflowException)
                 { throw new ArgumentException($"fix '{fix.Nid}': invalid stub '{fix.Stub}'", e); }
+                // a stub's insns: a derived GOT pre-fill that calls other imports (call_got:NID); the plain stub stays the
+                // fallback for modules that lack those imports
+                if (fix.Insns.Count > 0 && (fix.Kind != Fix.KindStub || !fix.Insns.Any(i => i.CallNid.Length > 0)
+                    || fix.Insns.Any(i => (i.CallGot && i.CallNid.Length == 0) || i.StateAt >= 0 || i.CallNid == fix.Nid)
+                    || fix.Insns[^1].Bytes is not [Patching.Ret]))
+                    throw new ArgumentException($"fix '{fix.Nid}': a stub's insns need call_got:NID of other imports, no state, and a final ret");
                 break;
             case Fix.KindSwap:
                 if (string.IsNullOrWhiteSpace(fix.NewNid))
@@ -400,6 +438,18 @@ public sealed class Knowledge
                     throw new ArgumentException($"fix '{fix.Nid}': state and state_size go together (state_size > 0)");
                 if (fix.Insns.Any(i => i.StateAt >= 0 && (fix.State.Length == 0 || i.StateOffset >= fix.StateSize)))
                     throw new ArgumentException($"fix '{fix.Nid}': {{state+N}} needs a state block larger than N");
+                break;
+            case Fix.KindGuarded:
+                if (fix.Guard != Fix.GuardOnError)
+                    throw new ArgumentException($"fix '{fix.Nid}': unknown guard '{fix.Guard}' (known: {Fix.GuardOnError})");
+                if (fix.Insns.Count > 0)
+                    throw new ArgumentException($"fix '{fix.Nid}': guarded builds its own instructions; insns are not allowed");
+                uint? value;
+                try { value = StubReturnValue(fix.Stub); }
+                catch (Exception e) when (e is KeyNotFoundException or FormatException or OverflowException)
+                { throw new ArgumentException($"fix '{fix.Nid}': invalid stub '{fix.Stub}'", e); }
+                if (value is null)
+                    throw new ArgumentException($"fix '{fix.Nid}': guard '{Fix.GuardOnError}' needs a value-only stub (ret0 or ret:<value>), not '{fix.Stub}'");
                 break;
             case Fix.KindNone when allowNone:
                 break;
@@ -455,7 +505,7 @@ public sealed class Knowledge
         ["sony_builds"] = ["builds", "evidence"],
     };
     static readonly string[] FixKeys = ["kind", "name", "area", "sources", "stub", "new_nid", "new_library", "insns", "export_nid", "when",
-                                        "post_call", "proven", "note", "rationale", "below", "contiguous", "state", "state_size"];
+                                        "post_call", "proven", "note", "rationale", "below", "contiguous", "state", "state_size", "guard"];
     static readonly string[] OptionKeys = ["name", "group", "description", "warning", "sources", "fixes", "fakelib_variant", "patterns", "probe"];
     static readonly string[] ProbeKeys = ["kind", "nid", "argument", "above", "recognized"];
     static readonly string[] PatternKeys = ["name", "area", "sources", "find", "replace", "files", "code", "note", "rationale"];

@@ -1,12 +1,12 @@
 ShaderData.bin 3ec797d34a665fc4c966a9c5a88f81062362f4ad68d7f7825e5c6ac414c823ba
-backport_report.json d7b620c36d843c383d23877855bdcff1f0026fb534959ff521dd997d092ad1f0
-backport_report.txt b2315f99878c0228c4de6b616a613314566df8c08a0daec103a28ed21cf0b64a
-eboot.bin 332ed475f0ea29869ab5358b210431dba1e9ca796130e67ed0f387bc34fcbd14
-fakelib/libSceAgc.sprx 07a995b32edd9db7506462b8f8f2e77fcd4dbd2e61f4dccffc50bb72c00261d0
-fakelib/libSceAgcDriver.sprx ebdfe2143543141e86cf3d133559993a988de0d825e7aef680fec1489cb446ad
+backport_report.json 9026c0e429c9a412978c1ca33918bafcfd481be13f791cea08bf53a999c5459a
+backport_report.txt 76612e8497f9142562aabaef52135a1ab924b35c3c7f14634f8871e72da23949
+eboot.bin e18cab64501b08290d640b1675cde2976e0d3bcbb798613b397847bd12b7202b
+fakelib/libSceAgc.sprx 51a6e52a4a77cf621915006c40e54ce893eb68b4918306b001dadbe47bb15312
+fakelib/libSceAgcDriver.sprx 6fe51fe3dd3082fa157938bf967a32d5582c5b16fa5e4fcc79ea7f117abae5f5
 fakelib/libSceAmpr.sprx 8248448608f36d8c937c77bd35b9b5b037b14d781544a14a39491a9bf88bc83b
 fakelib/libScePlayGo.sprx a0f20f40107713523ba1a3a0281fb7c4e238b2b5d3fda9354119352d9393d2f0
-fakelib/libScePsml.sprx a40abc1dd8b8de7f0cee3202516ff7b3228518837ddfe5372cc36e4aac715789
+fakelib/libScePsml.sprx 27b64831d89235267c22ba32aa23ee338f99f92a6f49d8f4d70c4c44ee62ca98
 k9.psp 22ffbf0618090f4f45137dd6f496a1910eebc94eda3b5f625c16f13cafa95546
 libaegir_f.prx 2b465921416636145c502373d9135657f581fbd48f5534af8bfdd00b891c5750
 libmemorywrapper_f.prx 4364994a30b7715a383038da1a505df8f11bc004a33e049a60b625148f04c597
@@ -32,6 +32,7 @@ Backport of <game>
   probe console-choice auto_pro  imports 3 of its 4 function(s): sceAgcGetIsTrinityMode, sceKernelGetOperationMode, sceKernelIsTrinityMode
   probe console-choice force_pro  imports 3 of its 3 function(s): sceAgcGetIsTrinityMode, sceKernelGetOperationMode, sceKernelIsTrinityMode
   probe applicable     gpu_scratch  its byte pattern(s) match 332 time(s)
+  probe console-choice agc_mode2  depends on the console or the tester's intent, not on the game
   probe console-choice playgo_0_6  depends on the console or the tester's intent, not on the game
   probe console-choice playgo_0_6_log  depends on the console or the tester's intent, not on the game
   probe console-choice psml_kpn9  the game uses libScePsml (PS5 Pro only)
@@ -44,7 +45,7 @@ Backport of <game>
   WARNING: param.json requiredSystemSoftwareVersion=0x1360000000000000, sdkVersion=0x1200000000000000 is above the target FW 4.50; left unchanged (--patch-param lowers it; tested backports have done both)
   WARNING: option GPU compute scratch fix (firmware below 12): fakelib/libSceAgcDriver.sprx from <repo>\fakelibs\4\gpu_scratch
   refs = direct code references to an unresolved import (0: reachable only through data, e.g. a vtable, or not at all)
-  NOTE: 4 derived fix(es) applied, not yet console-tested: sceKernelSyncOnAddressWait, sceKernelSyncOnAddressWait32, sceKernelSyncOnAddressWait64, sceUserServiceGetGamePresets
+  NOTE: 5 derived fix(es) applied, not yet console-tested: sceAudioOut2Set3DLatency, sceKernelSyncOnAddressWait, sceKernelSyncOnAddressWait32, sceKernelSyncOnAddressWait64, sceUserServiceGetGamePresets
   deployment: Assessed profile: ShadowMountPlus 1.7beta5-fix1 (98c524890176c7b474fcb03387bec88c4a559861). Console loader version, settings and launch format are unknown.
   deployment: Planned merged-game inventory includes unchanged source libraries; this output is a changed-file overlay, not a complete game. Merge with the matching original for folder/image launches.
   deployment: After successful publication, backport_publication.json Files records output paths, Size and Sha256; backport_run.json records source provenance. Analysis has no final output hashes; these reports do not confirm a console mount.
@@ -59,12 +60,12 @@ Backport of <game>
 
 eboot.bin  [PS5-style SELF]  written
   SDK 0x12000038/0x13090001 -> 0x04500031/0x09040001
-  imports: data=22, patched=6, provided=503, reference=796, stubbed=2
+  imports: data=22, patched=5, provided=503, reference=796, stubbed=3
   fixed    tU5e3f9gSiU  sceKernelIsTrinityMode  (PLT -> ret:1 @ 0x1a22; proven; from AC Black Flag Resynced 01.006.038 FW4.xx/10.xx)
-  fixed    TViD1EZXkNI  sceAudioOut2Set3DLatency  (PLT -> ret0 @ 0x1a29; proven; from CONTROL Resonant 1.300 FW4.03, Borderlands 4 PPSA01494 FW4.xx, Dying Light: The Beast PPSA24003 FW4.xx, Ghost of Yotei 02.002.000 FW4 cook (console-tested on FW 13.60))
-  fixed    ZP4e7rlzOUk  sceSaveDataMount3  (adapter (argument fix) via cave 0x4193ee4; proven; from GT7 1.71 FW4, CONTROL Resonant 1.300 FW4.03, AC Black Flag Resynced 01.006.038 FW4.xx/10.xx, Borderlands 4 PPSA01494 FW4.xx, EA SPORTS UFC 6 PPSA23566 (tested on PS5 Pro FW 9.60), Hades II PPSA36082 FW4.03 (console-tested), Hollow Knight: Silksong PPSA12544 FW4.xx (test status unknown), Ghost of Yotei 02.002.000 FW4 cook (console-tested on FW 13.60))
+  fixed    TViD1EZXkNI  sceAudioOut2Set3DLatency  (guarded: native, error -> ret0 via cave 0x4193ee4; GOT pre-fill ret0 @ 0x1a29; DERIVED, not console-tested; from CONTROL Resonant 1.300 FW4.03, Borderlands 4 PPSA01494 FW4.xx, Dying Light: The Beast PPSA24003 FW4.xx, Ghost of Yotei 02.002.000 FW4 cook (console-tested on FW 13.60))
+  fixed    ZP4e7rlzOUk  sceSaveDataMount3  (adapter (argument fix) via cave 0x419fde4; proven; from GT7 1.71 FW4, CONTROL Resonant 1.300 FW4.03, AC Black Flag Resynced 01.006.038 FW4.xx/10.xx, Borderlands 4 PPSA01494 FW4.xx, EA SPORTS UFC 6 PPSA23566 (tested on PS5 Pro FW 9.60), Hades II PPSA36082 FW4.03 (console-tested), Hollow Knight: Silksong PPSA12544 FW4.xx (test status unknown), Ghost of Yotei 02.002.000 FW4 cook (console-tested on FW 13.60))
   fixed    NH6xARDOVv8  sceKernelGetOperationMode  (PLT -> opmode_pro @ 0x1a43; proven; from AC Black Flag Resynced 01.006.038 FW4.xx/10.xx, Ghost of Yotei 02.002.000 FW10 (not tested))
-  fixed    -sD02mFDBh4  sceUserServiceGetGamePresets  (adapter (argument fix) via cave 0x419fde4; DERIVED, not console-tested; from Hollow Knight: Silksong PPSA12544 FW4.xx (test status unknown))
+  fixed    -sD02mFDBh4  sceUserServiceGetGamePresets  (adapter (argument fix) via cave 0x41b4cd7; DERIVED, not console-tested; from Hollow Knight: Silksong PPSA12544 FW4.xx (test status unknown))
   fixed    BfBDZGbti7A  sceAgcGetIsTrinityMode  (PLT -> byte1 @ 0x1a56; proven; from AC Black Flag Resynced 01.006.038 FW4.xx/10.xx)
   stubbed  w7Ipp9Xl7hg  sceVideoOutAllowOutputResolutionWqhdDetection  (ret0 @ 0x9973; known fix, proven; GOT pre-fill, native from FW 6.00 / firmware_db 6.00)
   stubbed  IXmfUaze9So  sceNpCommerceDialogOpen2  (ret:0x80000001 @ 0x9977; known fix, proven; GOT pre-fill, native from FW 7.00 / firmware_db 7.00)
@@ -126,7 +127,7 @@ sce_sys/about/right.sprx  [PS5-style SELF]  unchanged
 fakelib/libSceAgc.sprx  [PS4-style fake SELF (make_fself.py)]  written
   SDK 0x04000031/0x09040001 (kept)
   Sony build J03828141 = FW 12.70
-  imports: data=2, provided=4, reference=82, stubbed=9
+  imports: data=2, forced=8, provided=4, reference=82, stubbed=1
 
 fakelib/libSceAmpr.sprx  [PS4-style fake SELF (make_fself.py)]  written
   SDK 0x02000009/0x08050001 (kept)
@@ -139,10 +140,10 @@ fakelib/libScePlayGo.sprx  [PS4-style fake SELF (make_fself.py)]  written
 fakelib/libScePsml.sprx  [PS4-style fake SELF (make_fself.py)]  written
   SDK 0x04000031/0x09040001 (kept)
   Sony build J03950001 = FW 13.60
-  imports: data=5, patched=1, provided=20, reference=275, stubbed=33
+  imports: data=5, forced=27, patched=1, provided=20, reference=275, stubbed=6
   fixed    BfBDZGbti7A  sceAgcGetIsTrinityMode  (PLT -> byte1 @ 0x1fc6; proven; from AC Black Flag Resynced 01.006.038 FW4.xx/10.xx)
 
-fakelib/libSceAgcDriver.sprx  [PS5-style SELF]  written
+fakelib/libSceAgcDriver.sprx  [PS4-style fake SELF (make_fself.py)]  written
   SDK 0x04000031/0x09040001 (kept)
   Sony build J03828141 = FW 12.70
-  imports: data=4, reference=48, stubbed=4
+  imports: data=4, forced=3, reference=48, stubbed=1

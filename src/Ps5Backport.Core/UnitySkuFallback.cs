@@ -33,7 +33,7 @@ internal static class UnitySkuFallback
     }
 
     /// <summary>(failure-branch entry offset, resume vaddr) of the unique recognised layout, or null.</summary>
-    static (long Entry, long ResumeVa)? Locate(SceElf elf, CancellationToken cancel)
+    internal static (long Entry, long ResumeVa)? Locate(SceElf elf, CancellationToken cancel)
     {
         var dispatches = Find(elf, Dispatch, cancel);
         if (dispatches.Count != 1) return null;

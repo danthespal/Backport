@@ -193,4 +193,36 @@
     <Setter Property="FontSize" Value="12" />
     <Setter Property="Background" Value="Transparent" />
   </Style>
+
+  <!-- console results: run counts per band (pass / fail / unknown solid, old dashed) -->
+  <Style Selector="Border.count">
+    <Setter Property="MinWidth" Value="20" />
+    <Setter Property="Height" Value="18" />
+    <Setter Property="CornerRadius" Value="3" />
+    <Setter Property="Padding" Value="4,0" />
+    <Setter Property="BorderThickness" Value="1" />
+  </Style>
+  <Style Selector="Border.count TextBlock">
+    <Setter Property="FontFamily" Value="{StaticResource MonoFont}" />
+    <Setter Property="FontSize" Value="11" />
+    <Setter Property="HorizontalAlignment" Value="Center" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+  </Style>
+  <Style Selector="Border.count.pass"><Setter Property="BorderBrush" Value="{DynamicResource StatusOk}" /></Style>
+  <Style Selector="Border.count.pass TextBlock"><Setter Property="Foreground" Value="{DynamicResource StatusOk}" /></Style>
+  <Style Selector="Border.count.fail"><Setter Property="BorderBrush" Value="{DynamicResource StatusError}" /></Style>
+  <Style Selector="Border.count.fail TextBlock"><Setter Property="Foreground" Value="{DynamicResource StatusError}" /></Style>
+  <Style Selector="Border.count.unknown"><Setter Property="BorderBrush" Value="{DynamicResource StatusWarn}" /></Style>
+  <Style Selector="Border.count.unknown TextBlock"><Setter Property="Foreground" Value="{DynamicResource StatusWarn}" /></Style>
+  <Style Selector="Border.count.old"><Setter Property="BorderBrush" Value="{DynamicResource StatusMuted}" /><Setter Property="Opacity" Value="0.7" /></Style>
+  <Style Selector="Border.count.old TextBlock"><Setter Property="Foreground" Value="{DynamicResource StatusMuted}" /></Style>
+  <!-- a promotion candidate or a failure in the inspector and on the Backport page -->
+  <Style Selector="Border.banner">
+    <Setter Property="BorderBrush" Value="{DynamicResource MagentaBrush}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="Padding" Value="10,8" />
+  </Style>
+  <Style Selector="Border.banner.failure">
+    <Setter Property="BorderBrush" Value="{DynamicResource StatusError}" />
+  </Style>
 </Styles>

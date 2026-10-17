@@ -1,6 +1,7 @@
 <Application xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              x:Class="Ps5Backport.App.App"
+             xmlns:vm="using:Ps5Backport.App.ViewModels"
              RequestedThemeVariant="Dark">
   <!-- The pixel BP identity uses a dark terminal palette with magenta and cyan accents. -->
 
@@ -45,6 +46,19 @@
       <CornerRadius x:Key="OverlayCornerRadius">0</CornerRadius>
     </ResourceDictionary>
   </Application.Resources>
+
+  <!-- console evidence of one item in one firmware band: pass / fail / unknown counts, old runs dashed, "—" without runs -->
+  <Application.DataTemplates>
+    <DataTemplate x:DataType="vm:BandCell">
+      <StackPanel Orientation="Horizontal" Spacing="3" VerticalAlignment="Center">
+        <TextBlock Text="—" Foreground="{DynamicResource HairlineBrush}" IsVisible="{Binding IsEmpty}" />
+        <Border Classes="count pass" IsVisible="{Binding HasPass}" ToolTip.Tip="pass (current form)"><TextBlock Text="{Binding Pass}" /></Border>
+        <Border Classes="count fail" IsVisible="{Binding HasFail}" ToolTip.Tip="fail (current form)"><TextBlock Text="{Binding Fail}" /></Border>
+        <Border Classes="count unknown" IsVisible="{Binding HasUnknown}" ToolTip.Tip="unknown (current form)"><TextBlock Text="{Binding Unknown}" /></Border>
+        <Border Classes="count old" IsVisible="{Binding HasOld}" ToolTip.Tip="old form or unpinned: history only"><TextBlock Text="{Binding Old}" /></Border>
+      </StackPanel>
+    </DataTemplate>
+  </Application.DataTemplates>
 
   <Application.Styles>
     <FluentTheme>

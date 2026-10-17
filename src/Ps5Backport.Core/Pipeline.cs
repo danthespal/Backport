@@ -31,6 +31,14 @@ public sealed record BackportOptions
     public bool AmprDebugLogging { get; init; }
     /// <summary>Analyze only: run every step but write nothing (no modules, no param.json, no reports).</summary>
     public bool DryRun { get; init; }
+    /// <summary>Dry run only: keep the patched bytes of this module (its relative path, e.g. eboot.bin) in
+    /// <see cref="ModuleResult.PatchedData"/>, for the code graph's cook preview. Not part of the run fingerprint.</summary>
+    [System.Text.Json.Serialization.JsonIgnore]
+    public string? KeepModule { get; init; }
+    /// <summary>Console results to report per applied rule, option and fakelib set (null = no evidence section). Report only,
+    /// not part of the run fingerprint.</summary>
+    [System.Text.Json.Serialization.JsonIgnore]
+    public ConsoleResults? ConsoleResults { get; init; }
     public NameDb? Names { get; init; }
 }
 
@@ -86,6 +94,8 @@ public sealed class ModuleResult(string path, string container, bool added)
     /// <summary>Comes from the fakelib store / --fakelib, not from the game folder.</summary>
     public bool Added { get; } = added;
     public string SdkBefore { get; set; } = "";
+    /// <summary>The module as the run patched it (ELF), when a dry run was asked to keep it (<see cref="BackportOptions.KeepModule"/>).</summary>
+    public byte[]? PatchedData { get; internal set; }
     public string SdkAfter { get; set; } = "";
     public bool SdkPatched { get; set; }
     /// <summary>Sony system library: build id and the firmware it shipped with ("J03828141 = FW 12.70").</summary>
@@ -139,6 +149,11 @@ public sealed class GameResult(string source, string output, string targetFirmwa
     /// <summary>Data files added from the fakelib set's app0/ (e.g. k9.psp for an app0-patched libScePsml).</summary>
     public List<string> App0Files { get; } = [];
     public List<ModuleResult> Modules { get; } = [];
+    /// <summary>The rules, options and fakelib sets this cook applied, pinned to the forms it applied (backport_report.json
+    /// "console_items", read back by `results add --build`).</summary>
+    public List<ConsoleItem> ConsoleItems { get; } = [];
+    /// <summary>Console evidence for the applied items (empty unless <see cref="BackportOptions.ConsoleResults"/> was given).</summary>
+    public List<ConsoleEvidenceEntry> ConsoleEvidence { get; } = [];
 }
 
 /// <summary>Progress of a backport: module index (0-based), module count, the module and what is happening.</summary>
@@ -294,7 +309,15 @@ public static partial class Pipeline
             }
         }
 
-        var patchContext = new PatchContext(o, knowledge, fixes, patterns, reference, provided, newerDbs, targetPs5, targetPs4, cancel);
+        // boot_notice goes into exactly one module (the eboot's _start, else the bundled libc's initializer)
+        string? noticeHost = null;
+        if (o.KnownFixes && result.Options.Contains(BootNotice.Option))
+        {
+            (noticeHost, string noticeEvidence) = BootNotice.Assess(loaded.Where(l => !l.Mod.Added).Select(l => (l.Mod.Path, l.Elf)));
+            if (noticeHost is null)
+                result.ParamWarnings.Add($"option {BootNotice.Name}: not applied, {noticeEvidence}");
+        }
+        var patchContext = new PatchContext(o, knowledge, fixes, patterns, reference, provided, newerDbs, targetPs5, targetPs4, noticeHost, cancel);
 
         // 2) patch each module
         for (int i = 0; i < loaded.Count; i++)

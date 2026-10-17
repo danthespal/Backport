@@ -8,17 +8,18 @@ public static partial class Imports
     static readonly string[] ArgumentRegisters = ["edi", "esi", "edx", "ecx", "r8d", "r9d"];
 
     /// <summary>
-    /// Call sites of an import (call/jmp/jcc rel32 to its PLT entry) with the constant the game passes in argument
-    /// <paramref name="argument"/> (0 = rdi … 5 = r9), when the last write to that register before the call is a readable
-    /// constant: <c>mov r32, imm32</c>, <c>xor r32, r32</c> (0) or <c>push imm8; pop r64</c>. Null when the value is not a
-    /// constant there (loaded from memory, computed, or written further away than <see cref="LookBack"/> bytes).
-    /// A byte-pattern scan without disassembly: a constant found inside another instruction's bytes is a possible false
-    /// positive, so callers should present the result as evidence, not proof. Sites inside the PLT itself are skipped.
+    /// Call sites of an import (call, jmp or jcc to its PLT entry) with the constant the game passes in argument
+    /// <paramref name="argument"/> (0 = rdi … 5 = r9), read from decoded instructions: walking back through the site's basic
+    /// block to the previous call, the closest write to the register decides, and only <c>mov r32/r64, imm</c>,
+    /// <c>xor r, r</c> (0) and <c>push imm; pop r</c> are constants (<see cref="CodeImage.Arguments"/>, shared with the code
+    /// graph). Null when the value is not a constant there (loaded from memory, computed, or set in another block).
+    /// The functions to decode are those holding a byte-pattern hit (call/jmp/jcc rel32 to the PLT entry) according to the
+    /// unwind table; a module without one is decoded segment by segment. Replaced the plain byte scan on 15 October 2026,
+    /// which also read immediates inside other instructions' bytes (FINDINGS 6o). Still evidence, not proof: registers are
+    /// read within a block, not along every path.
     /// </summary>
     public static List<(ulong Site, uint? Constant)> ArgumentConstants(SceElf elf, Import import, int argument)
         => ArgumentConstants(elf, import, argument, default);
-
-    public const int LookBack = 24;
 
     public static List<(ulong Site, uint? Constant)> ArgumentConstants(SceElf elf, Import import, int argument, CancellationToken cancel)
     {
@@ -28,11 +29,45 @@ public static partial class Imports
             return [];
         ulong plt = elf.ReadU64(import.GotVaddr) - 6;
         var result = new List<(ulong, uint?)>();
+        foreach (var range in CodeToDecode(elf, plt, cancel))
+        {
+            cancel.ThrowIfCancellationRequested();
+            var insns = CodeImage.Decode(elf, range);
+            var leaders = CodeImage.Leaders(elf, insns, [range], out _);
+            int blockStart = 0;
+            for (int k = 0; k < insns.Count; k++)
+            {
+                var ins = insns[k];
+                if (leaders.Contains(ins.IP))
+                    blockStart = k;
+                if (!(ins.IsCallNear || ins.IsJmpShortOrNear || ins.IsJccShortOrNear) || ins.NearBranchTarget != plt || ins.IP == plt)
+                    continue;
+                var constant = CodeImage.Arguments(insns, blockStart, k)?.Where(a => a.Index == argument).Select(a => (uint?)(uint)a.Value).FirstOrDefault();
+                result.Add((ins.IP, constant));
+            }
+        }
+        // windows of nearby sites can overlap
+        return [.. result.DistinctBy(r => r.Item1).OrderBy(r => r.Item1)];
+    }
+
+    /// <summary>
+    /// The code ranges to decode for calls to <paramref name="plt"/>: the unwind-table functions holding a byte-pattern hit
+    /// (call/jmp/jcc rel32 to it; a superset of the real sites), the gap between two such functions for a hit in code without
+    /// an FDE (Borderlands 4, Beast of Reincarnation and PPSA34008 call the pad import from such code), or, without an unwind
+    /// table, the executable segments with a hit.
+    /// </summary>
+    static List<FunctionRange> CodeToDecode(SceElf elf, ulong plt, CancellationToken cancel)
+    {
+        var hits = new List<ulong>();
+        var segments = new List<FunctionRange>();
+        var executable = new List<FunctionRange>();
         foreach (var p in elf.Phdrs)
         {
             if (p.Type != SceElf.PtLoad || (p.Flags & SceElf.PfX) == 0)
                 continue;
             var seg = elf.Data.AsSpan(checked((int)p.Offset), checked((int)p.Filesz));
+            executable.Add(new FunctionRange(p.Vaddr, (ulong)p.Filesz));
+            int before = hits.Count;
             for (int i = 0; i + 5 <= seg.Length; i++)
             {
                 if ((i & 65535) == 0) cancel.ThrowIfCancellationRequested();
@@ -42,59 +77,55 @@ public static partial class Imports
                 else if (b == 0x0F && i + 6 <= seg.Length && seg[i + 1] is >= 0x80 and <= 0x8F) length = 6;
                 else continue;
                 long target = (long)p.Vaddr + i + length + BinaryPrimitives.ReadInt32LittleEndian(seg[(i + length - 4)..]);
-                if ((ulong)target != plt || p.Vaddr + (ulong)i == plt)
-                    continue;
-                result.Add((p.Vaddr + (ulong)i, ConstantBefore(seg, i, argument)));
+                if ((ulong)target == plt && p.Vaddr + (ulong)i != plt)
+                    hits.Add(p.Vaddr + (ulong)i);
             }
+            if (hits.Count > before)
+                segments.Add(new FunctionRange(p.Vaddr, (ulong)p.Filesz));
         }
-        return result;
+        if (hits.Count == 0)
+            return [];
+        List<FunctionRange> functions;
+        try
+        {
+            functions = CodeImage.UnwindFunctions(elf);
+        }
+        catch (InvalidDataException)
+        {
+            return segments;
+        }
+        var starts = functions.Select(f => f.Start).ToArray();
+        var ranges = new SortedSet<FunctionRange>(Comparer<FunctionRange>.Create((x, y) => x.Start.CompareTo(y.Start)));
+        foreach (ulong hit in hits)
+        {
+            int i = Array.BinarySearch(starts, hit);
+            if (i < 0)
+                i = ~i - 1;
+            if (i >= 0 && functions[i].Contains(hit))
+                ranges.Add(functions[i]);
+            else if (executable.FirstOrDefault(e => e.Contains(hit)) is { Size: > 0 } segment)
+                ranges.Add(Window(elf, hit, Math.Max(segment.Start, i >= 0 ? functions[i].End : segment.Start)));
+        }
+        return [.. ranges];
     }
 
-    /// <summary>The constant written to the argument register by the closest recognised writer in the bytes before the call.</summary>
-    static uint? ConstantBefore(ReadOnlySpan<byte> seg, int call, int argument)
+    /// <summary>How far before a site in code without an FDE decoding may start (such gaps can be most of the code segment).</summary>
+    const int WindowBack = 0x2000;
+
+    /// <summary>
+    /// A window ending just after the site <paramref name="hit"/>, starting after the last int3 padding within
+    /// <see cref="WindowBack"/> bytes before it (where a function most likely starts; else at the window's edge, x86 decoding
+    /// resynchronises within a few instructions), never before <paramref name="floor"/> (the previous function's end).
+    /// </summary>
+    static FunctionRange Window(SceElf elf, ulong hit, ulong floor)
     {
-        // encodings of the writers for edi, esi, edx, ecx, r8d, r9d
-        int reg = argument switch { 0 => 7, 1 => 6, 2 => 2, 3 => 1, 4 => 0, 5 => 1, _ => throw new ArgumentOutOfRangeException(nameof(argument)) };
-        bool extended = argument >= 4;
-        int start = Math.Max(0, call - LookBack);
-        for (int at = call - 1; at >= start; at--)
-        {
-            // a closer write that is not a readable constant ends the search: mov/lea/movzx/movsxd/cmovcc into the register
-            // (reg field), mov r/m32, r32 or arithmetic with the register as destination (rm field, mod = 11)
-            int op = at, prefixLen = 0;
-            if (0x40 <= seg[op] && seg[op] <= 0x4F && op + 1 < call) { op++; prefixLen = 1; }
-            bool rexR = prefixLen == 1 && (seg[at] & 0x04) != 0, rexB = prefixLen == 1 && (seg[at] & 0x01) != 0;
-            if (op + 1 < call)
-            {
-                byte opcode = seg[op], modrm = seg[op + 1];
-                int regField = (modrm >> 3) & 7, rmField = modrm & 7, mod = modrm >> 6;
-                bool regIsTarget = regField == reg && rexR == extended, rmIsTarget = mod == 3 && rmField == reg && rexB == extended;
-                if (opcode == 0xC7 && rmIsTarget && op + 6 <= call)
-                    return BinaryPrimitives.ReadUInt32LittleEndian(seg[(op + 2)..]);      // mov r32, imm32 (C7 /0 form)
-                if ((opcode is 0x8B or 0x8D or 0x63) && regIsTarget) return null;
-                if (opcode == 0x0F && op + 2 < call && (seg[op + 1] is 0xB6 or 0xB7 || (seg[op + 1] & 0xF0) == 0x40)
-                    && ((seg[op + 2] >> 3) & 7) == reg && rexR == extended) return null;
-                if ((opcode is 0x89 or 0x81 or 0x83 or 0x01 or 0x09 or 0x11 or 0x19 or 0x21 or 0x29 or 0x31 or 0x39 or 0x03 or 0x0B or 0x13 or 0x1B or 0x23 or 0x2B or 0x33) && rmIsTarget
-                    && !(opcode == 0x31 && regField == reg))                                 // xor reg, reg is the constant 0 below
-                    return null;
-            }
-            // mov r32, imm32: [41] B8+r imm32, ending anywhere before the call
-            if (!extended && seg[at] == 0xB8 + reg && at + 5 <= call)
-                return BinaryPrimitives.ReadUInt32LittleEndian(seg[(at + 1)..]);
-            if (extended && seg[at] == 0x41 && at + 6 <= call && seg[at + 1] == 0xB8 + reg)
-                return BinaryPrimitives.ReadUInt32LittleEndian(seg[(at + 2)..]);
-            // xor r32, r32: [45] 31 (C0 | reg<<3 | reg)
-            if (!extended && seg[at] == 0x31 && at + 2 <= call && seg[at + 1] == (0xC0 | reg << 3 | reg))
-                return 0;
-            if (extended && seg[at] == 0x45 && at + 3 <= call && seg[at + 1] == 0x31 && seg[at + 2] == (0xC0 | reg << 3 | reg))
-                return 0;
-            // push imm8; pop r64: 6A ib [41] 58+r
-            if (!extended && seg[at] == 0x6A && at + 3 <= call && seg[at + 2] == 0x58 + reg)
-                return (uint)(sbyte)seg[at + 1];
-            if (extended && seg[at] == 0x6A && at + 4 <= call && seg[at + 2] == 0x41 && seg[at + 3] == 0x58 + reg)
-                return (uint)(sbyte)seg[at + 1];
-        }
-        return null;
+        ulong start = Math.Max(floor, hit > WindowBack ? hit - WindowBack : 0);
+        long off = elf.Off(start);
+        var bytes = elf.Data.AsSpan((int)off, (int)(hit - start));
+        int padding = bytes.LastIndexOf(Patching.Int3);
+        if (padding >= 0)
+            start += (ulong)padding + 1;
+        return new FunctionRange(start, hit + 16 - start);
     }
 
     public static string ArgumentRegister(int argument) => ArgumentRegisters[argument];

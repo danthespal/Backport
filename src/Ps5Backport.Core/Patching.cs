@@ -8,6 +8,11 @@ public sealed class PatchException(string message, Exception? inner = null) : In
 
 public sealed record StubPatch(string Nid, ulong GotVaddr, string Stub, ulong StubVaddr);
 
+/// <summary><see cref="Patching.RestoreImport"/>: the import's symbol, its stub (now the GOT pre-fill), GOT slot and PLT entry,
+/// and what changed (local definition undone, PLT entry restored, GOT slot rewritten).</summary>
+public sealed record ImportRestore(string Nid, string Symbol, ulong Stub, ulong GotVaddr, ulong Plt,
+                                   bool WasDefined, bool PltRestored, bool GotRewritten);
+
 /// <summary>
 /// Patch primitives: int3 caves, stubs, PLT redirects, NID swaps, symbol
 /// definitions, chained adapter code and the code-space fallback.
@@ -20,6 +25,7 @@ public sealed record StubPatch(string Nid, ulong GotVaddr, string Stub, ulong St
 public static class Patching
 {
     public const byte Int3 = 0xCC, Ret = 0xC3;
+    const byte PushImm32 = 0x68, JmpRel32 = 0xE9, Nop = 0x90;
     /// <summary>ExtendText makes one cave per block (61 usable bytes).</summary>
     public const int ExtensionBlock = 64;
 
@@ -33,15 +39,10 @@ public static class Patching
     public static long ExtendText(SceElf elf)
     {
         var text = elf.TextSegment();
-        if (text.Filesz != text.Memsz)
+        long gap = ExtensionRoom(elf);
+        if (gap == 0)
             return 0;
         long endOff = text.Offset + text.Filesz;
-        ulong endVa = text.Vaddr + (ulong)text.Memsz;
-        long nextOff = elf.Phdrs.Where(p => p.Filesz != 0 && p.Offset >= endOff).Select(p => p.Offset).DefaultIfEmpty(elf.Data.Length).Min();
-        ulong nextVa = elf.Phdrs.Where(p => p.Type == SceElf.PtLoad && p.Vaddr >= endVa).Select(p => p.Vaddr).DefaultIfEmpty(endVa).Min();
-        long gap = Math.Min(nextOff - endOff, (long)(nextVa - endVa));
-        if (gap < 16 || elf.Data.AsSpan((int)endOff, (int)gap).ContainsAnyExcept((byte)0))
-            return 0;
         // 64-byte blocks of ret + int3s: each block is its own cave (a cave starts after a ret, and code
         // placed in one ends with a jmp, so a single long run would serve only one fix)
         for (long i = 0; i < gap; i++)
@@ -54,6 +55,25 @@ public static class Patching
         elf.TextExtended += gap;
         return gap;
     }
+
+    /// <summary>Bytes <see cref="ExtendText"/> would add: the all-zero gap between the code segment and the next one
+    /// (0 when there is none, it is under 16 bytes or not all zero, or the segment has bss). Writes nothing.</summary>
+    public static long ExtensionRoom(SceElf elf)
+    {
+        var text = elf.TextSegment();
+        if (text.Filesz != text.Memsz)
+            return 0;
+        long endOff = text.Offset + text.Filesz;
+        ulong endVa = text.Vaddr + (ulong)text.Memsz;
+        long nextOff = elf.Phdrs.Where(p => p.Filesz != 0 && p.Offset >= endOff).Select(p => p.Offset).DefaultIfEmpty(elf.Data.Length).Min();
+        ulong nextVa = elf.Phdrs.Where(p => p.Type == SceElf.PtLoad && p.Vaddr >= endVa).Select(p => p.Vaddr).DefaultIfEmpty(endVa).Min();
+        long gap = Math.Min(nextOff - endOff, (long)(nextVa - endVa));
+        return gap < 16 || elf.Data.AsSpan((int)endOff, (int)gap).ContainsAnyExcept((byte)0) ? 0 : gap;
+    }
+
+    /// <summary>Every cave <see cref="FindCave"/> can pick, in address order: (vaddr of the usable bytes, usable bytes).
+    /// For the code graph's cave map; writes nothing.</summary>
+    public static List<(ulong Vaddr, long Usable)> Caves(SceElf elf) => [.. CaveRuns(elf, 1).Select(r => (elf.Vaddr(r.Offset), r.Usable))];
 
     /// <summary>(stub file offset, usable bytes) for int3 runs after a `ret`, keeping one guard int3 on each side.</summary>
     static IEnumerable<(long Offset, long Usable)> CaveRuns(SceElf elf, long minUsable)
@@ -208,10 +228,10 @@ public static class Patching
     /// ends with `jmp [GOT]` (pre-call adapter); without, the instructions must contain call_got and end
     /// with `ret` (post-call adapter). Returns the vaddr of the first piece. <paramref name="contiguous"/>:
     /// one piece only, so the instructions may branch inside it. <paramref name="stateVaddr"/>: target of the
-    /// instructions' {state+N} displacements.
+    /// instructions' {state+N} displacements. <paramref name="callGots"/>: GOT slots of the imports named by call_got:NID.
     /// </summary>
     public static ulong PlaceChain(SceElf elf, IReadOnlyList<Insn> insns, ulong gotVaddr, bool tailJmp = true,
-                                   bool contiguous = false, ulong stateVaddr = 0)
+                                   bool contiguous = false, ulong stateVaddr = 0, IReadOnlyDictionary<string, ulong>? callGots = null)
     {
         int tail = tailJmp ? 6 : 0;
         var pieces = new List<(long Offset, List<Insn> Insns, bool IsLast)>();
@@ -257,7 +277,12 @@ public static class Patching
             foreach (var insn in piece)
             {
                 if (insn.CallGot)
-                    body.AddRange([0xFF, 0x15, .. Rel32(va + (ulong)body.Count + 6, gotVaddr)]);
+                {
+                    ulong target = insn.CallNid.Length == 0 ? gotVaddr
+                        : callGots?.GetValueOrDefault(insn.CallNid) is { } other and not 0 ? other
+                        : throw new PatchException($"call_got:{insn.CallNid}: the module does not import it through the PLT");
+                    body.AddRange([0xFF, 0x15, .. Rel32(va + (ulong)body.Count + 6, target)]);
+                }
                 else if (insn.StateAt >= 0)
                 {
                     if (stateVaddr == 0)
@@ -324,6 +349,78 @@ public static class Patching
         long off = elf.SymtabOffset(symIndex);
         BinaryPrimitives.WriteUInt16LittleEndian(elf.Data.AsSpan((int)off + 6), 1);
         BinaryPrimitives.WriteUInt64LittleEndian(elf.Data.AsSpan((int)off + 8), vaddr);
+    }
+
+    /// <summary>
+    /// Undo a forced stub so the loader can bind the native function again (FINDINGS 6v): a symbol rewritten into a local
+    /// definition becomes an import (st_shndx 0, value 0, as Sony ships it), a PLT entry rewritten into 'jmp &lt;stub&gt;'
+    /// becomes 'jmp [rip+GOT]', and the GOT slot is pre-filled with that stub, which keeps answering on firmwares that lack
+    /// the export. Only a function import with exactly one JUMP_SLOT, no RELA reference, one PLT entry and a recognised
+    /// GOT value (the stub or the lazy PLT+6) is accepted. Returns null when the import is already in that form.
+    /// </summary>
+    public static ImportRestore? RestoreImport(SceElf elf, string nid)
+    {
+        var imports = elf.Imports().Where(i => i.Nid == nid).ToList();
+        if (imports.Count == 0)
+            throw new PatchException($"{nid}: not imported by this module");
+        if (imports.Any(i => !i.Plt))
+            throw new PatchException($"{nid}: also referenced by RELA relocations (data import)");
+        if (imports.Count != 1)
+            throw new PatchException($"{nid}: {imports.Count} JUMP_SLOT relocations");
+        var imp = imports[0];
+        int slot = elf.Relocs(RelocKind.JmpRel).FindIndex(r => r.SymIndex == imp.SymIndex);
+        var reloc = elf.Relocs(RelocKind.JmpRel)[slot];
+        if (reloc.Type != 7)
+            throw new PatchException($"{nid}: JMPREL type {reloc.Type} is not R_X86_64_JUMP_SLOT");
+
+        // the PLT entry: 6-byte jmp, 'push <slot>', 'jmp PLT0'
+        byte[] push = [PushImm32, (byte)slot, (byte)(slot >> 8), (byte)(slot >> 16), (byte)(slot >> 24)];
+        var entries = new List<ulong>();
+        foreach (var p in elf.Phdrs.Where(p => p.Type == SceElf.PtLoad && (p.Flags & SceElf.PfX) != 0))
+        {
+            var code = elf.Data.AsSpan(checked((int)p.Offset), checked((int)p.Filesz));
+            for (int at = code.IndexOf(push); at >= 6; )
+            {
+                if (at + 5 < code.Length && code[at + 5] == JmpRel32)
+                    entries.Add(p.Vaddr + (ulong)at - 6);
+                int next = code[(at + 1)..].IndexOf(push);
+                at = next < 0 ? -1 : at + 1 + next;
+            }
+        }
+        if (entries.Count != 1)
+            throw new PatchException($"{nid}: {entries.Count} PLT entries for JUMP_SLOT {slot}");
+        ulong plt = entries[0];
+        long pltOff = elf.Off(plt);
+        byte[] viaGot = [0xFF, 0x25, .. BitConverter.GetBytes(checked((int)((long)imp.GotVaddr - (long)(plt + 6))))];
+
+        ulong? stub = imp.DefinedLocally ? elf.Symbols()[imp.SymIndex].Value : null;
+        bool pltRestored = !elf.Data.AsSpan((int)pltOff, 6).SequenceEqual(viaGot);
+        if (pltRestored)
+        {
+            ulong? target = elf.Data[pltOff] == JmpRel32 && elf.Data[pltOff + 5] == Nop
+                ? plt + 5 + (ulong)(long)BinaryPrimitives.ReadInt32LittleEndian(elf.Data.AsSpan((int)pltOff + 1)) : null;
+            bool executable = target is { } t && elf.Phdrs.Any(p => p.Type == SceElf.PtLoad && (p.Flags & SceElf.PfX) != 0
+                                                                      && t >= p.Vaddr && t < p.Vaddr + (ulong)p.Filesz);
+            stub ??= executable ? target : null;
+            if (target is null || target != stub)
+                throw new PatchException($"{nid}: PLT 0x{plt:x} is {Convert.ToHexStringLower(elf.Data.AsSpan((int)pltOff, 6))}, neither 'jmp [GOT]' nor 'jmp <stub>'");
+        }
+        if (stub is null)
+            return null;   // already an import whose PLT jumps through the GOT
+
+        ulong prefill = elf.ReadU64(imp.GotVaddr);
+        if (prefill != stub && prefill != plt + 6)
+            throw new PatchException($"{nid}: GOT 0x{imp.GotVaddr:x} holds 0x{prefill:x}, neither the stub nor the lazy PLT+6");
+        if (pltRestored)
+            viaGot.CopyTo(elf.Data, pltOff);
+        elf.WriteU64(imp.GotVaddr, stub.Value);
+        if (imp.DefinedLocally)
+        {
+            long sym = elf.SymtabOffset(imp.SymIndex);
+            BinaryPrimitives.WriteUInt16LittleEndian(elf.Data.AsSpan((int)sym + 6), 0);
+            BinaryPrimitives.WriteUInt64LittleEndian(elf.Data.AsSpan((int)sym + 8), 0);
+        }
+        return new ImportRestore(nid, elf.Symbols()[imp.SymIndex].Name, stub.Value, imp.GotVaddr, plt, imp.DefinedLocally, pltRestored, prefill != stub);
     }
 
     /// <summary>
@@ -425,6 +522,10 @@ public static class FixApplier
     /// <summary>Matches of <see cref="FixPattern.Find"/> in data[start..end) at offsets that are a multiple of
     /// <paramref name="step"/> from <paramref name="start"/>, without writing (the probe's count).</summary>
     public static int CountMatches(byte[] data, FixPattern pattern, CancellationToken cancel, long start = 0, long end = -1, int step = 1)
+        => FindMatches(data, pattern, cancel, start, end, step).Count;
+
+    /// <summary>Offsets of the matches <see cref="CountMatches"/> counts.</summary>
+    public static List<long> FindMatches(byte[] data, FixPattern pattern, CancellationToken cancel, long start = 0, long end = -1, int step = 1)
     {
         cancel.ThrowIfCancellationRequested();
         end = end < 0 ? data.Length : end;
@@ -432,7 +533,7 @@ public static class FixApplier
             throw new ArgumentException("patterns must find a nonempty sequence");
         if (start < 0 || end < start || end > data.Length || step <= 0)
             throw new ArgumentOutOfRangeException(nameof(start), "invalid pattern range or step");
-        int count = 0;
+        var found = new List<long>();
         long i = start, checkpoint = start;
         while (i <= end - pattern.Find.Length)
         {
@@ -441,18 +542,21 @@ public static class FixApplier
             int at = data.AsSpan((int)i, checked((int)(candidates + pattern.Find.Length - 1))).IndexOf(pattern.Find);
             if (at < 0) { i += candidates; continue; }
             i += at;
-            if ((i - start) % step == 0) count++;
+            if ((i - start) % step == 0) found.Add(i);
             i++;
         }
-        return count;
+        return found;
     }
 
     /// <summary>What <see cref="ApplyPattern(SceElf, FixPattern, CancellationToken)"/> would replace, counted without writing.</summary>
-    public static int CountPattern(SceElf elf, FixPattern pattern, CancellationToken cancel) => pattern.Code
-        ? elf.Phdrs.Where(p => p.Type == SceElf.PtLoad && p.Filesz > 0 && (p.Flags & SceElf.PfX) != 0)
-                   .Sum(p => CountMatches(elf.Data, pattern, cancel, p.Offset, p.Offset + p.Filesz))
-        : elf.Phdrs.Where(p => p.Type == SceElf.PtLoad && p.Filesz > 0 && (p.Flags & SceElf.PfX) == 0)
-                   .Sum(p => CountMatches(elf.Data, pattern, cancel, p.Offset, p.Offset + p.Filesz, 4));
+    public static int CountPattern(SceElf elf, FixPattern pattern, CancellationToken cancel) => FindPattern(elf, pattern, cancel).Count;
+
+    /// <summary>File offsets of what <see cref="ApplyPattern(SceElf, FixPattern, CancellationToken)"/> would replace.</summary>
+    public static List<long> FindPattern(SceElf elf, FixPattern pattern, CancellationToken cancel) => pattern.Code
+        ? [.. elf.Phdrs.Where(p => p.Type == SceElf.PtLoad && p.Filesz > 0 && (p.Flags & SceElf.PfX) != 0)
+                       .SelectMany(p => FindMatches(elf.Data, pattern, cancel, p.Offset, p.Offset + p.Filesz))]
+        : [.. elf.Phdrs.Where(p => p.Type == SceElf.PtLoad && p.Filesz > 0 && (p.Flags & SceElf.PfX) == 0)
+                       .SelectMany(p => FindMatches(elf.Data, pattern, cancel, p.Offset, p.Offset + p.Filesz, 4))];
 
     /// <summary>Pattern in a module: only 4-aligned hits inside non-executable loaded segments (shader binaries
     /// live in data; code is left alone).</summary>
@@ -468,6 +572,24 @@ public static class FixApplier
     /// <summary>NID -> stub for every stub fix (the rules StubImports uses for known fixes).</summary>
     public static Dictionary<string, string> StubRules(Knowledge knowledge) =>
         StubRules(knowledge.Fixes);
+
+    /// <summary>
+    /// A stub whose <see cref="Fix.Insns"/> call other imports (call_got:NID): placed as a branch-free chain (ret-terminated)
+    /// when the module imports every one of them through the PLT, else null (the plain <see cref="Fix.Stub"/> applies).
+    /// The caller pre-fills the import's GOT slot with the returned address, so the loader still binds the native function
+    /// wherever the firmware exports it.
+    /// </summary>
+    public static ulong? DerivedStub(SceElf elf, Fix fix)
+    {
+        if (fix.Kind != Fix.KindStub || fix.Insns.Count == 0)
+            return null;
+        var gots = new Dictionary<string, ulong>(StringComparer.Ordinal);
+        foreach (var imp in elf.Imports().Where(i => i.Plt))
+            gots.TryAdd(imp.Nid, imp.GotVaddr);
+        if (fix.Insns.Any(i => i.CallNid.Length > 0 && !gots.ContainsKey(i.CallNid)))
+            return null;
+        return Patching.PlaceChain(elf, fix.Insns, 0, tailJmp: false, callGots: gots);
+    }
 
     /// <summary>Stub rules from the run's fix table, including selected option overrides.</summary>
     public static Dictionary<string, string> StubRules(IReadOnlyDictionary<string, Fix> fixes) =>
@@ -522,6 +644,20 @@ public static class FixApplier
         return applied;
     }
 
+    /// <summary>Post-call chain of the <see cref="Fix.GuardOnError"/> guard: call the native function through its GOT slot
+    /// (stack kept 16-byte aligned) and return <paramref name="fallback"/> instead of a negative 32-bit result. Branch-free,
+    /// so <see cref="Patching.PlaceChain"/> may split it across caves.</summary>
+    public static IReadOnlyList<Insn> OnErrorGuard(uint fallback) =>
+    [
+        new([0x48, 0x83, 0xEC, 0x08], false, "sub rsp, 8"),
+        new([], true, "call [GOT]"),
+        new([0x48, 0x83, 0xC4, 0x08], false, "add rsp, 8"),
+        new([0xB9, (byte)fallback, (byte)(fallback >> 8), (byte)(fallback >> 16), (byte)(fallback >> 24)], false, $"mov ecx, 0x{fallback:x}"),
+        new([0x85, 0xC0], false, "test eax, eax"),
+        new([0x0F, 0x48, 0xC1], false, "cmovs eax, ecx"),
+        new([Patching.Ret], false, "ret"),
+    ];
+
     static string? ApplyOne(SceElf elf, Fix fix, Import? imp, Knowledge knowledge)
     {
         if (fix.Kind == Fix.KindStub)
@@ -547,6 +683,15 @@ public static class FixApplier
                     ?? throw new PatchException($"{fix.Nid}: this module does not export {fix.ExportNid}");
                 Patching.RedirectPlt(elf, imp, target);
                 return $"redirect -> local export {fix.ExportNid} @ 0x{target:x}";
+            case Fix.KindGuarded:
+                // the GOT pre-fill serves consoles whose firmware lacks the export (the loader leaves it alone there);
+                // elsewhere the loader binds the native function, and the guard turns its errors into the stub's value
+                uint fallback = knowledge.StubReturnValue(fix.Stub)
+                    ?? throw new PatchException($"{fix.Nid}: guard '{fix.Guard}' needs a value-only stub, not '{fix.Stub}'");
+                ulong guard = Patching.PlaceChain(elf, OnErrorGuard(fallback), imp.GotVaddr, tailJmp: false);
+                Patching.RedirectPlt(elf, imp, guard);   // before the pre-fill: the PLT entry is found through the GOT's lazy-bind value
+                var prefill = Patching.StubImports(elf, [fix.Nid], knowledge, new Dictionary<string, string> { [fix.Nid] = fix.Stub });
+                return $"guarded: native, error -> {fix.Stub} via cave 0x{guard:x}; GOT pre-fill {fix.Stub} @ 0x{prefill[0].StubVaddr:x}";
             case Fix.KindPltStub:
                 byte[] body = knowledge.StubBytes(fix.Stub);
                 long off = Patching.FindCave(elf, body.Length)
