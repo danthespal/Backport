@@ -1936,7 +1936,7 @@ namespace Ps5Backport.Tests
         [Property(MaxTest = 200, EndSize = 64, Replay = "54321,67891")]
         public void FirmwareSdk_UsesDecimalDigitsInBcd(byte major, byte minor)
         {
-            int m = 1 + major % 11, n = minor % 100;
+            int m = 1 + major % 13, n = minor % 100;
             uint bcd = (uint)((n / 10) * 16 + n % 10);
             var pair = Firmware.SdkFor($"{m}.{n}");
             Assert.Equal((Firmware.SdkPairs[m].Ps5 & 0xFF00FFFF) | (bcd << 16), pair.Ps5);
@@ -1949,7 +1949,7 @@ namespace Ps5Backport.Tests
             int invalid = 100 + value;
             Assert.Throws<FormatException>(() => Firmware.Parse($"{invalid}.00"));
             Assert.Throws<FormatException>(() => Firmware.Parse($"1.{invalid}"));
-            Assert.Throws<ArgumentException>(() => Firmware.SdkFor($"{12 + value % 88}.00"));
+            Assert.Throws<ArgumentException>(() => Firmware.SdkFor($"{14 + value % 86}.00"));
         }
 
         [Theory]
@@ -3444,7 +3444,7 @@ namespace Ps5Backport.Tests
         public void Parse_Invalid(string value) => Assert.Throws<FormatException>(() => Firmware.Parse(value));
 
         [Fact]
-        public void SdkFor_UnknownMajor() => Assert.Throws<ArgumentException>(() => Firmware.SdkFor("12"));
+        public void SdkFor_UnknownMajor() => Assert.Throws<ArgumentException>(() => Firmware.SdkFor("14"));
     }
 }
 #endregion

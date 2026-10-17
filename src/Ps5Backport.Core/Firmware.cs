@@ -9,6 +9,8 @@ public static class Firmware
     /// Target pairs from PS5-BACKPORK-KITCHEN core/VersionProfiles.vb: firmware major -> (PS5 SDK, PS4 SDK).
     /// GT7 confirms two of them: FW 10 is the original game's values, FW 4 is the backport's.
     /// FW 11 is not in Kitchen: Ghost of Yotei's original modules, PS4 half as in the FW 11.00 system libraries.
+    /// FW 12 and 13 are not in Kitchen either: the original eboots of 11 sample games (CONTROL PPSA34547, Black Flag PPSA28183,
+    /// UFC 6 PPSA23566, Hades II PPSA36082, …) carry 0x12000038/0x13090001, Wolverine PPSA03671 carries 0x13000035/0x13590001.
     /// </summary>
     public static readonly IReadOnlyDictionary<int, (uint Ps5, uint Ps4)> SdkPairs = new Dictionary<int, (uint, uint)>
     {
@@ -23,6 +25,8 @@ public static class Firmware
         [9] = (0x09000040, 0x11590001),
         [10] = (0x10000040, 0x12090001),
         [11] = (0x11000040, 0x12590001),
+        [12] = (0x12000038, 0x13090001),
+        [13] = (0x13000035, 0x13590001),
     };
 
     /// <summary>'4', '4.03' -> (4, 3).</summary>
