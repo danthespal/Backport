@@ -1700,6 +1700,23 @@ namespace Ps5Backport.Tests
         }
 
         [Fact]
+        public void MacBundle_FindsTheFoldersBesideTheApp()
+        {
+            // scripts/package.ps1 -Runtime osx-*: the program in Studio/<name>.app/Contents/MacOS, the writable folders in Studio/
+            string root = Directory.CreateDirectory(Path.Combine(Path.GetTempPath(), "ps5backport-bundle-" + Guid.NewGuid().ToString("N"))).FullName;
+            try
+            {
+                string macos = Directory.CreateDirectory(Path.Combine(root, "Studio", "PS5 Backport Studio.app", "Contents", "MacOS")).FullName;
+                Directory.CreateDirectory(Path.Combine(root, "Studio", "data"));
+                Directory.CreateDirectory(Path.Combine(root, "Studio", "fakelibs"));
+                File.WriteAllText(Path.Combine(root, "Studio", "data", "fixes.json"), "{}");
+                Assert.Equal(Path.Combine(root, "Studio", "data", "fixes.json"), Ps5Backport.Core.Paths.FindUp(Path.Combine("data", "fixes.json"), macos));
+                Assert.Equal(Path.Combine(root, "Studio", "fakelibs"), Ps5Backport.Core.Paths.FindUp("fakelibs", macos));
+            }
+            finally { Directory.Delete(root, recursive: true); }
+        }
+
+        [Fact]
         public async Task CopiedCli_FindsRuntimeAssetsOutsideTheRepository()
         {
             string root = Directory.CreateDirectory(Path.Combine(Path.GetTempPath(), "ps5backport-distribution-" + Guid.NewGuid().ToString("N"))).FullName;

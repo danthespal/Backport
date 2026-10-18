@@ -159,6 +159,28 @@ The script publishes both executables as self-contained Windows x64 applications
 
 No trimming or single-file bundling is enabled. Packages retain resolved NuGet metadata and bundled license/third-party notices under `licenses/`. Packages are not signed installers and do not include source, tests or engineering reports. Package generation copies files and leaves source assets unchanged. It does not upload or publish the archive.
 
+#### macOS package with .NET included
+
+From the source repository on Windows (the script uses Windows' `tar.exe`), run:
+
+```powershell
+powershell -NoProfile -File scripts/package.ps1 -Configuration Release -Runtime osx-arm64   # Apple silicon (M1 and later)
+powershell -NoProfile -File scripts/package.ps1 -Configuration Release -Runtime osx-x64     # Intel Macs
+```
+
+It writes `PS5BackportStudio-<configuration>-<runtime>.tar.gz` with `Studio/` and `CLI/`. `Studio/` holds `PS5 Backport Studio.app` with `data/`, `firmware_db/`, `fakelibs/`, `licenses/` and this file beside it, not inside it. The archive is a tar.gz because it records the executables' Unix mode (0755); a zip written on Windows loses it. macOS 14 Sonoma or later is required.
+
+Recipients:
+
+1. Double-click the archive to extract it, and keep the extracted folder together. Studio finds `data/`, `firmware_db/` and `fakelibs/` next to the `.app`, and writes fakelib imports and console results there. An `.app` moved away alone (for example into Applications) finds none of them; in that case set the folders in Settings.
+2. The app is not signed with an Apple Developer ID or notarized, so macOS blocks a downloaded copy and may say it is damaged or cannot be verified. Clear the download flag once in Terminal, then open the app normally:
+
+   ```sh
+   xattr -dr com.apple.quarantine <the extracted folder>
+   ```
+
+3. The CLI runs from Terminal: `<the extracted folder>/CLI/Ps5Backport.Cli`.
+
 #### Fakelib and symbol inputs and per-user files
 
 The sharing package includes the local fakelib store's `.sprx`, `.prx`, `.psp` companion files and manifests, preserving firmware and variant subfolders. Publication staging/backup folders are excluded. It copies the maintained `data/aerolib.csv` to `data/aerolib.csv` beside each executable. Runtime symbol lookup and packaging do not depend on `.original/reference`. Both clients automatically discover these packaged inputs; Settings and CLI path overrides remain available. Other reference repository files are not bundled.
