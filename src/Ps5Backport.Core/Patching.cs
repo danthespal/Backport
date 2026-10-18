@@ -229,11 +229,13 @@ public static class Patching
     /// with `ret` (post-call adapter). Returns the vaddr of the first piece. <paramref name="contiguous"/>:
     /// one piece only, so the instructions may branch inside it. <paramref name="stateVaddr"/>: target of the
     /// instructions' {state+N} displacements. <paramref name="callGots"/>: GOT slots of the imports named by call_got:NID.
+    /// <paramref name="tailTo"/> (without <paramref name="tailJmp"/>): the chain ends with `jmp rel32` to that address.
     /// </summary>
     public static ulong PlaceChain(SceElf elf, IReadOnlyList<Insn> insns, ulong gotVaddr, bool tailJmp = true,
-                                   bool contiguous = false, ulong stateVaddr = 0, IReadOnlyDictionary<string, ulong>? callGots = null)
+                                   bool contiguous = false, ulong stateVaddr = 0, IReadOnlyDictionary<string, ulong>? callGots = null,
+                                   ulong tailTo = 0)
     {
-        int tail = tailJmp ? 6 : 0;
+        int tail = tailJmp ? 6 : tailTo != 0 ? 5 : 0;
         var pieces = new List<(long Offset, List<Insn> Insns, bool IsLast)>();
         int k = 0;
         if (contiguous)
@@ -298,6 +300,8 @@ public static class Patching
                 body.AddRange([0xE9, .. Rel32(va + (ulong)body.Count + 5, elf.Vaddr(pieces[idx + 1].Offset))]);
             else if (tailJmp)
                 body.AddRange(JmpViaGot(va + (ulong)body.Count, gotVaddr));
+            else if (tailTo != 0)
+                body.AddRange([JmpRel32, .. Rel32(va + (ulong)body.Count + 5, tailTo)]);
             body.ToArray().CopyTo(elf.Data, off);
         }
         return elf.Vaddr(pieces[0].Offset);

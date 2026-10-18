@@ -736,8 +736,8 @@
     "save_prepare_compat": {
       "name": "Save preparation compatibility",
       "group": "Saves",
-      "description": "Changes sceSaveDataPrepare preparation mode 2 to 1 before the native call. Requires Known fixes enabled.",
-      "warning": "Disabled by default. Derived adapter, not console-tested. Without it, the native save-preparation call may reject mode 2. Disabling does not undo patches already present in the input.",
+      "description": "Changes sceSaveDataPrepare preparation mode 2 to 1, and modes 3 and 6 to 0, before the native call. Requires Known fixes enabled.",
+      "warning": "Disabled by default. Derived adapter, not console-tested. Without it, the native save-preparation call on FW 4.xx rejects modes above 1. Disabling does not undo patches already present in the input.",
       "sources": ["Existing save-data argument adapter; console testing pending"],
       "fixes": {
         "sDCBrmc61XU": {
@@ -745,19 +745,26 @@
           "name": "sceSaveDataPrepare",
           "area": "save data, entitlements, HTTP2",
           "sources": [
-            "CONTROL"
+            "CONTROL",
+            "SceShellCore 4.03 prepare handler",
+            "Decker97 0.3.1-beta (JWE3 mode 6 -> 0)"
           ],
           "insns": [
             "8b4604  ; mov eax, [rsi+4]",
-            "83f802  ; cmp eax, 2",
+            "4531db  ; xor r11d, r11d",
+            "83f803  ; cmp eax, 3",
+            "410f44c3  ; cmove eax, r11d",
+            "83f806  ; cmp eax, 6",
+            "410f44c3  ; cmove eax, r11d",
             "41bb01000000  ; mov r11d, 1",
+            "83f802  ; cmp eax, 2",
             "410f44c3  ; cmove eax, r11d",
             "894604  ; mov [rsi+4], eax"
           ],
           "when": "always",
           "proven": false,
-          "note": "SaveDataPrepareParam.prepareMode (+0x04) 2 -> 1",
-          "rationale": "Argument fix (CONTROL patched the call site). eax = [rsi+4]; if eax == 2: eax = 1; [rsi+4] = eax (r11 scratch)."
+          "note": "SaveDataPrepareParam.prepareMode (+0x04) 2 -> 1, 3 and 6 -> 0",
+          "rationale": "Argument fix. ShellCore 3.20-4.51 refuse prepareMode > 1 with 0x809F8004 (4.03: mov eax,[req+0x14]; cmp eax,1; ja). 2 -> 1 is CONTROL's own call-site patch. 3 and 6 go to 0: on 4.03 mode 1 is also refused when a list built from the mount path is non-empty, and mode 0 takes neither branch; Decker97 reports a working Jurassic World Evolution 3 package with 6 -> 0 (FINDINGS 6x). eax = [rsi+4]; if eax == 3 or 6: eax = 0; if eax == 2: eax = 1; [rsi+4] = eax (r11 scratch)."
         }
       }
     },

@@ -18,7 +18,8 @@ namespace Ps5Backport.Core;
 /// is the initializer (<c>DT_INIT</c>) of the game's bundled <c>sce_module/libc.prx</c>: every sample libc starts it
 /// with the same prologue and imports <c>_open</c>/<c>_write</c>/<c>_close</c>/<c>_nanosleep</c>. Exactly one module
 /// per game carries the notice (<see cref="Assess"/>). <c>sceKernelDlsym</c> on libkernel fails in a game process
-/// (console, §6p), so missing functions are never looked up at run time.
+/// (console, §6p), so missing functions are never looked up at run time. When no single cave fits, the same program is
+/// split across int3 padding (§6w).
 /// </summary>
 internal static class BootNotice
 {
@@ -115,24 +116,43 @@ internal static class BootNotice
         }
 
         var (body, calls) = BuildCave(msg, delaySeconds, plan);
-        long cave = Patching.FindContiguousCave(elf, body.Length)
-            ?? throw new PatchException("Matched boot notification, but no contiguous code padding is available");
-        ulong caveVa = elf.Vaddr(cave);
+        ulong caveVa;
+        if (Patching.FindContiguousCave(elf, body.Length) is long cave)
+        {
+            caveVa = elf.Vaddr(cave);
 
-        // Patch each `call rel32` to its PLT entry.
-        foreach (var (at, target) in calls)
-            BinaryPrimitives.WriteInt32LittleEndian(body.AsSpan(at + 1),
-                checked((int)((long)target - (long)caveVa - at - 5)));
+            // Patch each `call rel32` to its PLT entry.
+            foreach (var (at, target) in calls)
+                BinaryPrimitives.WriteInt32LittleEndian(body.AsSpan(at + 1),
+                    checked((int)((long)target - (long)caveVa - at - 5)));
 
-        // Tail "jmp rel32" resumes the real function at +6 (past the overwritten push rbp/mov rbp,rsp/push r15).
-        BinaryPrimitives.WriteInt32LittleEndian(body.AsSpan(body.Length - 4),
-            checked((int)((long)(plan.EntryVa + 6) - (long)caveVa - body.Length)));
-        body.CopyTo(elf.Data, cave);
+            // Tail "jmp rel32" resumes the real function at +6 (past the overwritten push rbp/mov rbp,rsp/push r15).
+            BinaryPrimitives.WriteInt32LittleEndian(body.AsSpan(body.Length - 4),
+                checked((int)((long)(plan.EntryVa + 6) - (long)caveVa - body.Length)));
+            body.CopyTo(elf.Data, cave);
+        }
+        else
+        {
+            // No single cave fits (the text extension can go to contiguous adapters first, PPSA25991): the same program
+            // split across int3 padding, calling through the imports' GOT slots (what their PLT entries jump through).
+            var gots = new Dictionary<string, ulong> { ["open"] = Got(elf, plan.Open), ["write"] = Got(elf, plan.Write), ["close"] = Got(elf, plan.Close) };
+            if (plan.Sleep != 0)
+                gots["sleep"] = Got(elf, plan.Sleep);
+            try
+            {
+                caveVa = Patching.PlaceChain(elf, BuildChain(msg, delaySeconds, plan), 0, tailJmp: false, callGots: gots,
+                                             tailTo: plan.EntryVa + 6);
+            }
+            catch (PatchException e)
+            {
+                throw new PatchException($"Matched boot notification, but {e.Message}", e);
+            }
+        }
 
         // Redirect the hook point (6 bytes): jmp rel32 -> cave, then nop.
         byte[] redirect = [0xE9, 0, 0, 0, 0, 0x90];
         BinaryPrimitives.WriteInt32LittleEndian(redirect.AsSpan(1),
-            checked((int)(caveVa - (plan.EntryVa + 5))));
+            checked((int)((long)caveVa - (long)(plan.EntryVa + 5))));
         redirect.CopyTo(elf.Data, plan.EntryOff);
         return 1;
     }
@@ -229,6 +249,80 @@ internal static class BootNotice
 
         return (b.ToArray(), calls);
     }
+
+    /// <summary>
+    /// <see cref="BuildCave"/>'s program for <see cref="Patching.PlaceChain"/>: no instruction over 8 bytes, so each fits the
+    /// 13 usable bytes of a 16-byte int3 run with its joining jmp (constants go 4 bytes at a time through eax). Calls are
+    /// call_got:open/write/close/sleep; the chain's tail jmp resumes the hooked function.
+    /// </summary>
+    static List<Insn> BuildChain(byte[] msg, int delaySeconds, Plan plan)
+    {
+        var c = new List<Insn>();
+        void I(params byte[] bytes) => c.Add(new Insn(bytes, false, ""));
+        void E(Action<List<byte>> emit) { var b = new List<byte>(); emit(b); c.Add(new Insn([.. b], false, "")); }
+        void Call(string import) => c.Add(new Insn([], true, "", CallNid: import));
+        void StoreBytes(int disp, byte[] data)          // mov eax, imm32; mov [rsp+disp], eax
+        {
+            for (int i = 0; i < data.Length; i += 4)
+            {
+                byte[] word = new byte[4];
+                data.AsSpan(i, Math.Min(4, data.Length - i)).CopyTo(word);
+                I([0xB8, .. word]);
+                E(b => EmitStoreEax(b, disp + i));
+            }
+        }
+
+        I(0x55); I(0x48, 0x89, 0xE5); I(0x41, 0x57);                         // push rbp; mov rbp, rsp; push r15
+        I(0x57); I(0x56); I(0x52); I(0x51); I(0x50);                         // push rdi, rsi, rdx, rcx, rax
+        I(0x41, 0x50); I(0x41, 0x51); I(0x41, 0x52); I(0x41, 0x53);          // push r8..r11
+        E(b => EmitSubRspImm(b, StackAlloc));
+
+        StoreBytes(Path, "/dev/notification0\0"u8.ToArray());
+        E(b => EmitLeaRdi(b, Req));
+        I(0x31, 0xC0);                                                       // xor eax, eax
+        E(b => { b.Add(0xB9); EmitU32(b, ReqSize / 8); });                   // mov ecx, 390
+        I(0xF3, 0x48, 0xAB);                                                 // rep stosq
+        StoreBytes(Msg, msg);
+
+        if (plan.Sleep != 0 && plan.Nanosleep)
+        {
+            E(b => { b.Add(0xB8); EmitU32(b, delaySeconds); });               // mov eax, tv_sec
+            E(b => { b.AddRange([0x48, 0x89, 0x84, 0x24]); EmitU32(b, Timespec); });       // mov [rsp+Timespec], rax
+            I(0x31, 0xC0);                                                   // xor eax, eax
+            E(b => { b.AddRange([0x48, 0x89, 0x84, 0x24]); EmitU32(b, Timespec + 8); });   // tv_nsec = 0
+            E(b => EmitLeaRdi(b, Timespec));
+            I(0x31, 0xF6);                                                   // xor esi, esi
+            Call("sleep");
+        }
+        else if (plan.Sleep != 0)
+        {
+            E(b => { b.Add(0xBF); EmitU32(b, (uint)((long)delaySeconds * 1000000)); });   // mov edi, usec
+            Call("sleep");
+        }
+
+        E(b => EmitLeaRdi(b, Path));
+        E(b => { b.Add(0xBE); EmitU32(b, 1); });                              // mov esi, 1 (O_WRONLY)
+        I(0x31, 0xD2); I(0x31, 0xC0);                                        // xor edx, edx; xor eax, eax
+        Call("open");
+        E(b => EmitStoreEax(b, FdSlot));
+
+        E(b => EmitLoadEdi(b, FdSlot));
+        E(b => EmitLeaRsi(b, Req));
+        E(b => { b.Add(0xBA); EmitU32(b, ReqSize); });                        // mov edx, 3120
+        Call("write");
+
+        E(b => EmitLoadEdi(b, FdSlot));
+        Call("close");
+
+        E(b => EmitAddRspImm(b, StackAlloc));
+        I(0x41, 0x5B); I(0x41, 0x5A); I(0x41, 0x59); I(0x41, 0x58);          // pop r11..r8
+        I(0x58); I(0x59); I(0x5A); I(0x5E); I(0x5F);                         // pop rax, rcx, rdx, rsi, rdi
+        return c;
+    }
+
+    /// <summary>GOT slot a PLT entry jumps through (<c>jmp [rip+rel32]</c>, checked by <see cref="Patching.PltEntry"/>).</summary>
+    static ulong Got(SceElf elf, ulong plt) =>
+        plt + 6 + (ulong)(long)BinaryPrimitives.ReadInt32LittleEndian(elf.Data.AsSpan((int)elf.Off(plt) + 2));
 
     /// <summary>
     /// The hook point and its file offset: e_entry when it is the SDK <c>_start</c>, or DT_INIT of the bundled libc

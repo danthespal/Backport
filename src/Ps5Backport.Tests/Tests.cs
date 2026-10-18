@@ -6531,6 +6531,58 @@ namespace Ps5Backport.Tests
         }
 
         /// <summary>
+        /// No cave fits the notice in one piece (PPSA25991: contiguous adapters took the whole text extension, and eboot
+        /// padding runs are at most 13 usable bytes), so it is split across 16-byte int3 runs: the chain builds the same
+        /// path and message on the stack, makes the same calls through the GOT slots and resumes _start at +6.
+        /// </summary>
+        [Fact]
+        public void NoRoomForOnePiece_SplitsAcrossSmallCaves()
+        {
+            byte[] d = FixtureBytes(Open, Write, Close, Usleep);    // GOT slots 0x480, 0x488, 0x490, 0x498
+            for (int off = 0x600; off < 0x1700; off++)
+                d[off] = (off & 15) == 0 ? Patching.Ret : Patching.Int3;
+            var elf = new SceElf(d);
+            const string msg = "Backport test files by Arsenic";
+            Assert.Equal(1, BootNotice.Apply(elf, msg, 8, TestContext.Current.CancellationToken));
+            Assert.Equal(0xE9, elf.Data[0x500]);
+
+            var stack = new Dictionary<long, byte>();
+            var gots = new List<ulong>();
+            int pieces = 1, pushes = 0;
+            uint eax = 0;
+            ulong ip = 0x505 + (ulong)(long)BinaryPrimitives.ReadInt32LittleEndian(elf.Data.AsSpan(0x501));
+            while (true)
+            {
+                var decoder = Iced.Intel.Decoder.Create(64, new Iced.Intel.ByteArrayCodeReader(elf.Data, (int)ip, 16), ip);
+                decoder.Decode(out var insn);
+                if (insn.Mnemonic == Iced.Intel.Mnemonic.Jmp)
+                {
+                    if (insn.NearBranchTarget == 0x506)
+                        break;                                       // resumes past the replicated prologue
+                    ip = insn.NearBranchTarget;
+                    pieces++;
+                    continue;
+                }
+                Assert.True(insn.Length <= 8, $"{insn} is {insn.Length} bytes");
+                if (insn.Mnemonic == Iced.Intel.Mnemonic.Push)
+                    pushes++;
+                else if (insn.Mnemonic == Iced.Intel.Mnemonic.Call)
+                    gots.Add(insn.IPRelativeMemoryAddress);
+                else if (insn.Code == Iced.Intel.Code.Mov_r32_imm32 && insn.Op0Register == Iced.Intel.Register.EAX)
+                    eax = insn.Immediate32;
+                else if (insn.Code == Iced.Intel.Code.Mov_rm32_r32 && insn.MemoryBase == Iced.Intel.Register.RSP && insn.Op1Register == Iced.Intel.Register.EAX)
+                    for (int i = 0; i < 4; i++)
+                        stack[(long)insn.MemoryDisplacement64 + i] = (byte)(eax >> (8 * i));
+                ip = insn.NextIP;
+            }
+            Assert.True(pieces > 10);
+            Assert.Equal(11, pushes);                                // the 6 replicated bytes hold 2, then 9 saved registers
+            Assert.Equal(new ulong[] { 0x498, 0x480, 0x488, 0x490 }, gots.ToArray());   // usleep, open, write, close
+            Assert.Equal("/dev/notification0\0"u8.ToArray(), Enumerable.Range(0, 19).Select(i => stack[i]).ToArray());
+            Assert.Equal(Encoding.UTF8.GetBytes(msg), Enumerable.Range(0x20 + 45, msg.Length).Select(i => stack[i]).ToArray());
+        }
+
+        /// <summary>
         /// An eboot that cannot carry the notice (PPSA18154, PPSA36082) gets it in the bundled libc's initializer instead;
         /// an eboot that can keeps it, and libc is left alone, so the notice is never shown twice.
         /// </summary>
