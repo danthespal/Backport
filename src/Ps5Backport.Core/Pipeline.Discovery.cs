@@ -31,7 +31,7 @@ public static partial class Pipeline
         var libraryInventories = new Dictionary<string, string[]>(StringComparer.Ordinal);
         if (extra is not null)
         {
-            libraryInventories[extra] = Directory.GetFiles(extra).Order(StringComparer.Ordinal).ToArray();
+            libraryInventories[extra] = Directory.GetFiles(extra).Where(f => !GameScan.IsFinderMetadata(System.IO.Path.GetFileName(f))).Order(StringComparer.Ordinal).ToArray();
             foreach (string file in libraryInventories[extra])
             {
                 string name = System.IO.Path.GetFileName(file);
@@ -59,7 +59,7 @@ public static partial class Pipeline
             if (problems.Count > 0)
                 throw new ArgumentException($"fakelib variant {folder} failed verification: " +
                                             string.Join("; ", problems.Select(p => $"{p.Name}: {p.Problem}")));
-            libraryInventories[folder] = Directory.GetFiles(folder).Order(StringComparer.Ordinal).ToArray();
+            libraryInventories[folder] = Directory.GetFiles(folder).Where(f => !GameScan.IsFinderMetadata(System.IO.Path.GetFileName(f))).Order(StringComparer.Ordinal).ToArray();
             foreach (string file in libraryInventories[folder])
             {
                 string name = System.IO.Path.GetFileName(file);
@@ -82,7 +82,7 @@ public static partial class Pipeline
                 throw new ArgumentException($"AMPR debug fakelib variant {folder} failed verification: " +
                                             string.Join("; ", problems.Select(p => $"{p.Name}: {p.Problem}")));
             string rel = System.IO.Path.Combine("fakelib", "libSceAmpr.sprx");
-            libraryInventories.TryAdd(folder!, Directory.GetFiles(folder!).Order(StringComparer.Ordinal).ToArray());
+            libraryInventories.TryAdd(folder!, Directory.GetFiles(folder!).Where(f => !GameScan.IsFinderMetadata(System.IO.Path.GetFileName(f))).Order(StringComparer.Ordinal).ToArray());
             modules.RemoveAll(m => string.Equals(m.Rel, rel, StringComparison.OrdinalIgnoreCase));
             modules.Add((rel, file, true));
             result.ParamWarnings.Add("AMPR debug logging enabled: fakelib/libSceAmpr.sprx writes /app0/ampr_emu.log; collect it after the test and do not use this build for release.");

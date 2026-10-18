@@ -90,7 +90,7 @@ internal sealed class DirectoryTransaction : IDisposable
         if (Path.GetFileName(full).StartsWith(Publication.Prefix, StringComparison.OrdinalIgnoreCase))
             throw new ArgumentException("reserved transaction directory name");
         string physical = PhysicalPaths.Resolve(full);
-        string key = OperatingSystem.IsWindows() ? physical.ToUpperInvariant() : physical;
+        string key = PhysicalPaths.IgnoresCase(physical) ? physical.ToUpperInvariant() : physical;
         string hash = Convert.ToHexStringLower(SHA256.HashData(Encoding.UTF8.GetBytes(key)));
         return Path.Combine(parent, Publication.Prefix + hash);
     }

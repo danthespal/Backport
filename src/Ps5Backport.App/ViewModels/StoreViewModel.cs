@@ -107,7 +107,7 @@ public sealed partial class StoreViewModel(MainViewModel main) : ObservableObjec
             foreach (var (name, manifest) in FakelibStore.List(store))
             {
                 string folder = System.IO.Path.Combine(store, name);
-                int libraries = Directory.EnumerateFiles(folder).Count(f => f.EndsWith(".sprx", StringComparison.OrdinalIgnoreCase)
+                int libraries = Directory.EnumerateFiles(folder).Count(f => !GameScan.IsFinderMetadata(System.IO.Path.GetFileName(f)) && f.EndsWith(".sprx", StringComparison.OrdinalIgnoreCase)
                                                                              || f.EndsWith(".prx", StringComparison.OrdinalIgnoreCase));
                 int problems = FakelibStore.Verify(folder).Count + FakelibStore.BuildWarnings(folder, main.KnowledgeData).Count;
                 Sets.Add(new StoreSetRow(name, folder, libraries, problems));

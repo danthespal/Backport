@@ -956,6 +956,22 @@ namespace Ps5Backport.Tests
             finally { Directory.Delete(root, true); }
         }
 
+        [Fact]
+        public void FinderMetadata_IsNotGameOrStoreContent()
+        {
+            string root = TempRoot();
+            try
+            {
+                Directory.CreateDirectory(Path.Combine(root, "sce_module"));
+                foreach (string rel in new[] { "eboot.bin", "._eboot.bin", ".DS_Store", "sce_module/libA.prx", "sce_module/._libA.prx" })
+                    File.WriteAllBytes(Path.Combine(root, rel), []);
+                Assert.Equal(new[] { "eboot.bin", "sce_module/libA.prx" },
+                    GameScan.FindModules(root, cancel: TestContext.Current.CancellationToken).Select(p => p.Replace('\\', '/')));
+                Assert.Equal(["libA.prx"], FakelibStore.Verify(Path.Combine(root, "sce_module")).Select(p => p.Name));
+            }
+            finally { Directory.Delete(root, true); }
+        }
+
         [Theory]
         [InlineData("--firmware")]
         [InlineData("--ps5")]
@@ -5887,6 +5903,34 @@ namespace Ps5Backport.Tests
             BinaryPrimitives.WriteUInt64LittleEndian(data.AsSpan(0x98), 0x18);
             BinaryPrimitives.WriteUInt64LittleEndian(data.AsSpan(0xA0), 0x18);
             return data;
+        }
+
+        [Fact]
+        public void FinderMetadataAddedLater_KeepsThePublicationValid()
+        {
+            using (var transaction = new DirectoryTransaction(Output))
+            {
+                File.WriteAllText(Path.Combine(transaction.Stage, "new.bin"), "replacement");
+                transaction.Commit(TestContext.Current.CancellationToken);
+            }
+            File.WriteAllText(Path.Combine(Output, ".DS_Store"), "finder");
+            File.WriteAllText(Path.Combine(Output, "._new.bin"), "appledouble");
+            Publication.Verify(Output);
+            Assert.Equal(["new.bin"], Publication.Inventory(Output).Keys);
+        }
+
+        [Fact]
+        public void UnixUserLinks_AreRefusedAndSystemLinkAncestorsAllowed()
+        {
+            if (OperatingSystem.IsWindows()) return;
+            Previous();
+            string link = Path.Combine(_root, "link");
+            Directory.CreateSymbolicLink(link, Output);
+            Assert.Throws<IOException>(() => Paths.RequireNoLinks(Path.Combine(link, "child")));
+            Assert.Equal(PhysicalPaths.Resolve(Output), PhysicalPaths.Resolve(link));
+            Assert.Throws<ArgumentException>(() => Paths.RequireSeparateTrees(Output, Path.Combine(PhysicalPaths.Resolve(link), "child")));
+            // macOS temp folders sit under /var -> /private/var, a link in a root-owned folder.
+            Paths.RequireNoLinks(Output, tree: true);
         }
 
         sealed class SyncProgress(Action<BackportProgress> action) : IProgress<BackportProgress>

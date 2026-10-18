@@ -340,7 +340,7 @@ public static partial class Pipeline
 
         // option patterns in data files (e.g. ShaderData.bin): every hit
         foreach (var group in patterns.SelectMany(p => p.Files.Select(rel => (Rel: rel.Replace('\\', '/'), Pattern: p)))
-                                      .GroupBy(p => p.Rel, OperatingSystem.IsWindows() ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal))
+                                      .GroupBy(p => p.Rel, PhysicalPaths.IgnoresCase(source) ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal))
             {
                 cancel.ThrowIfCancellationRequested();
                 string rel = group.Key;

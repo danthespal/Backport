@@ -11,7 +11,7 @@ public static class Paths
     {
         string src = Path.TrimEndingDirectorySeparator(Path.GetFullPath(source));
         string dest = Path.TrimEndingDirectorySeparator(Path.GetFullPath(output));
-        var comparison = OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal;
+        var comparison = PhysicalPaths.IgnoresCase(src) || PhysicalPaths.IgnoresCase(dest) ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal;
         string prefix = Path.EndsInDirectorySeparator(src) ? src : src + Path.DirectorySeparatorChar;
         if (string.Equals(src, dest, comparison) || dest.StartsWith(prefix, comparison))
             throw new ArgumentException("output folder must not be the game folder or inside it");
@@ -37,7 +37,8 @@ public static class Paths
         return Path.GetFullPath(Path.Combine(root, Path.Combine(parts)));
     }
 
-    /// <summary>Rejects links/junctions in existing path components and, optionally, every tree entry.</summary>
+    /// <summary>Rejects links/junctions in existing path components and, optionally, every tree entry.
+    /// On Unix, an ancestor link in a folder the user cannot write to belongs to the system layout and is allowed.</summary>
     public static void RequireNoLinks(string path, bool tree = false)
     {
         string full = Path.GetFullPath(path);
@@ -45,7 +46,8 @@ public static class Paths
         {
             try
             {
-                if ((File.GetAttributes(current) & FileAttributes.ReparsePoint) != 0)
+                if ((File.GetAttributes(current) & FileAttributes.ReparsePoint) != 0
+                    && (current == full || PhysicalPaths.UserCanWrite(Path.GetDirectoryName(current)!)))
                     throw new IOException($"filesystem links are not supported for publication: {current}");
             }
             catch (FileNotFoundException) { }
@@ -72,7 +74,7 @@ public static class Paths
         RequireNoLinks(first);
         RequireNoLinks(second);
         string a = PhysicalPaths.Resolve(first), b = PhysicalPaths.Resolve(second);
-        var comparison = OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal;
+        var comparison = PhysicalPaths.IgnoresCase(a) || PhysicalPaths.IgnoresCase(b) ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal;
         char separator = Path.DirectorySeparatorChar;
         if (string.Equals(a, b, comparison) || a.StartsWith(b.TrimEnd(separator) + separator, comparison)
             || b.StartsWith(a.TrimEnd(separator) + separator, comparison))
@@ -85,7 +87,7 @@ public static class Paths
         RequireNoLinks(destination);
         RequireNoLinks(input);
         string a = PhysicalPaths.Resolve(destination), b = PhysicalPaths.Resolve(input);
-        var comparison = OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal;
+        var comparison = PhysicalPaths.IgnoresCase(a) || PhysicalPaths.IgnoresCase(b) ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal;
         if (string.Equals(a, b, comparison) || b.StartsWith(a.TrimEnd(Path.DirectorySeparatorChar) + Path.DirectorySeparatorChar, comparison))
             throw new ArgumentException($"publication must not replace an input directory or its ancestor: {destination}, {input}");
     }

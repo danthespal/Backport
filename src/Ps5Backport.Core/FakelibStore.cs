@@ -19,7 +19,7 @@ public static class FakelibStore
     /// <summary>Compiler __DATE__ ("Aug 24 2026", day space-padded), the only build id homebrew ampr_emu carries.</summary>
     static readonly Regex BuildDate = new(@"(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec) [ 123]\d 20\d\d", RegexOptions.Compiled);
 
-    static bool IsModule(string name) => ModuleExtensions.Any(e => name.EndsWith(e, StringComparison.OrdinalIgnoreCase));
+    static bool IsModule(string name) => !GameScan.IsFinderMetadata(name) && ModuleExtensions.Any(e => name.EndsWith(e, StringComparison.OrdinalIgnoreCase));
 
     /// <summary>Folder name for a firmware: '4' -> "4", '4.03' -> "4.03".</summary>
     public static string FolderName(string firmware)
@@ -130,7 +130,7 @@ public static class FakelibStore
         if (variant.Length > 0)
             folder = VariantFolder(folder, variant);
         var inputs = files.ToArray();
-        var names = new HashSet<string>(OperatingSystem.IsWindows() ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal);
+        var names = new HashSet<string>(PhysicalPaths.IgnoresCase(store) ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal);
         foreach (string path in inputs)
         {
             Paths.RequireNoLinks(path);

@@ -48,7 +48,7 @@ internal sealed class RunEvidence(CancellationToken cancel) : IDisposable
     }
 
     static string[] SetFiles(string root, string pattern) => (Directory.Exists(root) ? Directory.GetFiles(root, pattern) : [])
-        .Where(f => !Path.GetFileName(f).StartsWith(Publication.Prefix, StringComparison.OrdinalIgnoreCase))
+        .Where(f => !Path.GetFileName(f).StartsWith(Publication.Prefix, StringComparison.OrdinalIgnoreCase) && !GameScan.IsFinderMetadata(Path.GetFileName(f)))
         .Order(StringComparer.Ordinal).ToArray();
 
     internal void CaptureTree(string root, string category)

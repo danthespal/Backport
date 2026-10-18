@@ -14,7 +14,7 @@ public static partial class Imports
     public static List<ImportProviderFinding> AuditProviders(string module, SceElf elf,
         IEnumerable<(string Module, SceElf Elf)> providers)
     {
-        var comparer = OperatingSystem.IsWindows() ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal;
+        var comparer = PhysicalPaths.IgnoresCase(module) ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal;
         var exports = providers.Where(p => !comparer.Equals(p.Module, module) && !ReferenceEquals(p.Elf, elf))
             .SelectMany(p => p.Elf.ExportsByLibrary().Select(e => (p.Module, e.Library, e.Nid)))
             .Distinct().ToLookup(e => e.Nid, StringComparer.Ordinal);

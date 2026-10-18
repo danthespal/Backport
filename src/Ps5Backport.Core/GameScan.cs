@@ -24,7 +24,12 @@ public static class GameScan
     static readonly string[] ParamFields = ["requiredSystemSoftwareVersion", "sdkVersion"];
     static readonly string[] AmprIndexFiles = ["ampr_emu.index", "ampr_emu.index.tmp"];
 
-    /// <summary>Every file under a folder, in os.walk order (a folder's files sorted, then its subfolders sorted).</summary>
+    /// <summary>macOS Finder metadata, never game or store content: <c>.DS_Store</c>, and the AppleDouble <c>._name</c>
+    /// files macOS writes beside every file on exFAT/FAT/SMB volumes (the usual dump drives).</summary>
+    public static bool IsFinderMetadata(string fileName) =>
+        fileName == ".DS_Store" || fileName.StartsWith("._", StringComparison.Ordinal);
+
+    /// <summary>Every file under a folder except Finder metadata, in os.walk order (a folder's files sorted, then its subfolders sorted).</summary>
     public static IEnumerable<string> WalkFiles(string dir) => WalkFiles(dir, default);
 
     /// <summary>Ordered traversal with cancellation between directories/files.</summary>
@@ -35,7 +40,7 @@ public static class GameScan
         while (pending.TryPop(out string? current))
         {
             cancel.ThrowIfCancellationRequested();
-            foreach (string file in Directory.EnumerateFiles(current).Order(StringComparer.Ordinal))
+            foreach (string file in Directory.EnumerateFiles(current).Where(f => !IsFinderMetadata(Path.GetFileName(f))).Order(StringComparer.Ordinal))
             {
                 cancel.ThrowIfCancellationRequested();
                 yield return file;
