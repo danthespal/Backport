@@ -1,0 +1,70 @@
+{
+  "Version": 1,
+  "RunId": "9613a543ff6f41bba6566535db51f6db",
+  "Files": {
+    "app0/k9.psp": {
+      "Size": 4135904,
+      "Sha256": "22ffbf0618090f4f45137dd6f496a1910eebc94eda3b5f625c16f13cafa95546"
+    },
+    "libScePsml.sprx": {
+      "Size": 1420272,
+      "Sha256": "186e9e2886df6f780f3eb95ffa3dd0d518823d80c6de18d45c3b1f3c9153af40"
+    },
+    "manifest.json": {
+      "Size": 1377,
+      "Sha256": "a710a7f93099365efc1b9be0f5f560c22921739788a5ff6bb0188c1fa24373a8"
+    },
+    "playgo_0_6/backport_publication.json": {
+      "Size": 365,
+      "Sha256": "059a988e3751ff756afa06db2d21df85723c07e0d5b14597303d0b71a0029207"
+    },
+    "playgo_0_6/libScePlayGo.sprx": {
+      "Size": 18150,
+      "Sha256": "f5fdb0ed6cc7413e6dcac79a62e0efd8cfbae04cca0bf932e7a741aed850d213"
+    },
+    "playgo_0_6/manifest.json": {
+      "Size": 633,
+      "Sha256": "1f72756cfed744e61f0f3ddaecf1f7324a8754e8b13c27a78e6bbff2daa5c1bf"
+    },
+    "playgo_0_6_log/backport_publication.json": {
+      "Size": 365,
+      "Sha256": "b9b2f48f525a9edc23a3ceadab7e89aaba8c7498235c562b6ed31d87b7942cd1"
+    },
+    "playgo_0_6_log/libScePlayGo.sprx": {
+      "Size": 23702,
+      "Sha256": "7595924889d67c33149dc152903d2f2492abbc3e846196d536c4f16a7b5560f6"
+    },
+    "playgo_0_6_log/manifest.json": {
+      "Size": 632,
+      "Sha256": "236f98f0a28a2c5d88eb542474825836b3b69443146cfef167b867480164497a"
+    },
+    "ppsa34008/backport_publication.json": {
+      "Size": 935,
+      "Sha256": "16752098e6377ebefcdd03beed8e18cc7e0aa270b51344ab9a08f8af9755137e"
+    },
+    "ppsa34008/libSceAgc.sprx": {
+      "Size": 326986,
+      "Sha256": "eace8ac152404132e632a7e170ddcca47f230e7c0c02cd4b76f29ca9604037ff"
+    },
+    "ppsa34008/libSceAgcDriver.sprx": {
+      "Size": 123989,
+      "Sha256": "ebdfe2143543141e86cf3d133559993a988de0d825e7aef680fec1489cb446ad"
+    },
+    "ppsa34008/libSceAmpr.sprx": {
+      "Size": 255126,
+      "Sha256": "362c84e31e3a06a42f50fe4d6ea124d15e73f77c901470f90823935d7f36ca76"
+    },
+    "ppsa34008/libScePlayGo.sprx": {
+      "Size": 11590,
+      "Sha256": "a0f20f40107713523ba1a3a0281fb7c4e238b2b5d3fda9354119352d9393d2f0"
+    },
+    "ppsa34008/libScePsml.sprx": {
+      "Size": 1536002,
+      "Sha256": "3e1df31de4049d958faec7ed3575d9ef7776eeb76e0ac2354d38c8b5eb33ad21"
+    },
+    "ppsa34008/manifest.json": {
+      "Size": 2978,
+      "Sha256": "a1f20fe899ab44b4b417ffe7852f2593d70894dc1d5108a30cc94b51f1b8f571"
+    }
+  }
+}

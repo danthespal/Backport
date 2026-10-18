@@ -1,7 +1,9 @@
 [CmdletBinding()]
 param(
     [ValidateSet('Debug', 'Release')][string]$Configuration = 'Release',
-    [ValidateSet('win-x64', 'osx-arm64', 'osx-x64')][string]$Runtime = 'win-x64'
+    [ValidateSet('win-x64', 'osx-arm64', 'osx-x64')][string]$Runtime = 'win-x64',
+    # Release version (the release workflow passes the tag's, e.g. 0.2.0 or 0.2.0-beta.1); default: Directory.Build.props
+    [ValidatePattern('^\d+\.\d+\.\d+(-[0-9A-Za-z.-]+)?$')][string]$Version = ''
 )
 
 $ErrorActionPreference = 'Stop'
@@ -19,11 +21,12 @@ try {
     }
     $env:DOTNET_CLI_TELEMETRY_OPTOUT = '1'
     $env:AVALONIA_TELEMETRY_OPTOUT = '1'
+    if (!$Version) { $Version = ([xml](Get-Content -LiteralPath (Join-Path $packageRoot 'Directory.Build.props') -Raw)).Project.PropertyGroup.Version }
     foreach ($packageProject in @(
         @{ Project = 'src/Ps5Backport.App/Ps5Backport.App.csproj'; Folder = 'Studio' },
         @{ Project = 'src/Ps5Backport.Cli/Ps5Backport.Cli.csproj'; Folder = 'CLI' }
     )) {
-        & dotnet publish $packageProject.Project -c $Configuration -r $Runtime --self-contained true -p:RestoreLockedMode=true -m:1 -o (Join-Path $packageRun $packageProject.Folder)
+        & dotnet publish $packageProject.Project -c $Configuration -r $Runtime --self-contained true -p:RestoreLockedMode=true -p:Version=$Version -m:1 -o (Join-Path $packageRun $packageProject.Folder)
         if ($LASTEXITCODE -ne 0) { throw "Package publish failed: $($packageProject.Project)" }
         # Retain package metadata and bundled notices alongside the shared binaries.
         $packageAssets = Get-Content -LiteralPath (Join-Path (Split-Path $packageProject.Project) 'obj/project.assets.json') -Raw | ConvertFrom-Json
@@ -56,8 +59,8 @@ try {
         Get-ChildItem -LiteralPath $packageStudio | Where-Object { $packageBeside -notcontains $_.Name } | ForEach-Object {
             Move-Item -LiteralPath $_.FullName -Destination $packageMacOS
         }
-        $packageVersion = ([xml](Get-Content -LiteralPath (Join-Path $packageRoot 'Directory.Build.props') -Raw)).Project.PropertyGroup.Version
-        $packagePlist = (Get-Content -LiteralPath (Join-Path $packageRoot 'build/macos/Info.plist') -Raw).Replace('@VERSION@', $packageVersion)
+        # macOS bundle versions are numeric only: 0.2.0-beta.1 -> 0.2.0
+        $packagePlist = (Get-Content -LiteralPath (Join-Path $packageRoot 'build/macos/Info.plist') -Raw).Replace('@VERSION@', $Version.Split('-')[0])
         [IO.File]::WriteAllText((Join-Path $packageContents 'Info.plist'), $packagePlist, (New-Object Text.UTF8Encoding $false))
         Copy-Item -LiteralPath (Join-Path $packageRoot 'build/macos/PS5BackportStudio.icns') -Destination (Join-Path $packageContents 'Resources')
 

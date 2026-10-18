@@ -1,0 +1,13 @@
+{
+  "libSceAmpr.sprx": {
+    "container": "PS4-style fake SELF (make_fself.py)",
+    "module": "libSceAmpr",
+    "ps5_sdk": "0x02000009",
+    "ps4_sdk": "0x08050001",
+    "build_path": "C:/dev/ps5/ampr_emu/out/Prospero_ReleaseHooks/libSceAmpr.prx",
+    "build_date": "Aug 24 2026",
+    "sha256": "27dec32b11d125d685b06702ae2b7fcb740dad0fe11b8b530921793515593aa9",
+    "size": 414614,
+    "source": "Official drakmor/ampr_emu 0.3.6.6 test-debug; static import-compatible through FW 9.60; diagnostic only"
+  }
+}

@@ -114,7 +114,7 @@ Investigation results will be recorded here after physical checks. Existing sett
 - Rule inputs live in `data`; export catalogs in `firmware_db`; local replacement modules/manifests in `fakelibs`; private references/source samples in `.original`. Golden expectations live in `src/Ps5Backport.Tests/golden`.
 - Preserve the distinction between proven/reference-derived fixes and candidates. Default rules are generic by library/function; recognized engine/library-specific options must fail closed on ambiguous layouts. Game-specific instruction addresses from research are not automatically reusable rules.
 - The app has no console FTP/payload/log-fetch integration and no installer/update platform. Sharing packages are now supported, superseding the old plan that dropped all release work. Private inputs remain local; package contents follow the sharing section, not the obsolete source-only plan.
-- No game/system binaries belong in Git. Third-party license/notices accompany distributed dependencies. Restoring discarded plans does not override the current implementation contracts below.
+- No game binaries belong in Git. The fakelib store (`fakelibs/`, Sony system libraries and their manifests) is tracked since 18 October 2026 at the user's decision, so the private repository's release workflow can package it; `.gitattributes` keeps it byte-exact (`-text`). Third-party license/notices accompany distributed dependencies. Restoring discarded plans does not override the current implementation contracts below.
 
 ## Cleanup and historical evidence
 
@@ -181,6 +181,17 @@ Recipients:
 
 3. The CLI runs from Terminal: `<the extracted folder>/CLI/Ps5Backport.Cli`.
 
+#### Releases from a tag (GitHub Actions)
+
+`.github/workflows/release.yml` runs when a tag `vMAJOR.MINOR.PATCH` is pushed (a suffix such as `v0.2.0-beta.1` makes a pre-release):
+
+```sh
+git tag v0.2.0
+git push origin v0.2.0
+```
+
+On `windows-latest` it installs the SDK pinned by `global.json`, runs `scripts/verify.ps1 -Lane Public -Configuration Release`, then runs `scripts/package.ps1 -Version <tag without v>` for `win-x64`, `osx-arm64` and `osx-x64`. It creates the release with the three archives (`PS5BackportStudio-<tag>-<runtime>.zip|tar.gz`), short download notes and GitHub's generated change list. The tag's version overrides `Directory.Build.props` for that build only (`-p:Version`; the macOS bundle gets the numeric part). The packages need the tracked `fakelibs/` and `data/aerolib.csv`. A failing test stops the release; delete the tag (`git push --delete origin <tag>`) or re-run the job after a fix.
+
 #### Fakelib and symbol inputs and per-user files
 
 The sharing package includes the local fakelib store's `.sprx`, `.prx`, `.psp` companion files and manifests, preserving firmware and variant subfolders. Publication staging/backup folders are excluded. It copies the maintained `data/aerolib.csv` to `data/aerolib.csv` beside each executable. Runtime symbol lookup and packaging do not depend on `.original/reference`. Both clients automatically discover these packaged inputs; Settings and CLI path overrides remain available. Other reference repository files are not bundled.
@@ -220,7 +231,8 @@ For day-to-day work, run only the affected test class: `dotnet test --solution P
 ### Lanes, fixtures and goldens
 
 - **Public** is every test without `[Trait("Lane", "Private")]`. Fixture-dependent classes or tests carry the trait; a class with private class fixtures or shared fixture helpers is private as a whole. Missing tracked `data/`, `firmware_db/` or text goldens fail rather than skip.
-- **Private** needs the local, uncommitted `.original/`, the `work/*_elf` fixtures and the `fakelibs/` store. The script fails setup if the main roots are missing and sets `PS5BP_REQUIRE_PRIVATE=1`, so any other missing fixture fails too. A direct `dotnet test` outside the script can still skip missing private fixtures; that is not a strict private-lane result.
+- **Private** needs the local, uncommitted `.original/` and the `work/*_elf` fixtures, plus the (now tracked) `fakelibs/` store. The script fails setup if the main roots are missing and sets `PS5BP_REQUIRE_PRIVATE=1`, so any other missing fixture fails too. A direct `dotnet test` outside the script can still skip missing private fixtures; that is not a strict private-lane result.
+- Any test that calls `Repo.Need` on `.original/` or `work/` must carry `[Trait("Lane", "Private")]`; otherwise the public lane fails on a clean checkout (the release workflow's case). On 18 October 21 code-graph, audio and GUI tests lacked it, and the public lane on a clean copy failed 23 cases; tagged, it passes 682 tests with zero skips.
 - **Goldens** live in `src/Ps5Backport.Tests/golden/`. After an intended output change, re-record with `PS5BP_RECORD=1 dotnet test --solution Ps5Backport.slnx` and review the diff.
 - **Layout.** `src/Ps5Backport.Tests/Tests.cs` holds the 27 former test files as named regions. Newer features have their own files (`CrashLogTests.cs`, `OptionalAudioTests.cs`, `SceDynamicTableTests.cs`, …). Optional verification projects link the same sources: `BACKPORT_SYNTHETIC_ONLY` selects the synthetic fixtures, `BACKPORT_PARSER_TESTS_ONLY` those plus the generated parser tests.
 - The 10 October redundancy review removed exactly two tests whose coverage was fully retained elsewhere (`FirmwareTests.SdkFor_KnownBackports`, `BackPorkPatchTests.AllPatches_AreInPlace`). `MutationWorker` and `InterruptionWorker` are child-process entry points for the parser-budget and recovery tests, not dead tests.

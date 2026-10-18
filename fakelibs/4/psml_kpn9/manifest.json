@@ -1,0 +1,12 @@
+{
+  "libScePsml.sprx": {
+    "container": "PS4-style fake SELF (make_fself.py)",
+    "module": "libScePsml",
+    "ps5_sdk": "0x04000031",
+    "ps4_sdk": "0x09040001",
+    "build_path": "W:/Build/J03950001/sys/internal/usermode/src/psml/Prospero_Game_PRX_psml_prx/libScePsml.prx",
+    "sha256": "6bd2b93bc5a6ddf8645fdd7a547bf07916f766ba5469a3361380632f1e3fed01",
+    "size": 1420272,
+    "source": "FW 13.60 Psml J03950001 from set 4 (72855f03...) with the model path moved from /app0/k9.psp to /app0/KPN9_v070.psp (FW 13.60 system name): string written in rodata at VA 0x5c033 over the tail of the fatal remap-error message (message now ends '...memory'), 4 leas (0xe0d2/0xe0d9/0xeb85/0xeb8c) repointed; unwrap -> patch -> sign. NOT console-tested | Since 2026-10-17 (FINDINGS 6v): from 1a3727fd, sceKernelIsTrinityMode and the libc++ _Mtx_init/destroy/lock/unlock, sceKernelGetOperationMode (PLT restored to jmp [GOT]) turned back from local definitions into imports (st_shndx 0, as in Sony's file) with the GOT pre-filled with the former local stub: native wherever the firmware exports them (IsTrinityMode/HasTrinityMode 7.00, _Mtx_* 9.00, GetOperationMode 11.00), the old stub elsewhere. Not console-tested. | 2026-10-17 second pass (FINDINGS 6v): from bddfe035, sceKernelGetAppInfo2 and sceKernelTitleWorkaroundIsEnabled2 (from 6.00; inputs of the MFSR2 override) restored from local definitions to imports with the former stub as GOT pre-fill (fakelib restore-imports). Not console-tested."
+  }
+}

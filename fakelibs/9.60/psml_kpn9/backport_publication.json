@@ -1,0 +1,14 @@
+{
+  "Version": 1,
+  "RunId": "e949b3a3934e4178a220e7dad31b2e0f",
+  "Files": {
+    "libScePsml.sprx": {
+      "Size": 1406272,
+      "Sha256": "c96ab246813efa8303ba0cdb2740e04260b52a79091bd7095c3d43bafec06347"
+    },
+    "manifest.json": {
+      "Size": 1122,
+      "Sha256": "67db1417a4059104bcb16309dbf833ba38af4de6c4662c4285c55612a48b3e98"
+    }
+  }
+}

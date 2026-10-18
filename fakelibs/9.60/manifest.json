@@ -1,0 +1,53 @@
+{
+  "libSceAgc.sprx": {
+    "container": "PS4-style fake SELF (make_fself.py)",
+    "module": "libSceAgc",
+    "ps5_sdk": "0x04000031",
+    "ps4_sdk": "0x09040001",
+    "build_path": "W:/Build/J03950001/sys/build/integration/orbis-build_0005c/package/target/phase2/usermode/src/graphics/gen2/agc/prx/libSceAgc.prx",
+    "sha256": "c0e00177f5cc807666aa453883d0d6919dc3e45b3bb511f9a94e18e050f9272e",
+    "size": 340080,
+    "source": "EA SPORTS UFC 6 (PPSA23566) backport tested on PS5 Pro FW 9.60: Sony build J03950001 (FW 13.x), SDK lowered to 4.00; shipped as plain ELF, fake-signed for the store | Since 2026-10-17 (FINDINGS 6v): from e449c017, sceKernelIsTrinityMode turned back from local definitions into imports (st_shndx 0, as in Sony's file) with the GOT pre-filled with the former local stub: native wherever the firmware exports them (IsTrinityMode/HasTrinityMode 7.00, _Mtx_* 9.00, GetOperationMode 11.00), the old stub elsewhere. Not console-tested. | 2026-10-17 second pass (FINDINGS 6v): from e8f5bb62, the Pro queries eSgYzXvTPQI and ciYlptMdvhc (libkernel, from 9.00; used by sceAgcGetRegisterDefaults*) restored from local definitions to imports with the former stub as GOT pre-fill (fakelib restore-imports). Not console-tested."
+  },
+  "libSceAgcDriver.sprx": {
+    "container": "PS4-style fake SELF (make_fself.py)",
+    "module": "libSceAgcDriver",
+    "ps5_sdk": "0x04000031",
+    "ps4_sdk": "0x09040001",
+    "build_path": "W:/Build/J03950001/sys/build/integration/orbis-build_0005c/package/target/phase2/usermode/src/graphics/gen2/agc_driver/libSceAgcDriver.prx",
+    "sha256": "de8e415c51a345aab0be6b4aef5a0c981d69bd9594c12a8a55d16727c7095d90",
+    "size": 120704,
+    "source": "EA SPORTS UFC 6 (PPSA23566) backport tested on PS5 Pro FW 9.60: Sony build J03950001 (FW 13.x), SDK lowered to 4.00; shipped as plain ELF, fake-signed for the store | Since 2026-10-17 (FINDINGS 6v): from 0170bcf4, sceKernelHasTrinityMode (PLT restored to jmp [GOT]) turned back from local definitions into imports (st_shndx 0, as in Sony's file) with the GOT pre-filled with the former local stub: native wherever the firmware exports them (IsTrinityMode/HasTrinityMode 7.00, _Mtx_* 9.00, GetOperationMode 11.00), the old stub elsewhere. Not console-tested."
+  },
+  "libSceAmpr.sprx": {
+    "container": "PS4-style fake SELF (make_fself.py)",
+    "module": "libSceAmpr",
+    "ps5_sdk": "0x02000009",
+    "ps4_sdk": "0x08050001",
+    "build_path": "C:/dev/ps5/ampr_emu/out/Prospero_ReleaseHooks/libSceAmpr.prx",
+    "build_date": "Aug 24 2026",
+    "sha256": "89995ddfad2dd28fec6ec438b97015395f55ce5c9089a015f0245600b865218b",
+    "size": 255126,
+    "source": "EA SPORTS UFC 6 backport tested on PS5 Pro FW 9.60: ampr_emu Aug 24 2026 build; shipped as plain ELF, fake-signed for the store"
+  },
+  "libScePlayGo.sprx": {
+    "container": "PS4-style fake SELF (make_fself.py)",
+    "module": "libScePlayGo",
+    "ps5_sdk": "0x02000009",
+    "ps4_sdk": "0x08050001",
+    "build_path": "C:/dev/ps5/playgo/out/nolog/libScePlayGo.prx",
+    "sha256": "645caa464a7d28fab7019ba547b204ecc007f87ccec072d330eb2b72a3e9ddac",
+    "size": 14390,
+    "source": "EA SPORTS UFC 6 dump: PlayGo stub (playgo/out/nolog); homebrew, not firmware-specific; dumps need it under ShadowMountPlus"
+  },
+  "libScePsml.sprx": {
+    "container": "PS4-style fake SELF (make_fself.py)",
+    "module": "libScePsml",
+    "ps5_sdk": "0x04000031",
+    "ps4_sdk": "0x09040001",
+    "build_path": "W:/Build/J03950001/sys/internal/usermode/src/psml/Prospero_Game_PRX_psml_prx/libScePsml.prx",
+    "sha256": "2ba040fba902f6ae76fb1ec511064a9b1ef4afcecebe446d92de0accbcd66198",
+    "size": 1406272,
+    "source": "EA SPORTS UFC 6 (PPSA23566) backport tested on PS5 Pro FW 9.60: Sony build J03950001 (FW 13.x), SDK lowered to 4.00; shipped as plain ELF, fake-signed for the store | Since 2026-10-17 (FINDINGS 6v): from cfe210a3, the sceKernelGetOperationMode PLT entry, which jumped straight to a local stub (*mode = 0, *lowEnergy = 0) on every firmware, restored to jmp [GOT] with the GOT pre-filled with that stub: native from FW 11.00, the old stub before. IsTrinityMode and the libc++ mutexes were already Sony imports. Not console-tested."
+  }
+}

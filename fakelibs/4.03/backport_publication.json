@@ -1,0 +1,86 @@
+{
+  "Version": 1,
+  "RunId": "4e6a2ef6b7694d98bd18693e84bfaa6d",
+  "Files": {
+    "agc_mode2/backport_publication.json": {
+      "Size": 364,
+      "Sha256": "ccae0edb595870b67526bc8ccac82dc82179ea0ce26ae6d9090241a0b569be55"
+    },
+    "agc_mode2/libSceAgc.sprx": {
+      "Size": 322432,
+      "Sha256": "f4abef6df535b126aae484e8766df882749498f4ec0a524fdfcaa63add1a9b8a"
+    },
+    "agc_mode2/manifest.json": {
+      "Size": 1399,
+      "Sha256": "5db2e8725d83f67826518621d73f00178efe0d8ab0e24de730034c0796de487e"
+    },
+    "ampr_debug/libSceAmpr.sprx": {
+      "Size": 414614,
+      "Sha256": "27dec32b11d125d685b06702ae2b7fcb740dad0fe11b8b530921793515593aa9"
+    },
+    "ampr_debug/manifest.json": {
+      "Size": 553,
+      "Sha256": "fa0d09dcd9d145204c5f85dfc9548ec9cb5917b2ddee89a8cd1650ed5a2fbb46"
+    },
+    "gpu_scratch/backport_publication.json": {
+      "Size": 370,
+      "Sha256": "6b8fd04cfe2b059d21fe29a0112625181f341f780096ab48fb04461661628c89"
+    },
+    "gpu_scratch/libSceAgcDriver.sprx": {
+      "Size": 121968,
+      "Sha256": "a212aea31322e11ae5bc44e7c77b2b3be20e82e0b8d3a826b5a3ff63cb31968c"
+    },
+    "gpu_scratch/manifest.json": {
+      "Size": 1015,
+      "Sha256": "f98cdca33ab602cee5085a169ea1a8613e26ecce1da398bfc4913001bc709919"
+    },
+    "libSceAgc.sprx": {
+      "Size": 322432,
+      "Sha256": "98d9979c33eb47b41de5f2b8b45fca55987bfd4fada0dadeffa8186b83462baa"
+    },
+    "libSceAgcDriver.sprx": {
+      "Size": 120592,
+      "Sha256": "50d7abac85dfa03fdca898867c4af166fa68c41a4ed9a72453e0ed5e1eaf9adc"
+    },
+    "libSceAmpr.sprx": {
+      "Size": 255126,
+      "Sha256": "362c84e31e3a06a42f50fe4d6ea124d15e73f77c901470f90823935d7f36ca76"
+    },
+    "libScePlayGo.sprx": {
+      "Size": 17741,
+      "Sha256": "35c437b7e9365e3183974ab5bfbf489ea1db12b7f711c829813ff14ce4d1790e"
+    },
+    "libScePsml.sprx": {
+      "Size": 1510608,
+      "Sha256": "d3ec2071f4eba8cd94f3288ed0a920add06c9045926c3bef071b3623004d4bd5"
+    },
+    "manifest.json": {
+      "Size": 4465,
+      "Sha256": "b4570c056a101d3881f643fe0997ed584d3c8f6ef37c6c87a0ea9218f264d934"
+    },
+    "playgo_0_6/backport_publication.json": {
+      "Size": 365,
+      "Sha256": "fca001dfebb738c80aecc90ab8b8eb19d057bda17b566695f17718b3b4b28965"
+    },
+    "playgo_0_6/libScePlayGo.sprx": {
+      "Size": 18150,
+      "Sha256": "f5fdb0ed6cc7413e6dcac79a62e0efd8cfbae04cca0bf932e7a741aed850d213"
+    },
+    "playgo_0_6/manifest.json": {
+      "Size": 633,
+      "Sha256": "1f72756cfed744e61f0f3ddaecf1f7324a8754e8b13c27a78e6bbff2daa5c1bf"
+    },
+    "playgo_0_6_log/backport_publication.json": {
+      "Size": 365,
+      "Sha256": "52b8ee4f8a65dc2528527250f501409d1f846777c4c943c765e343e47ea41390"
+    },
+    "playgo_0_6_log/libScePlayGo.sprx": {
+      "Size": 23702,
+      "Sha256": "7595924889d67c33149dc152903d2f2492abbc3e846196d536c4f16a7b5560f6"
+    },
+    "playgo_0_6_log/manifest.json": {
+      "Size": 632,
+      "Sha256": "236f98f0a28a2c5d88eb542474825836b3b69443146cfef167b867480164497a"
+    }
+  }
+}

@@ -253,6 +253,7 @@ public sealed class GuiPresentationTests : IDisposable
         Assert.Contains(svg.Descendants(ns + "rect"), r => (string?)r.Attribute("fill") == "#ff00ff");          // the patched line
     }
 
+    [Trait("Lane", "Private")]
     [Fact]
     public async Task CodeGraphVersions_MatchAnotherBuild()
     {
@@ -276,6 +277,7 @@ public sealed class GuiPresentationTests : IDisposable
         Assert.Contains("sub_183e7a0 at 0x183e7a0, matched by the same strings and imports", graph.MatchText);
     }
 
+    [Trait("Lane", "Private")]
     [Fact]
     public async Task CodeGraphFollow_OpensTheFakelibAndReturns()
     {
@@ -308,6 +310,7 @@ public sealed class GuiPresentationTests : IDisposable
         Assert.False(graph.InModule);
     }
 
+    [Trait("Lane", "Private")]
     [Fact]
     public async Task CodeGraphHistory_BackForwardAndRecent()
     {

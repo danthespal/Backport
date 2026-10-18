@@ -1,0 +1,12 @@
+{
+  "libScePsml.sprx": {
+    "container": "PS4-style fake SELF (make_fself.py)",
+    "module": "libScePsml",
+    "ps5_sdk": "0x04000031",
+    "ps4_sdk": "0x09040001",
+    "build_path": "W:/Build/J03950001/sys/internal/usermode/src/psml/Prospero_Game_PRX_psml_prx/libScePsml.prx",
+    "sha256": "186e9e2886df6f780f3eb95ffa3dd0d518823d80c6de18d45c3b1f3c9153af40",
+    "size": 1420272,
+    "source": "Ghost of Yotei (PPSA26344) FW 10.x backport (NOT TESTED): FW 13.60 Psml (J03950001, reads /app0/k9.psp), the same file as GT7's FW4 set; added for FW 10-11 targets, whose firmware lacks the FW 12.00 libScePsml_mfsr2 exports | Since 2026-10-17 (FINDINGS 6v): from 72855f03, sceKernelIsTrinityMode and the libc++ _Mtx_init/destroy/lock/unlock, sceKernelGetOperationMode (PLT restored to jmp [GOT]) turned back from local definitions into imports (st_shndx 0, as in Sony's file) with the GOT pre-filled with the former local stub: native wherever the firmware exports them (IsTrinityMode/HasTrinityMode 7.00, _Mtx_* 9.00, GetOperationMode 11.00), the old stub elsewhere. Not console-tested. | 2026-10-17 second pass (FINDINGS 6v): from 1288aca2, sceKernelGetAppInfo2 and sceKernelTitleWorkaroundIsEnabled2 (from 6.00; inputs of the MFSR2 override) restored from local definitions to imports with the former stub as GOT pre-fill (fakelib restore-imports). Not console-tested."
+  }
+}

@@ -211,6 +211,7 @@ namespace Ps5Backport.Tests
 
         /// <summary>Each 7.1 bed pattern matches Ghost of Yotei's eboot exactly once: the snd_SynthInit permitted-modes
         /// constant (file VA 0x30407c) and the probe's port-format constant (0x34d4f7).</summary>
+        [Trait("Lane", "Private")]
         [Fact]
         public void SevenOneBed_PatternsMatchYoteiOnce()
         {
@@ -249,6 +250,7 @@ namespace Ps5Backport.Tests
         /// The downmix state fits the 0x58-byte page tail of Battlefield 6 and PPSA34008 (EA eboots), where the
         /// 16-slot 0x90-byte state failed and aborted the whole cook. 8 slots: Yotei peaks at 3 bed ports + the probe.
         /// </summary>
+        [Trait("Lane", "Private")]
         [Theory]
         [InlineData("PPSA19534", "default", "eboot.bin")]
         [InlineData("PPSA19534", "default", "SP/BattlefieldGame.Main_Ps5_retail.elf")]

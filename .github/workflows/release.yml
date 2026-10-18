@@ -1,0 +1,71 @@
+name: Release
+
+# Pushing a tag vMAJOR.MINOR.PATCH (e.g. v0.2.0; v0.2.0-beta.1 becomes a pre-release) runs the public test lane,
+# builds the Windows and macOS packages with that version (scripts/package.ps1) and attaches them to a GitHub release.
+on:
+  push:
+    tags: ['v[0-9]+.[0-9]+.[0-9]+*']
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  release:
+    # Windows: package.ps1 writes the macOS tar.gz with Windows' tar.exe (bsdtar) to keep the execute bits.
+    runs-on: windows-latest
+    env:
+      TAG: ${{ github.ref_name }}
+      DOTNET_CLI_TELEMETRY_OPTOUT: '1'
+      DOTNET_NOLOGO: '1'
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-dotnet@v6
+        with:
+          global-json-file: global.json
+
+      - name: Version from the tag
+        id: version
+        shell: pwsh
+        run: |
+          if ($env:TAG -notmatch '^v(\d+\.\d+\.\d+(-[0-9A-Za-z.-]+)?)$') { throw "Tag $env:TAG is not vMAJOR.MINOR.PATCH[-suffix]" }
+          "version=$($Matches[1])" >> $env:GITHUB_OUTPUT
+          "prerelease=$($Matches[1].Contains('-'))" >> $env:GITHUB_OUTPUT
+
+      - name: Test (public lane)
+        shell: pwsh
+        run: ./scripts/verify.ps1 -Lane Public -Configuration Release
+
+      - name: Package
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Path dist | Out-Null
+          foreach ($runtime in 'win-x64', 'osx-arm64', 'osx-x64') {
+            ./scripts/package.ps1 -Configuration Release -Runtime $runtime -Version '${{ steps.version.outputs.version }}'
+            $archive = Get-ChildItem -Path work/packages/Release -Recurse -File -Filter "PS5BackportStudio-Release-$runtime.*" |
+              Sort-Object LastWriteTime | Select-Object -Last 1
+            Move-Item -LiteralPath $archive.FullName -Destination (Join-Path dist ($archive.Name -replace '-Release-', "-$env:TAG-"))
+          }
+          Get-ChildItem dist | Format-Table Name, Length
+
+      - name: Publish the release
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $notes = @"
+          **Downloads**
+          - Windows: ``PS5BackportStudio-$env:TAG-win-x64.zip`` (run ``Studio/Ps5BackportStudio.exe``)
+          - macOS, Apple silicon: ``PS5BackportStudio-$env:TAG-osx-arm64.tar.gz``
+          - macOS, Intel: ``PS5BackportStudio-$env:TAG-osx-x64.tar.gz``
+
+          macOS 14 or later. Keep the extracted folder together, and clear the download flag once before opening the app:
+          ``xattr -dr com.apple.quarantine <the extracted folder>`` (the app is not notarized). Details: ``DISTRIBUTION.md`` in the package.
+          "@
+          $flags = @()
+          if ('${{ steps.version.outputs.prerelease }}' -eq 'True') { $flags += '--prerelease' }
+          gh release create $env:TAG (Get-ChildItem dist).FullName --verify-tag --title "PS5 Backport Studio $env:TAG" --notes $notes --generate-notes @flags

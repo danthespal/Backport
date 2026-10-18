@@ -1,0 +1,12 @@
+{
+  "libSceAgc.sprx": {
+    "container": "PS4-style fake SELF (make_fself.py)",
+    "module": "libSceAgc",
+    "ps5_sdk": "0x04000031",
+    "ps4_sdk": "0x09040001",
+    "build_path": "W:/Build/J03718109/sys/build/integration/orbis-build_0005c/package/target/phase2/usermode/src/graphics/gen2/agc/prx/libSceAgc.prx",
+    "sha256": "f4abef6df535b126aae484e8766df882749498f4ec0a524fdfcaa63add1a9b8a",
+    "size": 322432,
+    "source": "Store set 4.03 libSceAgc (73611ebe, J03718109 FW 12.00) with the SDK4 AcquireMem workaround forced to mode 2: VA 0x8c23 (file 0xcc23) 'mov eax, esi; nop' -> 'push 2; pop rax' (6a 02 58). Mode 2 clears GL1_RANGE when GLV_INV and range bit 3 are both set, no packet-size change; FINDINGS 6u. Not console-tested. | Since 2026-10-17 (FINDINGS 6v): from 6917fbc8, sceKernelIsTrinityMode turned back from local definitions into imports (st_shndx 0, as in Sony's file) with the GOT pre-filled with the former local stub: native wherever the firmware exports them (IsTrinityMode/HasTrinityMode 7.00, _Mtx_* 9.00, GetOperationMode 11.00), the old stub elsewhere. Not console-tested. | 2026-10-17 second pass (FINDINGS 6v): from aff25e4f, the Pro queries eSgYzXvTPQI and ciYlptMdvhc (libkernel, from 9.00; used by sceAgcGetRegisterDefaults*) restored from local definitions to imports with the former stub as GOT pre-fill (fakelib restore-imports). Not console-tested."
+  }
+}

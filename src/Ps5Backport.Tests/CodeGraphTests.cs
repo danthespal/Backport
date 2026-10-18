@@ -13,6 +13,7 @@ namespace Ps5Backport.Tests
         static NameDb Names => new(Repo.Need("data", "aerolib.csv"));
         static CodeImage Original() => CodeImage.Load(Samples.Work("NOT_BACKPORT_elf", "eboot.elf"), Names);
 
+        [Trait("Lane", "Private")]
         [Fact]
         public void UnwindFunctions_ComeFromTheEhFrameHeader()
         {
@@ -23,6 +24,7 @@ namespace Ps5Backport.Tests
             Assert.Null(image.FunctionAt(0x3d2));   // int3 padding between functions
         }
 
+        [Trait("Lane", "Private")]
         [Fact]
         public void DiscoverFunctions_RecoversGt7sUnwindFunctions_WithoutTheUnwindTable()
         {
@@ -37,6 +39,7 @@ namespace Ps5Backport.Tests
             Assert.DoesNotContain(found, f => image.ImportAt(f.Start) is not null);         // the PLT is never a function
         }
 
+        [Trait("Lane", "Private")]
         [Fact]
         public void Graph_SplitsBlocks_NamesTargets_AndLabelsEdges()
         {
@@ -55,6 +58,7 @@ namespace Ps5Backport.Tests
             Assert.Equal("mov qword ptr [rdi+18h], 0FFFFFFFFFFFFFFFFh", lines[0x83403a].Text);
         }
 
+        [Trait("Lane", "Private")]
         [Fact]
         public void Graph_DecodesClangSwitchTables()
         {
@@ -71,6 +75,7 @@ namespace Ps5Backport.Tests
             Assert.Null(Jump(0x2be).Cases);                       // jmp [rax+8]: a virtual call, not a switch
         }
 
+        [Trait("Lane", "Private")]
         [Fact]
         public void Graph_ReadsConstantArguments_StoppingAtTheBlockAndThePreviousCall()
         {
@@ -102,6 +107,7 @@ namespace Ps5Backport.Tests
             Assert.DoesNotContain(tail.Arguments ?? [], a => a.Index == 1);
         }
 
+        [Trait("Lane", "Private")]
         [Fact]
         public void CrashMap_MapsLoggedAddressesOntoTheEboot()
         {
@@ -126,6 +132,7 @@ namespace Ps5Backport.Tests
             Assert.Equal([0x83403aUL, 0xd02d7f], summary.Frames.Select(f => f.Vaddr!.Value));
         }
 
+        [Trait("Lane", "Private")]
         [Fact]
         public void Detectors_ListRulePatternMatches_InCodeAndData()
         {
@@ -141,6 +148,7 @@ namespace Ps5Backport.Tests
                 Assert.Equal(FixApplier.CountPattern(control.Elf, p, TestContext.Current.CancellationToken), matches.Count(m => m.Name == p.Name));
         }
 
+        [Trait("Lane", "Private")]
         [Fact]
         public void Caves_AreTheEnginesCaves_AndTheExtensionRoomIsWhatExtendTextAdds()
         {
@@ -160,6 +168,7 @@ namespace Ps5Backport.Tests
             Assert.Equal(0, Patching.ExtensionRoom(image.Elf));   // used up
         }
 
+        [Trait("Lane", "Private")]
         [Fact]
         public void ScanCalls_FindsCallersOfFunctionsAndImports()
         {
@@ -192,6 +201,7 @@ namespace Ps5Backport.Tests
             Assert.Equal(index.Callers[hub].Count(c => c != hub) - CallIndex.FirstLevel, more.More);
         }
 
+        [Trait("Lane", "Private")]
         [Fact]
         public void Graph_TagsStringsPointersAndConstants()
         {
@@ -209,6 +219,7 @@ namespace Ps5Backport.Tests
             Assert.Equal("\"a\\nb\"", CodeImage.Quote(("a\nb", false)));
         }
 
+        [Trait("Lane", "Private")]
         [Fact]
         public void Versions_MatchUfc6Builds()
         {
@@ -230,6 +241,7 @@ namespace Ps5Backport.Tests
             Assert.True(diff.Matches.Count(x => x.Identical && x.Old.Start != x.New.Start) > 400_000);
         }
 
+        [Trait("Lane", "Private")]
         [Fact]
         public void Versions_SameBuild_PairsEveryFunctionWithItself()
         {
@@ -254,6 +266,7 @@ namespace Ps5Backport.Tests
             Assert.Equal([0x203UL, 0x204], added.Order().ToArray());
         }
 
+        [Trait("Lane", "Private")]
         [Fact]
         public void Follow_FindsTheShippedModuleAndItsExport()
         {
@@ -276,6 +289,7 @@ namespace Ps5Backport.Tests
             Assert.Contains("libSceSaveData_native", withSaveData.FakelibLibraries);
         }
 
+        [Trait("Lane", "Private")]
         [Fact]
         public void Compare_FindsThePatch_TheStubs_AndTheRedirectedImports()
         {
@@ -304,6 +318,7 @@ namespace Ps5Backport.Tests
             Assert.Equal("mov qword ptr [rdi+18h], 0", backport.Graph(diff.Changes[2].Function!.Value).Blocks.SelectMany(b => b.Lines).Single(l => l.Address == 0x83403a).Text);
         }
 
+        [Trait("Lane", "Private")]
         [Fact]
         public void Compare_OwnCook_JoinsAdapterChains_AndKeepsTheGotTailOnTheSystemFunction()
         {
@@ -370,6 +385,7 @@ namespace Ps5Backport.Tests
             Assert.Null(k.StubName(Convert.FromHexString("90C3")));
         }
 
+        [Trait("Lane", "Private")]
         [Fact]
         public void Compare_RefusesADifferentBuild()
         {

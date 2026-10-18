@@ -1,0 +1,14 @@
+{
+  "Version": 1,
+  "RunId": "de975ad4d73a41ca8db31a5b7d0e656f",
+  "Files": {
+    "libSceAgc.sprx": {
+      "Size": 322432,
+      "Sha256": "f4abef6df535b126aae484e8766df882749498f4ec0a524fdfcaa63add1a9b8a"
+    },
+    "manifest.json": {
+      "Size": 1399,
+      "Sha256": "5db2e8725d83f67826518621d73f00178efe0d8ab0e24de730034c0796de487e"
+    }
+  }
+}

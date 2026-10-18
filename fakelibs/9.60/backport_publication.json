@@ -1,0 +1,82 @@
+{
+  "Version": 1,
+  "RunId": "86e2d28907414a2b9d23a807e5bdd792",
+  "Files": {
+    "ampr_debug/libSceAmpr.sprx": {
+      "Size": 414614,
+      "Sha256": "27dec32b11d125d685b06702ae2b7fcb740dad0fe11b8b530921793515593aa9"
+    },
+    "ampr_debug/manifest.json": {
+      "Size": 510,
+      "Sha256": "4f928d48b0462db82e29764289a798a296ae30e9b230b51de2d3f0276df28aad"
+    },
+    "app0/KPN9_v070.psp": {
+      "Size": 4135904,
+      "Sha256": "22ffbf0618090f4f45137dd6f496a1910eebc94eda3b5f625c16f13cafa95546"
+    },
+    "app0/k9.psp": {
+      "Size": 4135904,
+      "Sha256": "22ffbf0618090f4f45137dd6f496a1910eebc94eda3b5f625c16f13cafa95546"
+    },
+    "libSceAgc.sprx": {
+      "Size": 340080,
+      "Sha256": "c0e00177f5cc807666aa453883d0d6919dc3e45b3bb511f9a94e18e050f9272e"
+    },
+    "libSceAgcDriver.sprx": {
+      "Size": 120704,
+      "Sha256": "de8e415c51a345aab0be6b4aef5a0c981d69bd9594c12a8a55d16727c7095d90"
+    },
+    "libSceAmpr.sprx": {
+      "Size": 255126,
+      "Sha256": "89995ddfad2dd28fec6ec438b97015395f55ce5c9089a015f0245600b865218b"
+    },
+    "libScePlayGo.sprx": {
+      "Size": 14390,
+      "Sha256": "645caa464a7d28fab7019ba547b204ecc007f87ccec072d330eb2b72a3e9ddac"
+    },
+    "libScePsml.sprx": {
+      "Size": 1406272,
+      "Sha256": "2ba040fba902f6ae76fb1ec511064a9b1ef4afcecebe446d92de0accbcd66198"
+    },
+    "manifest.json": {
+      "Size": 4212,
+      "Sha256": "25be6fae53fe4fe4eacabe70878921c4dec9820da2ba11196ae8ccfaba64829a"
+    },
+    "playgo_0_6/backport_publication.json": {
+      "Size": 365,
+      "Sha256": "1d5f80d7e6d4b6caa1617dc1ef0b0366d53ac1ed2ec3a588929892113aa0b77b"
+    },
+    "playgo_0_6/libScePlayGo.sprx": {
+      "Size": 18150,
+      "Sha256": "f5fdb0ed6cc7413e6dcac79a62e0efd8cfbae04cca0bf932e7a741aed850d213"
+    },
+    "playgo_0_6/manifest.json": {
+      "Size": 633,
+      "Sha256": "1f72756cfed744e61f0f3ddaecf1f7324a8754e8b13c27a78e6bbff2daa5c1bf"
+    },
+    "playgo_0_6_log/backport_publication.json": {
+      "Size": 365,
+      "Sha256": "51114bb66fd747a846eb9c280f2f954f5d6475589a456a26608a08ab08d40220"
+    },
+    "playgo_0_6_log/libScePlayGo.sprx": {
+      "Size": 23702,
+      "Sha256": "7595924889d67c33149dc152903d2f2492abbc3e846196d536c4f16a7b5560f6"
+    },
+    "playgo_0_6_log/manifest.json": {
+      "Size": 632,
+      "Sha256": "236f98f0a28a2c5d88eb542474825836b3b69443146cfef167b867480164497a"
+    },
+    "psml_kpn9/backport_publication.json": {
+      "Size": 366,
+      "Sha256": "1fff118bb6918b56feb1a74e99645c3afb517033555a1558af25426adc74ec3f"
+    },
+    "psml_kpn9/libScePsml.sprx": {
+      "Size": 1406272,
+      "Sha256": "c96ab246813efa8303ba0cdb2740e04260b52a79091bd7095c3d43bafec06347"
+    },
+    "psml_kpn9/manifest.json": {
+      "Size": 1122,
+      "Sha256": "67db1417a4059104bcb16309dbf833ba38af4de6c4662c4285c55612a48b3e98"
+    }
+  }
+}

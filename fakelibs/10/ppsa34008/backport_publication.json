@@ -1,0 +1,30 @@
+{
+  "Version": 1,
+  "RunId": "5b2378492fb64c06a5a5d00b9be2ee32",
+  "Files": {
+    "libSceAgc.sprx": {
+      "Size": 326986,
+      "Sha256": "eace8ac152404132e632a7e170ddcca47f230e7c0c02cd4b76f29ca9604037ff"
+    },
+    "libSceAgcDriver.sprx": {
+      "Size": 123989,
+      "Sha256": "ebdfe2143543141e86cf3d133559993a988de0d825e7aef680fec1489cb446ad"
+    },
+    "libSceAmpr.sprx": {
+      "Size": 255126,
+      "Sha256": "362c84e31e3a06a42f50fe4d6ea124d15e73f77c901470f90823935d7f36ca76"
+    },
+    "libScePlayGo.sprx": {
+      "Size": 11590,
+      "Sha256": "a0f20f40107713523ba1a3a0281fb7c4e238b2b5d3fda9354119352d9393d2f0"
+    },
+    "libScePsml.sprx": {
+      "Size": 1536002,
+      "Sha256": "3e1df31de4049d958faec7ed3575d9ef7776eeb76e0ac2354d38c8b5eb33ad21"
+    },
+    "manifest.json": {
+      "Size": 2978,
+      "Sha256": "a1f20fe899ab44b4b417ffe7852f2593d70894dc1d5108a30cc94b51f1b8f571"
+    }
+  }
+}

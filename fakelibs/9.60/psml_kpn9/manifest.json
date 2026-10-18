@@ -1,0 +1,12 @@
+{
+  "libScePsml.sprx": {
+    "container": "PS4-style fake SELF (make_fself.py)",
+    "module": "libScePsml",
+    "ps5_sdk": "0x04000031",
+    "ps4_sdk": "0x09040001",
+    "build_path": "W:/Build/J03950001/sys/internal/usermode/src/psml/Prospero_Game_PRX_psml_prx/libScePsml.prx",
+    "sha256": "c96ab246813efa8303ba0cdb2740e04260b52a79091bd7095c3d43bafec06347",
+    "size": 1406272,
+    "source": "FW 13.60 Psml J03950001 from set 9.60 (cfe210a3...) with the model path moved from /app0/k9.psp to /app0/KPN9_v070.psp (FW 13.60 system name): string written in rodata at VA 0x5c033 over the tail of the fatal remap-error message (message now ends '...memory'), 4 leas (0xe0d2/0xe0d9/0xeb85/0xeb8c) repointed; unwrap -> patch -> sign. NOT console-tested | Since 2026-10-17 (FINDINGS 6v): from e09e5c27, the sceKernelGetOperationMode PLT entry, which jumped straight to a local stub (*mode = 0, *lowEnergy = 0) on every firmware, restored to jmp [GOT] with the GOT pre-filled with that stub: native from FW 11.00, the old stub before. IsTrinityMode and the libc++ mutexes were already Sony imports. Not console-tested."
+  }
+}

@@ -1,0 +1,12 @@
+{
+  "libScePlayGo.sprx": {
+    "container": "PS4-style fake SELF (make_fself.py)",
+    "module": "libScePlayGo",
+    "ps5_sdk": "0x02000009",
+    "ps4_sdk": "0x08050001",
+    "build_path": "C:/dev/ps5/playgo/out/log/libScePlayGo.prx",
+    "sha256": "7595924889d67c33149dc152903d2f2492abbc3e846196d536c4f16a7b5560f6",
+    "size": 23702,
+    "source": "Official drakmor/pgo_stub 0.6 logging asset; https://github.com/drakmor/pgo_stub/releases/tag/0.6; source version commit 16d30a463c66ae7b23e4c6ad546ff21f5c4e6d59; GitHub SHA-256 verified; imported NIDs present in target/lower-bound catalog; console compatibility unverified"
+  }
+}

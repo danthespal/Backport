@@ -1,0 +1,14 @@
+{
+  "Version": 1,
+  "RunId": "d12cddd4493a4a6dbc3da8b56ba359a2",
+  "Files": {
+    "libScePlayGo.sprx": {
+      "Size": 23702,
+      "Sha256": "7595924889d67c33149dc152903d2f2492abbc3e846196d536c4f16a7b5560f6"
+    },
+    "manifest.json": {
+      "Size": 632,
+      "Sha256": "236f98f0a28a2c5d88eb542474825836b3b69443146cfef167b867480164497a"
+    }
+  }
+}

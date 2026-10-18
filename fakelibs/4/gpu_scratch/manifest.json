@@ -1,0 +1,12 @@
+{
+  "libSceAgcDriver.sprx": {
+    "container": "PS4-style fake SELF (make_fself.py)",
+    "module": "libSceAgcDriver",
+    "ps5_sdk": "0x04000031",
+    "ps4_sdk": "0x09040001",
+    "build_path": "W:/Build/J03828141/sys/build/integration/orbis-build_0005c/package/target/phase2/usermode/src/graphics/gen2/agc_driver/libSceAgcDriver.prx",
+    "sha256": "6fe51fe3dd3082fa157938bf967a32d5582c5b16fa5e4fcc79ea7f117abae5f5",
+    "size": 121968,
+    "source": "AC Black Flag Resynced 01.006.038 10xx+ backport: GT7's AgcDriver (fakelibs/4) + compute scratch hook on SubmitMultiDcbs/Acbs (tested on PS5 Pro FW 10.20) | Since 2026-10-17 (FINDINGS 6v): from ebdfe214, sceKernelHasTrinityMode (PLT restored to jmp [GOT]) turned back from local definitions into imports (st_shndx 0, as in Sony's file) with the GOT pre-filled with the former local stub: native wherever the firmware exports them (IsTrinityMode/HasTrinityMode 7.00, _Mtx_* 9.00, GetOperationMode 11.00), the old stub elsewhere. Not console-tested."
+  }
+}

@@ -2,3 +2,5 @@
 firmware_db/*.json text eol=lf
 data/*.json text eol=lf
 src/Ps5Backport.Tests/golden/** text eol=lf
+# The fakelib store is byte-exact: manifests and publication records hash its files
+fakelibs/** -text

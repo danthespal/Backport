@@ -1,0 +1,42 @@
+{
+  "Version": 1,
+  "RunId": "31634694b9f94bd8892ff1444e509f85",
+  "Files": {
+    "app0/k9.psp": {
+      "Size": 4135904,
+      "Sha256": "22ffbf0618090f4f45137dd6f496a1910eebc94eda3b5f625c16f13cafa95546"
+    },
+    "libScePsml.sprx": {
+      "Size": 1420272,
+      "Sha256": "186e9e2886df6f780f3eb95ffa3dd0d518823d80c6de18d45c3b1f3c9153af40"
+    },
+    "manifest.json": {
+      "Size": 1377,
+      "Sha256": "a710a7f93099365efc1b9be0f5f560c22921739788a5ff6bb0188c1fa24373a8"
+    },
+    "playgo_0_6/backport_publication.json": {
+      "Size": 365,
+      "Sha256": "0edd3e007b3c2e6f53269b16d8c5cf2241e60abdde087e3535c380e525dfef5e"
+    },
+    "playgo_0_6/libScePlayGo.sprx": {
+      "Size": 18150,
+      "Sha256": "f5fdb0ed6cc7413e6dcac79a62e0efd8cfbae04cca0bf932e7a741aed850d213"
+    },
+    "playgo_0_6/manifest.json": {
+      "Size": 633,
+      "Sha256": "1f72756cfed744e61f0f3ddaecf1f7324a8754e8b13c27a78e6bbff2daa5c1bf"
+    },
+    "playgo_0_6_log/backport_publication.json": {
+      "Size": 365,
+      "Sha256": "115b7821c09fdb8183bc586a92b79eb366398d7125db63c36bbd2d95a588ac38"
+    },
+    "playgo_0_6_log/libScePlayGo.sprx": {
+      "Size": 23702,
+      "Sha256": "7595924889d67c33149dc152903d2f2492abbc3e846196d536c4f16a7b5560f6"
+    },
+    "playgo_0_6_log/manifest.json": {
+      "Size": 632,
+      "Sha256": "236f98f0a28a2c5d88eb542474825836b3b69443146cfef167b867480164497a"
+    }
+  }
+}
