@@ -16,6 +16,7 @@ public sealed class PathSetting
 {
     public required PathKind Kind { get; init; }
     public required string Title { get; init; }
+    /// <summary>Key of the icon geometry in App.axaml.</summary>
     public required string Icon { get; init; }
     public required string Path { get; init; }
     public required bool IsCustom { get; init; }
@@ -53,7 +54,7 @@ public partial class MainViewModel
         int dbs = db is not null && Directory.Exists(db) ? Directory.EnumerateFiles(db, "*.json").Count() : 0;
         PathSettings.Add(new PathSetting
         {
-            Kind = PathKind.FirmwareDb, Title = "Firmware database", Icon = "", Path = db ?? "not found",
+            Kind = PathKind.FirmwareDb, Title = "Firmware database", Icon = "IconDocument", Path = db ?? "not found",
             IsCustom = Settings.FirmwareDbDir is not null,
             Status = dbs > 0 ? $"{dbs} firmware export lists" : "no firmware lists; analysis falls back to the 3.20 reference",
             Tone = dbs > 0 ? "ok" : "warn",
@@ -64,7 +65,7 @@ public partial class MainViewModel
                 .Where(k => !k.StartsWith(Publication.Prefix, StringComparison.OrdinalIgnoreCase)).Order(StringComparer.Ordinal).ToList() : [];
         PathSettings.Add(new PathSetting
         {
-            Kind = PathKind.FakelibStore, Title = "Fakelib store", Icon = "", Path = store ?? "not found",
+            Kind = PathKind.FakelibStore, Title = "Fakelib store", Icon = "IconStore", Path = store ?? "not found",
             IsCustom = Settings.FakelibStoreDir is not null,
             Status = sets.Count > 0 ? $"sets {string.Join(", ", sets)}" : "no fakelib sets",
             Tone = sets.Count > 0 ? "ok" : "warn",
@@ -73,7 +74,7 @@ public partial class MainViewModel
         bool found = aerolib is not null && File.Exists(aerolib);
         PathSettings.Add(new PathSetting
         {
-            Kind = PathKind.Aerolib, Title = "Function names (aerolib.csv)", Icon = "", Path = aerolib ?? "not found",
+            Kind = PathKind.Aerolib, Title = "Function names (aerolib.csv)", Icon = "IconTag", Path = aerolib ?? "not found",
             IsCustom = Settings.AerolibPath is not null,
             Status = found ? "found" : "not found; imports show as NIDs only",
             Tone = found ? "ok" : "warn",

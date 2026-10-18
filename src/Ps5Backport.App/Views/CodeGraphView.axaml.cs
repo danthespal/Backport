@@ -31,10 +31,13 @@ public partial class CodeGraphView : UserControl
         OriginalCanvas.ModeToggleRequested += ToggleListing;
         MainCanvas.HistoryRequested += Step;
         OriginalCanvas.HistoryRequested += Step;
-        // Ctrl+K: the search box; F11: both side panels away or back
+        // Ctrl+K (⌘K on macOS): the search box; F11: both side panels away or back
+        foreach (var control in new Control[] { RailButton, ListingButton })
+            ToolTip.SetTip(control, Hotkeys.Text((string)ToolTip.GetTip(control)!));
+        SearchBox.PlaceholderText = Hotkeys.Text(SearchBox.PlaceholderText!);
         AddHandler(KeyDownEvent, (_, e) =>
         {
-            if (e.Key == Key.K && e.KeyModifiers == KeyModifiers.Control)
+            if (e.Key == Key.K && e.KeyModifiers == Hotkeys.Command)
             {
                 SearchBox.Focus();
                 SearchBox.SelectAll();

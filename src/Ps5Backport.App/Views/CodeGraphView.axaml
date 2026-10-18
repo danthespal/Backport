@@ -160,7 +160,7 @@
     <Border Classes="panel" BorderThickness="0,0,0,1" Padding="6,4" ClipToBounds="True">
       <DockPanel>
         <StackPanel DockPanel.Dock="Left" Orientation="Horizontal" Spacing="6">
-          <Button Classes="bar icon ghost" Content="≡" Command="{Binding $parent[Window].((vm:MainViewModel)DataContext).ToggleRailCommand}"
+          <Button Name="RailButton" Classes="bar icon ghost" Content="≡" Command="{Binding $parent[Window].((vm:MainViewModel)DataContext).ToggleRailCommand}"
                   AutomationProperties.Name="Studio pages" ToolTip.Tip="Studio pages (Ctrl+B, or move the mouse to the left edge)" />
           <TextBlock Classes="caption" Text="EBOOT" VerticalAlignment="Center" />
           <Button Classes="bar" ToolTip.Tip="{Binding EbootPath}" AutomationProperties.Name="Eboot">
@@ -312,7 +312,7 @@
               <Border Classes="vsep" />
               <RadioButton Classes="seg" GroupName="view" Content="Graph" IsChecked="{Binding GraphView}"
                            ToolTip.Tip="Blocks and their edges (Space in the graph switches)" />
-              <RadioButton Classes="seg" GroupName="view" Content="Listing" IsChecked="{Binding Listing}"
+              <RadioButton Name="ListingButton" Classes="seg" GroupName="view" Content="Listing" IsChecked="{Binding Listing}"
                            ToolTip.Tip="The blocks one under the other in address order, like a disassembly listing; the wheel scrolls, Ctrl+wheel zooms (Space switches)" />
               <RadioButton Classes="seg" GroupName="view" Content="Calls" IsChecked="{Binding CallsView}" IsEnabled="{Binding HasImage}"
                            ToolTip.Tip="The functions around this one: its callers above, what it calls below, two levels each way (at most 10 per node, then 5)" />

@@ -19,6 +19,7 @@ public partial class MainWindow : Window
     public MainWindow()
     {
         InitializeComponent();
+        KeyBindings.Single(k => k.Gesture?.Key == Key.B).Gesture = Hotkeys.Gesture(Key.B);   // Ctrl+B, ⌘B on macOS
         LogList.DoubleTapped += (_, _) => (DataContext as MainViewModel)?.JumpTo(LogList.SelectedItem as LogEntry);
         LogToggle.Click += (_, _) =>
         {

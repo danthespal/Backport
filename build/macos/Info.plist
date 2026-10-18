@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!-- Info.plist of "PS5 Backport Studio.app". The packaging step replaces @VERSION@ with the build's version. -->
+<plist version="1.0">
+<dict>
+  <key>CFBundleName</key>
+  <string>PS5 Backport Studio</string>
+  <key>CFBundleDisplayName</key>
+  <string>PS5 Backport Studio</string>
+  <key>CFBundleIdentifier</key>
+  <string>local.ps5backport.studio</string>
+  <key>CFBundleExecutable</key>
+  <string>Ps5BackportStudio</string>
+  <key>CFBundleIconFile</key>
+  <string>PS5BackportStudio.icns</string>
+  <key>CFBundlePackageType</key>
+  <string>APPL</string>
+  <key>CFBundleInfoDictionaryVersion</key>
+  <string>6.0</string>
+  <key>CFBundleShortVersionString</key>
+  <string>@VERSION@</string>
+  <key>CFBundleVersion</key>
+  <string>@VERSION@</string>
+  <key>LSMinimumSystemVersion</key>
+  <string>14.0</string>
+  <key>LSApplicationCategoryType</key>
+  <string>public.app-category.developer-tools</string>
+  <key>NSPrincipalClass</key>
+  <string>NSApplication</string>
+  <key>NSHighResolutionCapable</key>
+  <true/>
+</dict>
+</plist>

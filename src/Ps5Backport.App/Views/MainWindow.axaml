@@ -29,28 +29,28 @@
             HorizontalAlignment="Left" ZIndex="2" IsVisible="{Binding RailVisible}">
       <DockPanel Margin="0,10">
         <RadioButton AutomationProperties.Name="Settings" DockPanel.Dock="Bottom" Classes="rail" GroupName="rail" ToolTip.Tip="Settings" IsChecked="{Binding Page, Converter={x:Static app:PageIsConverter.Instance}, ConverterParameter={x:Static vm:AppPage.Settings}}">
-          <TextBlock Classes="icon" Text="&#xE713;" />
+          <PathIcon Classes="icon" Data="{StaticResource IconSettings}" />
         </RadioButton>
         <StackPanel>
           <Image Source="/Assets/backport.png" Width="44" Height="44" Margin="0,0,0,14"
                  ToolTip.Tip="PS5 Backport Studio" />
           <RadioButton AutomationProperties.Name="Backport" Classes="rail" GroupName="rail" ToolTip.Tip="Backport" IsChecked="{Binding Page, Converter={x:Static app:PageIsConverter.Instance}, ConverterParameter={x:Static vm:AppPage.Backport}}">
-            <TextBlock Classes="icon" Text="&#xE90F;" />
+            <PathIcon Classes="icon" Data="{StaticResource IconBackport}" />
           </RadioButton>
           <RadioButton AutomationProperties.Name="Compatibility libraries" Classes="rail" GroupName="rail" ToolTip.Tip="Compatibility libraries (fakelibs)" IsChecked="{Binding Page, Converter={x:Static app:PageIsConverter.Instance}, ConverterParameter={x:Static vm:AppPage.Store}}">
-            <TextBlock Classes="icon" Text="&#xE7B8;" />
+            <PathIcon Classes="icon" Data="{StaticResource IconStore}" />
           </RadioButton>
           <RadioButton AutomationProperties.Name="Firmware database" Classes="rail" GroupName="rail" ToolTip.Tip="Firmware database" IsChecked="{Binding Page, Converter={x:Static app:PageIsConverter.Instance}, ConverterParameter={x:Static vm:AppPage.FirmwareDb}}">
-            <TextBlock Classes="icon" Text="&#xE8A5;" />
+            <PathIcon Classes="icon" Data="{StaticResource IconDocument}" />
           </RadioButton>
           <RadioButton AutomationProperties.Name="Tools" Classes="rail" GroupName="rail" ToolTip.Tip="Tools: SELF files, NID lookup" IsChecked="{Binding Page, Converter={x:Static app:PageIsConverter.Instance}, ConverterParameter={x:Static vm:AppPage.Tools}}">
-            <TextBlock Classes="icon" Text="&#xEC7A;" />
+            <PathIcon Classes="icon" Data="{StaticResource IconTools}" />
           </RadioButton>
           <RadioButton AutomationProperties.Name="Code graph" Classes="rail" GroupName="rail" ToolTip.Tip="Code graph: an eboot's functions as graphs, compared with its backport" IsChecked="{Binding Page, Converter={x:Static app:PageIsConverter.Instance}, ConverterParameter={x:Static vm:AppPage.CodeGraph}}">
-            <TextBlock Classes="icon" Text="&#xE943;" />
+            <PathIcon Classes="icon" Data="{StaticResource IconCode}" />
           </RadioButton>
           <RadioButton AutomationProperties.Name="Console results" Classes="rail" GroupName="rail" ToolTip.Tip="Console results: what ran on which firmware, evidence per band, promotion" IsChecked="{Binding Page, Converter={x:Static app:PageIsConverter.Instance}, ConverterParameter={x:Static vm:AppPage.Results}}">
-            <TextBlock Classes="icon" Text="&#xE9D9;" />
+            <PathIcon Classes="icon" Data="{StaticResource IconResults}" />
           </RadioButton>
         </StackPanel>
       </DockPanel>
@@ -88,7 +88,7 @@
           <Border Width="88" Height="88" CornerRadius="6" ClipToBounds="True" Background="{DynamicResource PanelBrush}"
                   BorderBrush="{DynamicResource HairlineBrush}" BorderThickness="1">
             <Panel>
-              <TextBlock Classes="icon muted" FontSize="28" HorizontalAlignment="Center" Text="&#xE7FC;" IsVisible="{Binding Cover, Converter={x:Static ObjectConverters.IsNull}}" />
+              <PathIcon Classes="icon muted" Width="28" Height="28" HorizontalAlignment="Center" Data="{StaticResource IconGame}" IsVisible="{Binding Cover, Converter={x:Static ObjectConverters.IsNull}}" />
               <Image Source="{Binding Cover}" Stretch="UniformToFill" />
             </Panel>
           </Border>
@@ -570,7 +570,7 @@
               <DataTemplate x:DataType="vm:PathSetting">
                 <Border Classes="card setting">
                   <Grid ColumnDefinitions="Auto,*,Auto,Auto" ColumnSpacing="12">
-                    <TextBlock Classes="icon" Text="{Binding Icon}" />
+                    <PathIcon Classes="icon" Data="{Binding Icon, Converter={x:Static app:IconConverter.Instance}}" />
                     <StackPanel Grid.Column="1" Spacing="2">
                       <StackPanel Orientation="Horizontal" Spacing="8">
                         <TextBlock FontWeight="Medium" Text="{Binding Title}" />

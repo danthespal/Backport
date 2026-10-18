@@ -239,7 +239,7 @@ public sealed class GraphCanvas : Control
     protected override void OnPointerWheelChanged(PointerWheelEventArgs e)
     {
         base.OnPointerWheelChanged(e);
-        if (Scene is { IsListing: true } && Viewport is { } v && (e.KeyModifiers & KeyModifiers.Control) == 0)
+        if (Scene is { IsListing: true } && Viewport is { } v && (e.KeyModifiers & Hotkeys.Command) == 0)
             v.Set(v.Scale, v.X, v.Y + e.Delta.Y * 3 * GraphScene.LineHeight * Math.Max(v.Scale, 0.5));
         else
             ZoomAt(e.GetPosition(this), Math.Pow(1.15, e.Delta.Y));
